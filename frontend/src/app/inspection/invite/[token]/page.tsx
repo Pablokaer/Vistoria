@@ -4,7 +4,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AcceptPanel } from "@/components/AcceptPanel";
 import { AuthCard } from "@/components/AuthCard";
-import { Button, ErrorBanner, Field, Input, LinkButton, Loading } from "@/components/ui";
+import { Brand } from "@/components/AppShell";
+import { Button, EmptyState, ErrorBanner, Field, Input, LinkButton, Loading, PageHeader } from "@/components/ui";
 import { useT } from "@/i18n/I18nProvider";
 import { agentMessages } from "@/i18n/messages/agent";
 import { errorMessage, post } from "@/lib/api";
@@ -36,19 +37,19 @@ export default function PrivateInvitePage() {
     finally { setBusy(false); }
   }
 
-  if (authLoading || !user) return <Loading />;
-  if (!isAgent) return <AuthCard title={t("inspectorRequiredTitle")}><p className="text-sm text-slate-600">{t("inspectorRequiredBody")}</p></AuthCard>;
+  if (authLoading || !user) return <div className="mx-auto max-w-narrow px-4 py-10"><Loading /></div>;
+  if (!isAgent) return <AuthCard title={t("inspectorRequiredTitle")}><p className="text-body text-ink-3">{t("inspectorRequiredBody")}</p></AuthCard>;
 
   if (data && !data.requiresCode) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-8">
-        <h1 className="mb-4 text-2xl font-semibold">{t("privateInspection")}</h1>
-        {data.inspection ? <AcceptPanel item={data.inspection} /> : (
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <p className="text-sm text-slate-700">{t("noLongerOpen")}</p>
-            <LinkButton className="mt-4" href="/agent/inspections">{t("myInspectionsTitle")}</LinkButton>
-          </div>
-        )}
+      <div className="min-h-screen bg-canvas">
+        <header className="border-b border-line bg-surface"><div className="mx-auto flex h-14 max-w-narrow items-center px-4"><Brand href="/app" alwaysShowName /></div></header>
+        <main className="mx-auto max-w-narrow px-4 py-6">
+          <PageHeader eyebrow={t("privateInspection")} title={t("acceptTitle")} />
+          {data.inspection ? <AcceptPanel item={data.inspection} insideShell={false} /> : (
+            <EmptyState icon="lock" title={t("noLongerOpen")} action={<LinkButton href="/agent/inspections">{t("myInspectionsTitle")}</LinkButton>} />
+          )}
+        </main>
       </div>
     );
   }

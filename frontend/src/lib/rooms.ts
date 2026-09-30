@@ -47,3 +47,9 @@ export function useInspectionRooms(inspectionId: string) {
 
   return { inspection, rooms, error, load, setRoom, reloadRoom };
 }
+
+/** Step 1 readiness: the room has a general photo and every defect has at least one photo. */
+export const roomPhotosReady = (r: RoomDetail) => r.generalPhotos.length > 0 && r.defects.every((d) => d.photos.length > 0);
+
+/** Step 2 readiness: the API reports nothing blocking completion (or the room is already completed). */
+export const roomTextReady = (r: RoomDetail) => r.status === "Completed" || r.completionIssues.length === 0;

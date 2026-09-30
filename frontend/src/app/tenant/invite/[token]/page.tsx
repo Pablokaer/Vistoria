@@ -35,7 +35,7 @@ export default function TenantInvitePage() {
       <ErrorBanner message={acceptError} />
       <div className="space-y-3">
         <Button size="lg" className="w-full" loading={busy} onClick={() => void accept()}>{t("acceptInvitation")}</Button>
-        <p className="text-center text-sm text-slate-600">{t("notSignedIn")}</p>
+        <p className="text-center text-sm text-ink-3">{t("notSignedIn")}</p>
         <div className="grid grid-cols-2 gap-2">
           <LinkButton variant="secondary" href={`/login?next=${next}`}>{t("signIn")}</LinkButton>
           <LinkButton variant="secondary" href={`/register?role=Tenant&next=${next}`}>{t("createAccount")}</LinkButton>

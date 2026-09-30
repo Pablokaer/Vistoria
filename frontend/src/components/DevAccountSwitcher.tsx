@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { Icon } from "@/components/icons";
 import { errorMessage, get } from "@/lib/api";
 import { useT } from "@/i18n/I18nProvider";
 import { authMessages } from "@/i18n/messages/auth";
@@ -13,7 +14,8 @@ interface DevAccount { email: string; role: string; label: string }
  * Header dropdown to jump between the seeded demo accounts. The API only maps /api/dev in Development,
  * so outside it the account list fails to load and nothing is rendered.
  */
-export function DevAccountSwitcher() {
+// Visually separate from product UI: dashed, monospace "dev" chip. `placement="up"` opens above (sidebar footer).
+export function DevAccountSwitcher({ placement = "down" }: { placement?: "up" | "down" }) {
   const { user, switchAccount } = useAuth();
   const t = useT(authMessages);
   const router = useRouter();
@@ -51,22 +53,22 @@ export function DevAccountSwitcher() {
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open}
-        className="flex items-center gap-1 whitespace-nowrap rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100">
-        {t("devSwitch")} <span aria-hidden>▾</span>
+        className="flex w-full items-center justify-between gap-2 whitespace-nowrap rounded-md border border-dashed border-warning-500/60 px-2 py-1 font-mono text-[11px] font-medium text-warning-500 hover:bg-warning-500/10">
+        {t("devSwitch")} <Icon name="chevronDown" className="h-3.5 w-3.5" />
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 z-40 mt-1 w-72 rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
+        <div role="menu" className={`absolute z-40 w-72 rounded-lg border border-line bg-surface p-1 text-ink shadow-overlay animate-fade-in ${placement === "up" ? "bottom-full left-0 mb-1" : "right-0 mt-1"}`}>
           {accounts.map((a) => {
             const current = a.email.toLowerCase() === user?.email.toLowerCase();
             return (
               <button key={a.email} role="menuitem" disabled={current || busy !== null} onClick={() => void pick(a)}
-                className={`block w-full rounded-md px-3 py-2 text-left text-sm ${current ? "bg-brand-50 text-brand" : "hover:bg-slate-50"} disabled:cursor-default`}>
+                className={`block w-full rounded-md px-3 py-2 text-left text-sm ${current ? "bg-brand-50 text-brand" : "hover:bg-surface-2"} disabled:cursor-default`}>
                 <span className="block font-medium">{a.label}{current && t("devCurrent")}{busy === a.email && " …"}</span>
-                <span className="block text-xs text-slate-500">{a.email}</span>
+                <span className="block text-caption text-ink-3">{a.email}</span>
               </button>
             );
           })}
-          {error && <p className="px-3 py-2 text-xs text-red-600">{error}</p>}
+          {error && <p className="px-3 py-2 text-caption text-danger-700">{error}</p>}
         </div>
       )}
     </div>

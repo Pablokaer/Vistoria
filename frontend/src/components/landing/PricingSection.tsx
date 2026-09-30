@@ -14,7 +14,7 @@ export function PricingSection() {
   const t = useT(landingDetailsMessages);
   const single = plans?.length === 1;
   return (
-    <section id="pricing" aria-labelledby="pricing-title" className="scroll-mt-20 border-t border-slate-200 bg-white py-20 sm:py-24">
+    <section id="pricing" aria-labelledby="pricing-title" className="scroll-mt-20 border-t border-line bg-white py-20 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <SectionHeading id="pricing-title" eyebrow={t("pricingEyebrow")} title={t("pricingTitle")} centered intro={t("pricingIntro")} />
         <div className="mt-12">
@@ -25,14 +25,14 @@ export function PricingSection() {
               {plans.map((plan) => (
                 <PlanCard key={plan.code} plan={plan} action={
                   <Link href={`/register?plan=${encodeURIComponent(plan.code)}`}
-                    className="flex min-h-12 w-full items-center justify-center rounded-lg bg-brand px-5 text-base font-semibold text-white shadow-sm hover:bg-brand-dark">
+                    className="flex min-h-12 w-full items-center justify-center rounded-lg bg-brand px-5 text-base font-semibold text-white shadow-card hover:bg-brand-dark">
                     {t("pricingGetStarted")}
                   </Link>
                 } />
               ))}
             </div>
           )}
-          <p className="mt-6 text-center text-sm text-slate-500">{t("pricingPaymentNote")}</p>
+          <p className="mt-6 text-center text-sm text-ink-3">{t("pricingPaymentNote")}</p>
         </div>
       </div>
     </section>

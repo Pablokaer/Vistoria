@@ -46,7 +46,7 @@ function CheckoutContent() {
       <ErrorBanner message={error} />
       {!plans && !plansError && <Loading label={t("loadingPlans")} />}
       {plans && plan && (
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <fieldset className="grid gap-4">
             <legend className="sr-only">{t("planLegend")}</legend>
             {plans.map((p) => (
@@ -73,14 +73,14 @@ function OrderSummary({ plan, busy, onContinue }: { plan: BillingPlan; busy: boo
   const t = useT(billingMessages);
   const price = formatPrice(plan.priceCents, plan.currency, locale);
   return (
-    <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-6">
+    <aside className="h-fit rounded-lg border border-line bg-surface p-5 shadow-card lg:sticky lg:top-6">
       <h2 className="text-base font-semibold text-ink">{t("orderSummary")}</h2>
       <dl className="mt-4 space-y-2 text-sm">
-        <div className="flex justify-between"><dt className="text-slate-600">{t("planLine", { name: plan.name })}</dt><dd className="font-medium">{price} / {intervalLabel(plan.interval, locale)}</dd></div>
-        <div className="flex justify-between border-t border-slate-100 pt-2"><dt className="font-medium text-ink">{t("dueToday")}</dt><dd className="font-semibold text-ink">{price}</dd></div>
+        <div className="flex justify-between"><dt className="text-ink-3">{t("planLine", { name: plan.name })}</dt><dd className="font-medium">{price} / {intervalLabel(plan.interval, locale)}</dd></div>
+        <div className="flex justify-between border-t border-line pt-2"><dt className="font-medium text-ink">{t("dueToday")}</dt><dd className="font-semibold text-ink">{price}</dd></div>
       </dl>
       <Button size="lg" className="mt-5 w-full" loading={busy} onClick={onContinue}>{t("continueToPayment")}</Button>
-      <p className="mt-3 text-xs leading-relaxed text-slate-500">{t("providerNote")}</p>
+      <p className="mt-3 text-xs leading-relaxed text-ink-3">{t("providerNote")}</p>
     </aside>
   );
 }

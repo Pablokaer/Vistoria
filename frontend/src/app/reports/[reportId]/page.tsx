@@ -1,17 +1,23 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { Brand } from "@/components/AppShell";
-import { ReportBody, ReportMeta } from "@/components/ReportView";
-import { Badge, ErrorBanner, Loading } from "@/components/ui";
+import { AppShell } from "@/components/AppShell";
+import { ReportBody, ReportMeta, ReportToolbar } from "@/components/ReportView";
+import { ReportPageSkeleton } from "@/components/report/ReportPageSkeleton";
+import { ErrorBanner, PageSkeleton } from "@/components/ui";
 import { useT } from "@/i18n/I18nProvider";
 import { reportMessages } from "@/i18n/messages/report";
 import { homeFor, useAuth } from "@/lib/auth";
 import { useApi } from "@/lib/hooks";
-import type { ReportView } from "@/lib/types";
+import type { ReportView, Role } from "@/lib/types";
 
+/** Where "Back" leads: tenants return to their review page, everyone else to their home. */
+function backHref(report: ReportView | null, fallback: string): string {
+  return report?.viewerKind === "Tenant" ? `/tenant/inspections/${report.inspectionId}` : fallback;
+}
+
+/** A finalized report for any signed-in viewer, inside the viewer's own app shell. */
 export default function ReportPage() {
   const { reportId } = useParams<{ reportId: string }>();
   const { user, loading: authLoading } = useAuth();
@@ -20,31 +26,21 @@ export default function ReportPage() {
   const { data, error, loading } = useApi<ReportView>(user ? `/api/reports/${reportId}` : null);
 
   useEffect(() => { if (!authLoading && !user) router.replace(`/login?next=/reports/${reportId}`); }, [authLoading, user, router, reportId]);
-  if (authLoading || !user) return <Loading />;
+  if (authLoading || !user) return <div className="mx-auto max-w-page px-4 py-8"><PageSkeleton /></div>;
+  const role: Role = user.roles[0] ?? "Tenant";
 
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4">
-          <Brand />
-          <div className="flex items-center gap-2">
-            {data?.pdfUrl && <a href={data.pdfUrl} target="_blank" rel="noreferrer" className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white">{t("downloadPdf")}</a>}
-            <Link href={data?.viewerKind === "Tenant" ? `/tenant/inspections/${data.inspectionId}` : homeFor(user)} className="text-sm text-brand hover:underline">{t("back")}</Link>
+    <AppShell role={role} wide>
+      <ErrorBanner message={error} />
+      {loading && !data ? <ReportPageSkeleton /> : data && (
+        <>
+          <ReportToolbar report={data} backHref={backHref(data, homeFor(user))} backLabel={t("back")} />
+          <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_17rem]">
+            <ReportBody snapshot={data.snapshot} photoUrls={data.photoUrls} observations={data.observations} />
+            <aside className="space-y-4 xl:sticky xl:top-6"><ReportMeta report={data} /></aside>
           </div>
-        </div>
-      </header>
-      <main className="mx-auto max-w-5xl px-4 py-6">
-        <ErrorBanner message={error} />
-        {loading && !data ? <Loading /> : data && (
-          <>
-            <div className="mb-4 flex flex-wrap items-center gap-3"><h1 className="text-2xl font-semibold">{t("reportTitle", { number: data.reportNumber })}</h1><Badge value={data.inspectionStatus} /></div>
-            <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
-              <ReportBody snapshot={data.snapshot} photoUrls={data.photoUrls} observations={data.observations} />
-              <div><ReportMeta report={data} /></div>
-            </div>
-          </>
-        )}
-      </main>
-    </div>
+        </>
+      )}
+    </AppShell>
   );
 }

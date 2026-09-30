@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckoutLayout } from "@/components/billing/CheckoutLayout";
-import { Icon } from "@/components/landing/icons";
+import { Icon } from "@/components/icons";
 import { ErrorBanner, LinkButton, Spinner } from "@/components/ui";
 import { useT } from "@/i18n/I18nProvider";
 import { billingMessages, type BillingKey } from "@/i18n/messages/billing";
@@ -87,13 +87,13 @@ function decidePhase(status: CheckoutStatus, elapsedMs: number): Phase {
 function PhaseBody({ phase }: { phase: Phase }) {
   const t = useT(billingMessages);
   if (phase === "waiting") {
-    return <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-6 text-slate-600"><Spinner /> {t("waitingText")}</div>;
+    return <div className="flex items-center gap-3 rounded-lg border border-line bg-surface p-6 text-ink-3"><Spinner /> {t("waitingText")}</div>;
   }
   if (phase === "active") {
     return (
-      <div className="rounded-2xl border border-emerald-200 bg-white p-6">
-        <span className="grid h-12 w-12 place-items-center rounded-full bg-emerald-100 text-emerald-700"><Icon name="check" className="h-6 w-6" strokeWidth={2.5} /></span>
-        <p className="mt-4 text-slate-700">{t("confirmedText")}</p>
+      <div className="rounded-lg border border-success-500/30 bg-surface p-6">
+        <span className="grid h-12 w-12 place-items-center rounded-full bg-success-50 text-success-700"><Icon name="check" className="h-6 w-6" strokeWidth={2.5} /></span>
+        <p className="mt-4 text-ink-2">{t("confirmedText")}</p>
       </div>
     );
   }
@@ -101,8 +101,8 @@ function PhaseBody({ phase }: { phase: Phase }) {
     ? t("failedText")
     : t("slowText");
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6">
-      <p className="text-slate-700">{text}</p>
+    <div className="rounded-lg border border-line bg-surface p-6">
+      <p className="text-ink-2">{text}</p>
       <LinkButton href="/checkout" className="mt-4">{t("backToCheckout")}</LinkButton>
     </div>
   );

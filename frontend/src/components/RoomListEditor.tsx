@@ -3,7 +3,7 @@
 import { useFormatters, useT } from "@/i18n/I18nProvider";
 import { companyFormMessages } from "@/i18n/messages/company-forms";
 import { ROOM_TYPES, type RoomType } from "@/lib/types";
-import { Button, Input, Select } from "./ui";
+import { IconButton, Input, Select } from "./ui";
 
 export interface RoomDraft { key: string; roomType: RoomType; name: string }
 
@@ -43,24 +43,28 @@ export function RoomListEditor({ rooms, onChange }: { rooms: RoomDraft[]; onChan
   };
   const add = (type: RoomType) => onChange([...rooms, { key: crypto.randomUUID(), roomType: type, name: defaultName(humanize(type), type, rooms) }]);
   return (
-    <div className="space-y-2">
-      {rooms.map((room, i) => (
-        <div key={room.key} className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 p-2 sm:flex-nowrap">
-          <span className="w-6 text-center text-sm text-slate-400">{i + 1}</span>
-          <Select className="sm:w-44" value={room.roomType} onChange={(e) => update(room.key, { roomType: e.target.value as RoomType })}>
-            {ROOM_TYPES.map((type) => <option key={type} value={type}>{humanize(type)}</option>)}
-          </Select>
-          <Input className="min-w-0 flex-1" value={room.name} onChange={(e) => update(room.key, { name: e.target.value })} aria-label={t("roomName")} required />
-          <div className="flex gap-1">
-            <Button type="button" variant="ghost" disabled={i === 0} onClick={() => move(i, -1)} aria-label={t("moveUp")}>↑</Button>
-            <Button type="button" variant="ghost" disabled={i === rooms.length - 1} onClick={() => move(i, 1)} aria-label={t("moveDown")}>↓</Button>
-            <Button type="button" variant="ghost" onClick={() => onChange(rooms.filter((r) => r.key !== room.key))} aria-label={t("removeRoom")}>✕</Button>
-          </div>
-        </div>
-      ))}
-      <div className="flex flex-wrap gap-2 pt-1">
+    <div>
+      <ol className="divide-y divide-line overflow-hidden rounded-md border border-line">
+        {rooms.map((room, i) => (
+          <li key={room.key} className="flex flex-wrap items-center gap-2 bg-surface px-2 py-2 transition hover:bg-surface-2 sm:flex-nowrap">
+            <span className="tabular w-7 shrink-0 text-center text-caption font-semibold text-ink-3">{i + 1}</span>
+            <Select className="min-w-0 flex-1 sm:w-44 sm:flex-none" aria-label={t("roomType")} value={room.roomType} onChange={(e) => update(room.key, { roomType: e.target.value as RoomType })}>
+              {ROOM_TYPES.map((type) => <option key={type} value={type}>{humanize(type)}</option>)}
+            </Select>
+            <div className="flex min-w-0 basis-full items-center gap-1 pl-9 sm:basis-auto sm:flex-1 sm:pl-0">
+              <Input className="min-w-0 flex-1" value={room.name} onChange={(e) => update(room.key, { name: e.target.value })} aria-label={t("roomName")} required />
+              <IconButton icon="chevronDown" className="rotate-180" disabled={i === 0} onClick={() => move(i, -1)} label={t("moveUp")} />
+              <IconButton icon="chevronDown" disabled={i === rooms.length - 1} onClick={() => move(i, 1)} label={t("moveDown")} />
+              <IconButton icon="trash" className="hover:text-danger-700" onClick={() => onChange(rooms.filter((r) => r.key !== room.key))} label={t("removeRoom")} />
+            </div>
+          </li>
+        ))}
+      </ol>
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        <span className="mr-1 text-caption font-medium text-ink-3">{t("quickAdd")}</span>
         {QUICK_ADD_TYPES.map((type) => (
-          <Button key={type} type="button" variant="secondary" onClick={() => add(type)}>+ {humanize(type)}</Button>
+          <button key={type} type="button" onClick={() => add(type)}
+            className="rounded-sm border border-dashed border-line-strong px-2 py-1 text-label font-medium text-ink-2 transition hover:border-brand hover:bg-brand-50 hover:text-brand">+ {humanize(type)}</button>
         ))}
       </div>
     </div>

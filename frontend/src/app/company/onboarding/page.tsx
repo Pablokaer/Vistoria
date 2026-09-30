@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Icon } from "@/components/icons";
 import { Button, Card, ErrorBanner, Field, Input, PageHeader } from "@/components/ui";
 import { useLocale, useT } from "@/i18n/I18nProvider";
 import { companyPageMessages } from "@/i18n/messages/company-pages";
@@ -38,15 +39,20 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="mx-auto max-w-xl">
-      <PageHeader title={t("onboardingTitle")} subtitle={t("onboardingSubtitle")} />
+    <div className="mx-auto max-w-narrow">
+      <PageHeader eyebrow={t("workspaceStep")} title={t("onboardingTitle")} subtitle={t("onboardingSubtitle")} />
       <Card>
         <ErrorBanner message={error} />
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={submit} className="space-y-5">
           <Field label={t("companyName")}><Input required value={name} onChange={(e) => setName(e.target.value)} placeholder={t("companyNamePlaceholder")} /></Field>
-          <Field label={t("contactEmail")} hint={t("contactEmailHint")}><Input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} /></Field>
-          <Field label={t("phone")}><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></Field>
-          <Button type="submit" size="lg" loading={busy}>{t("createWorkspace")}</Button>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <Field label={t("contactEmail")} hint={t("contactEmailHint")}><Input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} /></Field>
+            <Field label={t("phone")}><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></Field>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+            <p className="flex max-w-sm items-start gap-2 text-caption text-ink-3"><Icon name="info" className="mt-0.5 h-4 w-4 shrink-0" />{t("onboardingAside")}</p>
+            <Button type="submit" size="lg" loading={busy}>{t("createWorkspace")}</Button>
+          </div>
         </form>
       </Card>
     </div>

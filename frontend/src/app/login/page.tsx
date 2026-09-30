@@ -43,7 +43,7 @@ function LoginForm() {
         <Field label={t("password")}><Input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></Field>
         <Button type="submit" size="lg" className="w-full" loading={busy}>{t("signInButton")}</Button>
       </form>
-      <p className="mt-6 text-center text-sm text-slate-600">
+      <p className="mt-5 border-t border-line pt-4 text-center text-label text-ink-3">
         {t("noAccount")} <Link className="font-medium text-brand hover:underline" href={`/register${params.get("next") ? `?next=${encodeURIComponent(params.get("next")!)}` : ""}`}>{t("createOne")}</Link>
       </p>
     </AuthCard>

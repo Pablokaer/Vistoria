@@ -23,9 +23,9 @@ export function CheckoutSteps({ current }: { current: CheckoutStep }) {
     <ol aria-label={t("progressLabel")} className="flex items-center gap-2 text-xs font-medium">
       {STEPS.map((s, i) => (
         <li key={s.key} className="flex items-center gap-2" aria-current={i === index ? "step" : undefined}>
-          <span className={`grid h-6 w-6 place-items-center rounded-full ${i < index ? "bg-brand text-white" : i === index ? "border-2 border-brand text-brand" : "border border-slate-300 text-slate-400"}`}>{i + 1}</span>
-          <span className={i === index ? "text-ink" : "hidden text-slate-500 sm:inline"}>{t(s.label)}</span>
-          {i < STEPS.length - 1 && <span className="h-px w-4 bg-slate-300 sm:w-8" aria-hidden="true" />}
+          <span className={`grid h-6 w-6 place-items-center rounded-full ${i < index ? "bg-brand text-white" : i === index ? "border-2 border-brand text-brand" : "border border-line-strong text-ink-4"}`}>{i + 1}</span>
+          <span className={i === index ? "text-ink" : "hidden text-ink-3 sm:inline"}>{t(s.label)}</span>
+          {i < STEPS.length - 1 && <span className="h-px w-4 bg-line-strong sm:w-8" aria-hidden="true" />}
         </li>
       ))}
     </ol>
@@ -38,8 +38,8 @@ export function CheckoutSteps({ current }: { current: CheckoutStep }) {
  */
 export function CheckoutLayout({ step, title, subtitle, children, wide }: { step?: CheckoutStep; title: string; subtitle?: ReactNode; children: ReactNode; wide?: boolean }) {
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
+    <div className="min-h-screen bg-canvas">
+      <header className="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-4xl items-center justify-between gap-4 px-4">
           <Brand alwaysShowName />
           <div className="flex items-center gap-3">
@@ -49,8 +49,8 @@ export function CheckoutLayout({ step, title, subtitle, children, wide }: { step
         </div>
       </header>
       <main className={`mx-auto px-4 py-8 sm:py-12 ${wide ? "max-w-4xl" : "max-w-lg"}`}>
-        <h1 className="text-2xl font-semibold tracking-tight text-ink sm:text-3xl">{title}</h1>
-        {subtitle && <p className="mt-2 text-slate-600">{subtitle}</p>}
+        <h1 className="text-page font-semibold tracking-tight text-ink sm:text-[1.75rem] sm:leading-9">{title}</h1>
+        {subtitle && <p className="mt-2 text-body text-ink-3">{subtitle}</p>}
         <div className="mt-6">{children}</div>
       </main>
     </div>

@@ -1,48 +1,64 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
-import { EmptyState, ErrorBanner, Input, LinkButton, Loading, PageHeader } from "@/components/ui";
-import { useFormatters, useT } from "@/i18n/I18nProvider";
+import { PropertyTable, PropertyTableSkeleton } from "@/components/company/PropertyTable";
+import { Icon } from "@/components/icons";
+import { Button, Card, EmptyState, ErrorBanner, Input, LinkButton, PageHeader } from "@/components/ui";
+import { useT } from "@/i18n/I18nProvider";
 import { companyPageMessages } from "@/i18n/messages/company-pages";
 import { useApi } from "@/lib/hooks";
 import type { PropertySummary } from "@/lib/types";
 
-function PropertyCard({ property: p }: { property: PropertySummary }) {
+/** Search is server-side (GET /api/properties?search=…), submitted explicitly so typing doesn't fire a request per key. */
+function SearchBar({ onSearch, query }: { onSearch: (q: string) => void; query: string }) {
   const t = useT(companyPageMessages);
-  const { humanize } = useFormatters();
+  const [search, setSearch] = useState(query);
   return (
-    <Link href={`/company/properties/${p.id}`} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-brand/40">
-      <div className="font-medium text-slate-900">{p.addressLine1}</div>
-      <div className="text-sm text-slate-600">{p.city} {p.postcode}</div>
-      <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500">
-        <span>{humanize(p.propertyType)}</span><span>{t("roomCount", { count: p.roomCount })}</span>
-        <span>{t("tenancyCount", { count: p.activeTenancies })}</span><span>{t("activeInspectionCount", { count: p.openInspections })}</span>
+    <form role="search" onSubmit={(e) => { e.preventDefault(); onSearch(search.trim()); }} className="flex gap-2">
+      <div className="relative flex-1">
+        <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-4" />
+        <Input aria-label={t("search")} placeholder={t("searchPlaceholder")} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
       </div>
-    </Link>
+      <Button type="submit" variant="secondary">{t("search")}</Button>
+      {query && <Button type="button" variant="subtle" onClick={() => { setSearch(""); onSearch(""); }}>{t("clearSearch")}</Button>}
+    </form>
   );
+}
+
+function PropertyResults({ data, loading, query }: { data: PropertySummary[] | null; loading: boolean; query: string }) {
+  const t = useT(companyPageMessages);
+  if (loading && !data) return <PropertyTableSkeleton />;
+  if (!data) return null;
+  if (data.length === 0) {
+    return (
+      <div className="p-4 sm:p-5">
+        <EmptyState icon="building" title={query ? t("noMatchingProperties") : t("noPropertiesYet")}
+          action={!query && <LinkButton href="/company/properties/new" icon="plus" size="sm">{t("addProperty")}</LinkButton>}>
+          {t("noPropertiesHint")}
+        </EmptyState>
+      </div>
+    );
+  }
+  return <PropertyTable items={data} />;
 }
 
 export default function PropertiesPage() {
   const t = useT(companyPageMessages);
-  const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const { data, error, loading, reload } = useApi<PropertySummary[]>(`/api/properties${query ? `?search=${encodeURIComponent(query)}` : ""}`);
 
   return (
     <>
-      <PageHeader title={t("properties")} actions={<LinkButton href="/company/properties/new">{t("addProperty")}</LinkButton>} />
-      <form onSubmit={(e) => { e.preventDefault(); setQuery(search); }} className="mb-4 flex gap-2">
-        <Input placeholder={t("searchPlaceholder")} value={search} onChange={(e) => setSearch(e.target.value)} />
-      </form>
+      <PageHeader title={t("properties")} subtitle={t("propertiesSubtitle")}
+        actions={<LinkButton href="/company/properties/new" icon="plus">{t("addProperty")}</LinkButton>} />
       <ErrorBanner message={error} onRetry={reload} />
-      {loading && !data ? <Loading /> : data && data.length === 0 ? (
-        <EmptyState title={query ? t("noMatchingProperties") : t("noPropertiesYet")}>{t("noPropertiesHint")}</EmptyState>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {data?.map((p) => <PropertyCard key={p.id} property={p} />)}
+      <Card flush>
+        <div className="flex flex-wrap items-center gap-3 border-b border-line p-3 sm:px-5">
+          <div className="min-w-0 flex-1"><SearchBar query={query} onSearch={setQuery} /></div>
+          {data && data.length > 0 && <span className="tabular text-label text-ink-3">{t("resultCount", { count: data.length })}</span>}
         </div>
-      )}
+        <PropertyResults data={data} loading={loading} query={query} />
+      </Card>
     </>
   );
 }

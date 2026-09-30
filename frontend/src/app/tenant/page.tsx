@@ -1,49 +1,50 @@
 "use client";
 
-import Link from "next/link";
-import { Badge, EmptyState, ErrorBanner, Loading, PageHeader } from "@/components/ui";
-import { useFormatters, useT } from "@/i18n/I18nProvider";
+import { useGreeting } from "@/components/AppShell";
+import { AwaitingReviewCard, TenantHistory } from "@/components/tenant/TenantReportCards";
+import { EmptyState, ErrorBanner, PageHeader, SectionHeader, Skeleton } from "@/components/ui";
+import { useT } from "@/i18n/I18nProvider";
 import { tenantMessages } from "@/i18n/messages/tenant";
 import { useApi } from "@/lib/hooks";
 import type { TenantDashboard, TenantInspection } from "@/lib/types";
 
-function List({ title, items, empty }: { title: string; items: TenantInspection[]; empty: string }) {
-  const t = useT(tenantMessages);
-  const { formatDate, humanize } = useFormatters();
-  return (
-    <section>
-      <h2 className="mb-3 text-base font-semibold">{title} ({items.length})</h2>
-      {items.length === 0 ? <EmptyState title={empty} /> : (
-        <div className="space-y-3">
-          {items.map((i) => (
-            <Link key={i.id} href={`/tenant/inspections/${i.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-brand/40">
-              <div>
-                <div className="font-medium">{humanize(i.inspectionType)} · {i.propertyAddress}</div>
-                <div className="text-sm text-slate-600">{t("companyInspected", { company: i.companyName, date: formatDate(i.completedAt) })}</div>
-              </div>
-              <Badge value={i.status} />
-            </Link>
-          ))}
-        </div>
-      )}
-    </section>
-  );
+const byResponse = (a: TenantInspection, b: TenantInspection) => (b.respondedAt ?? "").localeCompare(a.respondedAt ?? "");
+
+function DashboardSkeleton() {
+  return <div className="space-y-6" aria-busy="true"><Skeleton className="h-28" /><Skeleton className="h-5 w-32" /><Skeleton className="h-32" /></div>;
 }
 
+/**
+ * The tenant's home is deliberately simple: what needs their review first, then what they already answered.
+ */
 export default function TenantDashboardPage() {
   const t = useT(tenantMessages);
+  const greeting = useGreeting();
   const { data, error, loading, reload } = useApi<TenantDashboard>("/api/tenant/dashboard");
+  const history = data ? [...data.accepted, ...data.disputed].sort(byResponse) : [];
   return (
-    <>
-      <PageHeader title={t("myInspections")} subtitle={t("dashboardSubtitle")} />
+    <div className="mx-auto max-w-narrow">
+      <PageHeader eyebrow={greeting} title={t("dashboardTitle")} subtitle={t("dashboardSubtitle")} />
       <ErrorBanner message={error} onRetry={reload} />
-      {loading && !data ? <Loading /> : data && (
+      {loading && !data ? <DashboardSkeleton /> : data && (
         <div className="space-y-8">
-          <List title={t("awaitingReview")} items={data.awaitingReview} empty={t("nothingToReview")} />
-          <List title={t("accepted")} items={data.accepted} empty={t("noAccepted")} />
-          <List title={t("disputed")} items={data.disputed} empty={t("noDisputed")} />
+          <section>
+            <SectionHeader title={t("awaitingReview")} count={data.awaitingReview.length} />
+            {data.awaitingReview.length === 0
+              ? <EmptyState icon="checkCircle" title={t("allCaughtUp")}>{t("allCaughtUpText")}</EmptyState>
+              : (
+                <div className="space-y-3">
+                  <p className="text-label text-ink-3">{t("reviewHint")}</p>
+                  {data.awaitingReview.map((i) => <AwaitingReviewCard key={i.id} item={i} />)}
+                </div>
+              )}
+          </section>
+          <section>
+            <SectionHeader title={t("history")} count={history.length} />
+            <TenantHistory items={history} />
+          </section>
         </div>
       )}
-    </>
+    </div>
   );
 }

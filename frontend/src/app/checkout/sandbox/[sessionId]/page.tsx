@@ -54,16 +54,16 @@ export default function SandboxPaymentPage() {
       <ErrorBanner message={loadError} />
       {!session && !loadError && <Loading />}
       {session && session.status !== "Open" && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-6">
-          <p className="text-slate-700">{t("sessionNotOpen", { status: humanize(session.status).toLowerCase() })}</p>
+        <div className="rounded-lg border border-line bg-surface p-6">
+          <p className="text-ink-2">{t("sessionNotOpen", { status: humanize(session.status).toLowerCase() })}</p>
           <LinkButton href="/checkout" className="mt-4">{t("backToCheckout")}</LinkButton>
         </div>
       )}
       {session?.status === "Open" && (
-        <form onSubmit={pay} className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex items-baseline justify-between border-b border-slate-100 pb-4">
-            <span className="text-sm text-slate-600">InspectFlow {session.planName}</span>
-            <span className="text-lg font-semibold text-ink">{formatPrice(session.priceCents, session.currency, locale)} <span className="text-sm font-normal text-slate-500">/ {intervalLabel(session.interval, locale)}</span></span>
+        <form onSubmit={pay} className="space-y-5 rounded-lg border border-line bg-surface p-6 shadow-card">
+          <div className="flex items-baseline justify-between border-b border-line pb-4">
+            <span className="text-sm text-ink-3">InspectFlow {session.planName}</span>
+            <span className="text-lg font-semibold text-ink">{formatPrice(session.priceCents, session.currency, locale)} <span className="text-sm font-normal text-ink-3">/ {intervalLabel(session.interval, locale)}</span></span>
           </div>
           <Field label={t("email")}><Input value={session.customerEmail} readOnly /></Field>
           <Field label={t("cardNumber")}><Input inputMode="numeric" autoComplete="off" required value={card} onChange={(e) => setCard(e.target.value)} /></Field>

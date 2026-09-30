@@ -1,6 +1,6 @@
 import { getServerTranslator } from "@/i18n/server";
 import { landingDetailsMessages, type LandingDetailsKey } from "@/i18n/messages/landingDetails";
-import { Icon, type IconName } from "./icons";
+import { Icon, type IconName } from "@/components/icons";
 import { SectionHeading } from "./SectionHeading";
 
 // Only features that exist in the product today (see README → "How to test the flows").
@@ -21,20 +21,20 @@ const FEATURES: { icon: IconName; title: LandingDetailsKey; text: LandingDetails
 export async function FeaturesSection() {
   const t = await getServerTranslator(landingDetailsMessages);
   return (
-    <section id="features" aria-labelledby="features-title" className="scroll-mt-20 border-t border-slate-200 bg-slate-50/70 py-20 sm:py-24">
+    <section id="features" aria-labelledby="features-title" className="scroll-mt-20 border-t border-line bg-surface-2 py-20 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <SectionHeading id="features-title" eyebrow={t("featuresEyebrow")} title={t("featuresTitle")} intro={t("featuresIntro")} />
         <dl className="mt-12 grid gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f) => (
             <div key={f.title} className="flex gap-4">
               <dt className="shrink-0">
-                <span className="grid h-10 w-10 place-items-center rounded-lg border border-slate-200 bg-white text-brand shadow-sm">
+                <span className="grid h-10 w-10 place-items-center rounded-lg border border-line bg-white text-brand shadow-card">
                   <Icon name={f.icon} className="h-5 w-5" />
                 </span>
               </dt>
               <dd>
                 <p className="font-semibold text-ink">{t(f.title)}</p>
-                <p className="mt-1 text-sm leading-relaxed text-slate-600">{t(f.text)}</p>
+                <p className="mt-1 text-sm leading-relaxed text-ink-3">{t(f.text)}</p>
               </dd>
             </div>
           ))}

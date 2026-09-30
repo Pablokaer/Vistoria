@@ -171,6 +171,7 @@ try {
   await agent.getByText("Scuff marks").first().waitFor();
   await snap(agent, "agent-review");
   await agent.getByRole("button", { name: "Finalize inspection" }).click();
+  await agent.getByRole("button", { name: "Yes, finalize" }).click(); // in-app confirmation (was window.confirm)
   await agent.waitForURL(/\/reports\/[0-9a-f-]{36}$/, { timeout: 60000 });
   const pdfHref = await agent.getByRole("link", { name: "Download PDF" }).getAttribute("href");
   const pdf = await agent.request.get(`${BASE}${pdfHref}`);
@@ -188,6 +189,8 @@ try {
   await tenant.getByText("Tenant observation (Tom Tenant)").waitFor();
   await snap(tenant, "tenant-review");
   await tenant.getByRole("button", { name: "Everything is correct" }).click();
+  // In-app confirmation dialog (replaced window.confirm in the redesign).
+  await tenant.getByRole("button", { name: "Yes, the report is correct" }).click();
   await tenant.getByText("You accepted this report.").waitFor();
   log("tenant accepted move in");
 
@@ -214,6 +217,7 @@ try {
   ]);
   await agent.getByText("Move In / Move Out comparison summary").waitFor();
   await agent.getByRole("button", { name: "Finalize inspection" }).click();
+  await agent.getByRole("button", { name: "Yes, finalize" }).click(); // in-app confirmation (was window.confirm)
   await agent.waitForURL(/\/reports\/[0-9a-f-]{36}$/, { timeout: 60000 });
   await agent.getByText("Move In / Move Out comparison summary").waitFor();
   await snap(agent, "move-out-report");

@@ -4,6 +4,29 @@ Every code change is recorded here (newest first), together with the docs it tou
 
 ## 2026-09-30
 
+- **Product UI redesign (frontend only; no endpoint, rule or state changed).** See [ADR 0015](architecture/0015-design-system.md).
+  - **Design system:** tokens in `app/globals.css` (type scale, neutrals, brand blue, semantic tones, Move In / Move Out / Periodic identities, radii, shadows, widths, motion), the Inter font through `next/font`, and inline icons (`components/icons.tsx`). The primitives in `components/ui/*` replace `components/ui.tsx`: StatusBadge with icon and label, MetricCard, EmptyState, Skeleton, Tabs, ProgressRing, Switch, toasts, and `useConfirm` instead of `window.confirm`.
+  - **Shell:** a navy sidebar per role with notifications (titles translated from the notification type), profile, language and sign-out. On phones, a top bar, a drawer and bottom tabs; the tabs are hidden during inspection execution. The dev account switcher is now a discreet chip.
+  - **Inspector:**
+    - The dashboard shows the current inspection with a Continue button, compact metrics, a marketplace preview and recently completed inspections.
+    - The marketplace gets search, filters and sorting (client-side).
+    - *My inspections* is a single tabbed view.
+    - A new inspection details page with a next-step panel.
+    - Execution:
+      - A step header on every page.
+      - Room navigation: side list on desktop, chip strip on phones.
+      - A capture area with a large *Take photo*, a viewer and retry.
+      - AI draft states with "Restore".
+      - Defects that expand when needed.
+      - A Before/After comparison.
+      - Sticky action bars.
+  - **Company:** a pipeline dashboard, a property table, a sectioned property page and forms, and an inspection timeline built from the real timestamps.
+  - **Tenant:** a simple dashboard (awaiting review first) and a response panel.
+  - **Reports:** a document layout with a photo lightbox and a side panel (contents, review, versions, integrity), plus *Share report* for companies.
+  - **Sign-in, sign-up and checkout:** aligned with the new look.
+  - **Fix found during the pass:** the new next-step panel called `/agent/…/start` without `/api`, which returned 404. It now calls `/api/agent/…`.
+  - **Tests:** the e2e now clicks the in-app confirmations (*Yes, finalize*, *Yes, the report is correct*). `tsc`, `eslint`, the Docker production build and the full UI flow pass.
+
 - **English and Brazilian Portuguese across the platform.** See [ADR 0014](architecture/0014-localization.md).
   - **Web:** every page and component has both languages, with catalogs in `frontend/src/i18n/messages/*.ts` built on a small dependency-free i18n core (`src/i18n`). The first language comes from the browser; the **EN / PT** switcher in the app header, the landing header, sign-in/register and checkout changes it and stores the choice in the `locale` cookie. Server components render in the right language on the first byte. Dates, money and enum labels are localized, and `lib/format.ts` was removed.
   - **Company Settings page** (`/company/settings`) with the **report language**. Onboarding sends the owner's current language as the company's report language.

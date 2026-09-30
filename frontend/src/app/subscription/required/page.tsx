@@ -2,7 +2,7 @@
 
 import { CheckoutLayout } from "@/components/billing/CheckoutLayout";
 import { useSignedInForBilling } from "@/components/billing/useSignedInForBilling";
-import { Loading } from "@/components/ui";
+import { buttonClasses, PageSkeleton, StatusBadge } from "@/components/ui";
 import { useFormatters, useT } from "@/i18n/I18nProvider";
 import { billingMessages, type BillingKey } from "@/i18n/messages/billing";
 import { useAuth } from "@/lib/auth";
@@ -23,18 +23,18 @@ export default function SubscriptionRequiredPage() {
   const user = useSignedInForBilling();
   const { logout } = useAuth();
   const t = useT(billingMessages);
-  if (!user) return <CheckoutLayout title={t("subscriptionTitle")}><Loading /></CheckoutLayout>;
+  if (!user) return <CheckoutLayout title={t("subscriptionTitle")}><PageSkeleton /></CheckoutLayout>;
   const copy = COPY[user.subscription.status] ?? COPY.None;
   return (
     <CheckoutLayout step="plan" title={t(copy.title)}>
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-slate-700">{copy.text ? t(copy.text) : ""}</p>
+      <div className="rounded-lg border border-line bg-surface p-6 shadow-card">
+        {copy.text && <p className="text-body text-ink-2">{t(copy.text)}</p>}
         <StatusDetails summary={user.subscription} />
         <Link href={`/checkout${user.subscription.planCode ? `?plan=${encodeURIComponent(user.subscription.planCode)}` : ""}`}
-          className="mt-6 flex min-h-12 w-full items-center justify-center rounded-lg bg-brand px-5 text-base font-semibold text-white shadow-sm hover:bg-brand-dark">
+          className={buttonClasses("primary", "lg", "mt-6 w-full")}>
           {t(copy.cta)}
         </Link>
-        <p className="mt-4 text-center text-sm text-slate-500">
+        <p className="mt-4 text-center text-sm text-ink-3">
           {t("signedInAsEmail", { email: user.email })} · <button type="button" onClick={() => void logout()} className="font-medium text-brand hover:underline">{t("signOut")}</button>
         </p>
       </div>
@@ -44,13 +44,13 @@ export default function SubscriptionRequiredPage() {
 
 function StatusDetails({ summary }: { summary: SubscriptionSummary }) {
   const t = useT(billingMessages);
-  const { formatDate, humanize } = useFormatters();
+  const { formatDate } = useFormatters();
   if (summary.status === "None") return null;
   return (
-    <dl className="mt-4 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-4 text-sm">
-      <div><dt className="text-slate-500">{t("status")}</dt><dd className="font-medium text-ink" data-testid="subscription-status">{humanize(summary.status)}</dd></div>
-      {summary.planName && <div><dt className="text-slate-500">{t("plan")}</dt><dd className="font-medium text-ink">{summary.planName}</dd></div>}
-      {summary.accessEndsAt && <div><dt className="text-slate-500">{t("accessEnded")}</dt><dd className="font-medium text-ink">{formatDate(summary.accessEndsAt)}</dd></div>}
+    <dl className="mt-4 grid grid-cols-2 gap-3 rounded-lg bg-surface-2 p-4 text-sm">
+      <div><dt className="text-ink-3">{t("status")}</dt><dd className="mt-0.5" data-testid="subscription-status"><StatusBadge value={summary.status} /></dd></div>
+      {summary.planName && <div><dt className="text-ink-3">{t("plan")}</dt><dd className="font-medium text-ink">{summary.planName}</dd></div>}
+      {summary.accessEndsAt && <div><dt className="text-ink-3">{t("accessEnded")}</dt><dd className="font-medium text-ink">{formatDate(summary.accessEndsAt)}</dd></div>}
     </dl>
   );
 }

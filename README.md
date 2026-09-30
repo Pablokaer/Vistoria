@@ -9,6 +9,7 @@ InspectFlow connects **companies** (letting agents / property managers), **inspe
 - Finalization freezes an immutable, versioned report (JSON snapshot + PDF, both hashed).
 - Tenants review the report, add observations (general or per room) and accept or dispute it.
 - **English and Brazilian Portuguese.** Every screen, API message and report exists in both. The UI follows the browser language until the user picks one in the header (EN / PT); reports and AI descriptions follow the company's **report language** (*Settings*).
+- **Product UI.** A role-aware sidebar (drawer + bottom tabs on phones), dashboards organised around the next action (inspector: current inspection, marketplace preview, recently completed; company: pipeline, recent inspections and reports; tenant: reports awaiting review), a searchable/filterable marketplace, tabbed "My inspections", a phone-first inspection flow (room navigation, big camera button, AI drafts clearly marked and editable, progressive defects, Before/After comparison) and document-style reports with a separate action toolbar. Built on a small in-house design system (`frontend/src/app/globals.css` tokens + `components/ui`, see [ADR 0015](docs/architecture/0015-design-system.md)).
 
 The web app is the first client; the API is designed so iOS/Android apps can use it unchanged (JWT + refresh token in body for native clients).
 
@@ -46,7 +47,8 @@ backend/
   tests/InspectFlow.Tests/
     Domain/          state machine, room rules, comparison, architecture, OpenAI adapter
     Integration/     real HTTP + PostgreSQL: authorization, flows, concurrency, immutability
-frontend/            Next.js app (Company, Agent and Tenant areas; texts per language in src/i18n)
+frontend/            Next.js app (Company, Agent and Tenant areas; texts per language in src/i18n;
+                     design tokens in app/globals.css, primitives in components/ui, app shell in components/shell)
 e2e/                 Playwright script driving the full Move In + Move Out flow through the UI
 docs/architecture/   ADRs
 ```

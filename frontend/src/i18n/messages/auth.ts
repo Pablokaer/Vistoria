@@ -29,6 +29,11 @@ export const authMessages = defineMessages(
     companyRegisterSubtitle: "Next you will choose your plan and pay securely. Inspectors and tenants join for free.",
     devSwitch: "Dev: switch account",
     devCurrent: " (current)",
+    roleLegend: "I will use InspectFlow as",
+    panelTitle: "Property inspections, documented properly.",
+    panelPoint1: "Room-by-room reports with photos and defects",
+    panelPoint2: "AI drafts every description; the inspector decides",
+    panelPoint3: "Immutable PDF reports the tenant reviews and signs off",
   },
   {
     signInTitle: "Entrar",
@@ -57,6 +62,11 @@ export const authMessages = defineMessages(
     companyRegisterSubtitle: "Em seguida, você escolhe o plano e paga com segurança. Vistoriadores e inquilinos participam de graça.",
     devSwitch: "Dev: trocar de conta",
     devCurrent: " (atual)",
+    roleLegend: "Vou usar o InspectFlow como",
+    panelTitle: "Vistorias de imóveis, documentadas do jeito certo.",
+    panelPoint1: "Laudos cômodo a cômodo com fotos e avarias",
+    panelPoint2: "A IA rascunha cada descrição; o vistoriador decide",
+    panelPoint3: "Laudos em PDF imutáveis, revisados e aceitos pelo inquilino",
   },
 );
 
