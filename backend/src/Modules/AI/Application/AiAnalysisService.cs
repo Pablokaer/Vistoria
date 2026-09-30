@@ -97,7 +97,7 @@ public sealed class AiAnalysisService(
             Status = AiAnalysisStatus.Pending,
             Provider = analyzer.ProviderName,
             Model = analyzer.Model,
-            PromptVersion = AiPrompts.Version,
+            PromptVersion = AiPrompts.FullVersion(await AiLanguageOfAsync(inspection.CompanyId, ct)),
             MediaIds = mediaIds,
             RequestedBy = agentId,
             RequestedAt = now,
@@ -126,4 +126,8 @@ public sealed class AiAnalysisService(
         a.ResultJson is null ? null : JsonDocument.Parse(a.ResultJson).RootElement.Clone());
 
     public const string MockProviderName = "mock";
+
+    /// <summary>The company's report language decides the language of every AI text (see AiOutputLanguage).</summary>
+    internal async Task<AiOutputLanguage> AiLanguageOfAsync(Guid companyId, CancellationToken ct) =>
+        AiOutputLanguage.For(await db.Companies.Where(c => c.Id == companyId).Select(c => c.ReportLanguage).FirstOrDefaultAsync(ct));
 }

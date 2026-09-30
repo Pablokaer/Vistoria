@@ -16,3 +16,4 @@ Short records of *why* things are the way they are. Format: context → decision
 | [0010](0010-concurrency.md) | Optimistic concurrency (xmin) + row locks for critical transitions |
 | [0011](0011-capture-then-describe.md) | Agents capture all photos first; every AI text is requested in one batch |
 | [0012](0012-subscription-billing.md) | Mandatory subscription for companies; billing behind `IPaymentProvider`; activation only from verified webhooks |
+| [0013](0013-ai-writing-guide-and-language.md) | AI writing guide as versioned prompt content; AI text in the company's report language |

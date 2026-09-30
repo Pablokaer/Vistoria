@@ -45,6 +45,10 @@ public sealed class AiAnalysisProcessor(
         {
             var room = await db.InspectionRooms.AsNoTracking().FirstAsync(r => r.Id == analysis.InspectionRoomId, ct);
             var images = await LoadImagesAsync(analysis.MediaIds, ct);
+            // Read at processing time: the queue delay is seconds, and the company setting is the source of truth.
+            var companyLanguage = await db.Inspections.Where(i => i.Id == analysis.InspectionId)
+                .Join(db.Companies, i => i.CompanyId, c => c.Id, (i, c) => c.ReportLanguage).FirstOrDefaultAsync(ct);
+            var language = AiOutputLanguage.For(companyLanguage);
             string description;
             object result;
             decimal? confidence = null;
@@ -53,7 +57,7 @@ public sealed class AiAnalysisProcessor(
             {
                 case AiAnalysisKind.RoomDescription:
                 {
-                    var r = await analyzer.AnalyzeRoomAsync(new RoomAnalysisRequest(room.Name, room.RoomType.ToString(), images), ct);
+                    var r = await analyzer.AnalyzeRoomAsync(new RoomAnalysisRequest(room.Name, room.RoomType.ToString(), images, language), ct);
                     description = r.Description;
                     result = r;
                     break;
@@ -61,7 +65,7 @@ public sealed class AiAnalysisProcessor(
                 case AiAnalysisKind.DefectDescription:
                 {
                     var defect = await db.InspectionDefects.AsNoTracking().FirstAsync(d => d.Id == analysis.DefectId, ct);
-                    var r = await analyzer.AnalyzeDefectAsync(new DefectAnalysisRequest(room.Name, defect.Description, images), ct);
+                    var r = await analyzer.AnalyzeDefectAsync(new DefectAnalysisRequest(room.Name, defect.Description, images, language), ct);
                     description = r.Description;
                     confidence = r.Confidence;
                     result = r;
@@ -69,7 +73,7 @@ public sealed class AiAnalysisProcessor(
                 }
                 case AiAnalysisKind.RoomComparison:
                 {
-                    var r = await CompareAsync(room, images, ct);
+                    var r = await CompareAsync(room, images, language, ct);
                     description = r.Summary;
                     confidence = r.Confidence;
                     result = r;
@@ -157,7 +161,7 @@ public sealed class AiAnalysisProcessor(
         }
     }
 
-    private async Task<ComparisonAnalysisResult> CompareAsync(InspectionRoom room, IReadOnlyList<AnalysisImage> currentImages, CancellationToken ct)
+    private async Task<ComparisonAnalysisResult> CompareAsync(InspectionRoom room, IReadOnlyList<AnalysisImage> currentImages, AiOutputLanguage language, CancellationToken ct)
     {
         var comparison = await db.InspectionComparisons.AsNoTracking().FirstAsync(c => c.InspectionRoomId == room.Id, ct);
         var baseline = await snapshots.FindRoomAsync(comparison.SourceInspectionId, comparison.SourceInspectionRoomId, ct);
@@ -174,7 +178,8 @@ public sealed class AiAnalysisProcessor(
             baselineImages,
             room.FinalDescription,
             currentDefects,
-            currentImages.Take(AiAnalysisService.MaxImagesPerAnalysis / 2).ToList()), ct);
+            currentImages.Take(AiAnalysisService.MaxImagesPerAnalysis / 2).ToList(),
+            language), ct);
     }
 
     private async Task<IReadOnlyList<AnalysisImage>> LoadImagesAsync(IReadOnlyList<Guid> mediaIds, CancellationToken ct)

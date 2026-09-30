@@ -55,7 +55,7 @@ public class OpenAiImageAnalysisServiceTests
         };
         var (service, handler) = Create(HttpStatusCode.OK, Completion(result));
         var analysis = await service.AnalyzeRoomAsync(new RoomAnalysisRequest("Bedroom 1", "Bedroom",
-            [new AnalysisImage("image/jpeg", [1, 2, 3])]));
+            [new AnalysisImage("image/jpeg", [1, 2, 3])], AiOutputLanguage.English));
 
         Assert.Equal("fair", analysis.Floor!.Condition);
         Assert.Equal("bed", analysis.VisibleItems[0].Name);
@@ -78,7 +78,7 @@ public class OpenAiImageAnalysisServiceTests
     {
         var (service, _) = Create(status, "{\"error\":{\"message\":\"Incorrect API key provided: " + Key + "\"}}");
         var ex = await Assert.ThrowsAsync<AiProviderException>(() =>
-            service.AnalyzeDefectAsync(new DefectAnalysisRequest("Kitchen", "crack", [new AnalysisImage("image/png", [1])])));
+            service.AnalyzeDefectAsync(new DefectAnalysisRequest("Kitchen", "crack", [new AnalysisImage("image/png", [1])], AiOutputLanguage.English)));
         Assert.DoesNotContain(Key, ex.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("sk-", ex.Message, StringComparison.Ordinal);
     }
@@ -89,7 +89,7 @@ public class OpenAiImageAnalysisServiceTests
         var body = """{"choices":[{"message":{"content":null,"refusal":"I can't help with that."}}]}""";
         var (service, _) = Create(HttpStatusCode.OK, body);
         var ex = await Assert.ThrowsAsync<AiProviderException>(() =>
-            service.CompareRoomAsync(new RoomComparisonRequest("Kitchen", null, [], [], null, [], [new AnalysisImage("image/png", [1])])));
+            service.CompareRoomAsync(new RoomComparisonRequest("Kitchen", null, [], [], null, [], [new AnalysisImage("image/png", [1])], AiOutputLanguage.English)));
         Assert.Contains("manually", ex.Message, StringComparison.Ordinal);
     }
 }

@@ -12,6 +12,10 @@
     <ProjectReference Include="..\Shared\InspectFlow.Shared.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <!-- The AI writing guide is prompt content: editing it changes AI output without code changes (see the file header). -->
+    <EmbeddedResource Include="AI\Guidelines\inspection-writing-guide.md" LogicalName="InspectFlow.AI.InspectionWritingGuide" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="InspectFlow.Tests" />
   </ItemGroup>
 </Project>

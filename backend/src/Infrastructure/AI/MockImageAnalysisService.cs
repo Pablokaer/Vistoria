@@ -11,6 +11,12 @@ public sealed class MockImageAnalysisService : IImageAnalysisService
 {
     public const string Label = "[Development mock AI — photos were not actually analysed]";
 
+    /// <summary>
+    /// The mock cannot translate; it names the language a real provider would use so the setting is visible in development.
+    /// Example: <c>LabelFor(AiOutputLanguage.PortugueseBrazil) // "[Development mock AI — …; a real provider writes in Brazilian Portuguese]"</c>
+    /// </summary>
+    public static string LabelFor(AiOutputLanguage language) => $"{Label[..^1]}; a real provider writes in {language.PromptName}]";
+
     public string ProviderName => AiAnalysisService.MockProviderName;
     public string? Model => "mock-v1";
     public bool IsMock => true;
@@ -38,7 +44,7 @@ public sealed class MockImageAnalysisService : IImageAnalysisService
         };
         var floorCondition = seed % 4 == 0 ? "fair" : "good";
         var description =
-            $"{Label} {request.Images.Count} photo(s) of the {request.RoomName} were provided. " +
+            $"{LabelFor(request.Language)} {request.Images.Count} photo(s) of the {request.RoomName} were provided. " +
             $"Walls appear to be painted white and in good visible condition. The ceiling appears white with no visible marks. " +
             $"The floor is {floorColour} {floorMaterial} and appears in {floorCondition} visible condition. " +
             $"Visible items include: {string.Join(", ", items)}. " +
@@ -62,7 +68,7 @@ public sealed class MockImageAnalysisService : IImageAnalysisService
         var label = string.IsNullOrWhiteSpace(request.AgentHint) ? "a mark" : request.AgentHint.Trim();
         return new DefectAnalysisResult(
             $"Possible {label}",
-            $"{Label} The photo(s) appear to show {label.ToLowerInvariant()} in the {request.RoomName}. " +
+            $"{LabelFor(request.Language)} The photo(s) appear to show {label.ToLowerInvariant()} in the {request.RoomName}. " +
             "The extent is limited to the area visible in the images; the cause cannot be determined from the photos.",
             null,
             0.5m);
@@ -78,8 +84,8 @@ public sealed class MockImageAnalysisService : IImageAnalysisService
             differences.Add(new PossibleDifference("Recorded defect", defect, defect, "PreExisting"));
 
         var summary = differences.Count == 0
-            ? $"{Label} No possible differences were identified between the baseline and current records of the {request.RoomName}."
-            : $"{Label} {differences.Count} possible difference(s) identified in the {request.RoomName}. The inspector must confirm each one.";
+            ? $"{LabelFor(request.Language)} No possible differences were identified between the baseline and current records of the {request.RoomName}."
+            : $"{LabelFor(request.Language)} {differences.Count} possible difference(s) identified in the {request.RoomName}. The inspector must confirm each one.";
         return new ComparisonAnalysisResult(differences, summary, 0.4m);
     }
 

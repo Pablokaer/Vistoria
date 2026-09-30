@@ -1,3 +1,4 @@
+
 namespace InspectFlow.Modules.AI.Application;
 
 /// <summary>
@@ -19,9 +20,10 @@ public interface IImageAnalysisService
 
 public sealed record AnalysisImage(string MimeType, byte[] Content);
 
-public sealed record RoomAnalysisRequest(string RoomName, string RoomType, IReadOnlyList<AnalysisImage> Images);
+/// <summary><c>Language</c> is the company's report language for every free-text value in the result.</summary>
+public sealed record RoomAnalysisRequest(string RoomName, string RoomType, IReadOnlyList<AnalysisImage> Images, AiOutputLanguage Language);
 
-public sealed record DefectAnalysisRequest(string RoomName, string? AgentHint, IReadOnlyList<AnalysisImage> Images);
+public sealed record DefectAnalysisRequest(string RoomName, string? AgentHint, IReadOnlyList<AnalysisImage> Images, AiOutputLanguage Language);
 
 public sealed record RoomComparisonRequest(
     string RoomName,
@@ -30,7 +32,8 @@ public sealed record RoomComparisonRequest(
     IReadOnlyList<AnalysisImage> BaselineImages,
     string? CurrentDescription,
     IReadOnlyList<string> CurrentDefects,
-    IReadOnlyList<AnalysisImage> CurrentImages);
+    IReadOnlyList<AnalysisImage> CurrentImages,
+    AiOutputLanguage Language);
 
 /// <summary>Condition vocabulary: "good", "fair", "poor", "not_visible".</summary>
 public sealed record SurfaceObservation(string? Color, string? Material, string Condition, string? Notes);
