@@ -1,9 +1,10 @@
-// End-to-end UI flow (Move In + Move Out) driven through the real web app with Playwright.
+// End-to-end UI flow (landing + subscription, Move In + Move Out) driven through the real web app with Playwright.
 // Usage: BASE_URL=http://localhost:3000 node ui-flow.mjs   (screenshots in ./output)
 import { chromium, devices } from "playwright";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { abandonedCheckoutFlow, landingOnMobile, subscribeFromLanding } from "./subscription.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
@@ -103,8 +104,9 @@ try {
   // ---------------- Company ----------------
   const companyEmail = `company-${run}@e2e.local`;
   const tenantEmail = `tenant-${run}@e2e.local`;
-  const { page: company } = await register(browser, "Company", companyEmail, "Clara Company");
-  await company.waitForURL("**/company/onboarding");
+  const ctxOpts = { base: BASE, snap, log };
+  await landingOnMobile(browser, ctxOpts);
+  const { page: company } = await subscribeFromLanding(browser, { name: "Clara Company", email: companyEmail, password: PASSWORD }, ctxOpts);
   await company.getByLabel("Company name").fill(`E2E Lettings ${run}`);
   await company.getByRole("button", { name: "Create workspace" }).click();
   await company.waitForURL(/\/company$/);
@@ -226,7 +228,8 @@ try {
   await company.goto(`${BASE}/company`);
   await company.getByText("disputed by tenants").waitFor();
   await snap(company, "company-dashboard-final");
-  log("✅ UI flow completed: Move In accepted, Move Out disputed");
+  await abandonedCheckoutFlow(browser, { name: "Rita Returning", email: `returning-${run}@e2e.local`, password: PASSWORD }, ctxOpts);
+  log("✅ UI flow completed: subscription (direct + resumed), Move In accepted, Move Out disputed");
 } catch (e) {
   for (const [i, ctx] of browser.contexts().entries())
     for (const [j, p] of ctx.pages().entries()) await p.screenshot({ path: path.join(OUT, `FAILED-${i}-${j}.png`), fullPage: true }).catch(() => {});

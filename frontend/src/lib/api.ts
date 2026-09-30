@@ -18,9 +18,12 @@ export class ApiError extends Error {
 let accessToken: string | null = null;
 let refreshing: Promise<AuthResponse | null> | null = null;
 let onSessionExpired: (() => void) | null = null;
+let onSubscriptionRequired: (() => void) | null = null;
 
 export function setAccessToken(token: string | null) { accessToken = token; }
 export function setSessionExpiredHandler(handler: () => void) { onSessionExpired = handler; }
+/** Called when the API answers 402 subscription.required (e.g. the subscription lapsed while the app was open). */
+export function setSubscriptionRequiredHandler(handler: () => void) { onSubscriptionRequired = handler; }
 
 async function parseError(res: Response): Promise<ApiError> {
   let body: { title?: string; code?: string; details?: string[]; errors?: Record<string, string[]> } = {};
@@ -60,6 +63,7 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
     if (refreshed) return api<T>(path, init, false);
     onSessionExpired?.();
   }
+  if (res.status === 402) onSubscriptionRequired?.();
   if (!res.ok) throw await parseError(res);
   if (res.status === 204) return undefined as T;
   const text = await res.text();

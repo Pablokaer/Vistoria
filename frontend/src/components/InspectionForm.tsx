@@ -37,7 +37,7 @@ export function InspectionSettingsFields({ value, onChange }: { value: Inspectio
         <div className="grid gap-2 sm:grid-cols-2">
           {(["Public", "Private"] as Visibility[]).map((v) => (
             <label key={v} className={`flex cursor-pointer gap-3 rounded-lg border p-3 ${value.visibility === v ? "border-brand bg-brand-50" : "border-slate-200"}`}>
-              <input type="radio" className="mt-1 accent-[#0f4c5c]" checked={value.visibility === v} onChange={() => set("visibility", v)} />
+              <input type="radio" className="mt-1 accent-brand" checked={value.visibility === v} onChange={() => set("visibility", v)} />
               <span className="text-sm"><span className="block font-medium">{v}</span>
                 <span className="text-slate-600">{v === "Public" ? "Listed for all agents in the marketplace." : "Only an agent with the link and the 6-digit code."}</span></span>
             </label>
@@ -57,7 +57,7 @@ export function InspectionSettingsFields({ value, onChange }: { value: Inspectio
         <Textarea rows={3} value={value.instructions} onChange={(e) => set("instructions", e.target.value)} placeholder="Access, keys, parking…" />
       </Field>
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" className="h-4 w-4 accent-[#0f4c5c]" checked={value.publishNow} onChange={(e) => set("publishNow", e.target.checked)} /> Publish now
+        <input type="checkbox" className="h-4 w-4 accent-brand" checked={value.publishNow} onChange={(e) => set("publishNow", e.target.checked)} /> Publish now
       </label>
     </>
   );

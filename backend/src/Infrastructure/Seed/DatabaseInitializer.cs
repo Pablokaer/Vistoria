@@ -1,5 +1,7 @@
 using InspectFlow.Infrastructure.Identity;
 using InspectFlow.Infrastructure.Persistence;
+using InspectFlow.Modules.Billing.Application;
+using InspectFlow.Modules.Billing.Domain;
 using InspectFlow.Modules.Identity.Application;
 using InspectFlow.Modules.Identity.Domain;
 using InspectFlow.Modules.Companies.Application;
@@ -19,6 +21,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace InspectFlow.Infrastructure.Seed;
 
@@ -59,10 +62,32 @@ public static class DatabaseInitializer
             logger.LogWarning("Seed:Enabled is ignored outside the Development environment (demo credentials are never created in {Env}).", env.EnvironmentName);
             return;
         }
-        if (await db.Users.AnyAsync(u => u.NormalizedEmail == CompanyEmail.ToUpperInvariant(), ct)) return;
+        if (!await db.Users.AnyAsync(u => u.NormalizedEmail == CompanyEmail.ToUpperInvariant(), ct))
+        {
+            logger.LogInformation("Seeding development demo data");
+            await new DemoSeeder(services).RunAsync(ct);
+        }
+        // Also runs for databases seeded before billing existed, so the demo company keeps working.
+        await EnsureDemoSubscriptionAsync(sp, ct);
+    }
 
-        logger.LogInformation("Seeding development demo data");
-        await new DemoSeeder(services).RunAsync(ct);
+    /// <summary>
+    /// Gives the demo company a one-year Active subscription (provider "Seed") when it has none.
+    /// Example: <c>await EnsureDemoSubscriptionAsync(scope.ServiceProvider, ct);</c>
+    /// </summary>
+    private static async Task EnsureDemoSubscriptionAsync(IServiceProvider sp, CancellationToken ct)
+    {
+        var db = sp.GetRequiredService<AppDbContext>();
+        var companyId = await db.Users.Where(u => u.NormalizedEmail == CompanyEmail.ToUpperInvariant()).Select(u => u.Id).FirstOrDefaultAsync(ct);
+        if (companyId == Guid.Empty) return;
+        if (await db.Subscriptions.AnyAsync(s => s.UserId == companyId && Subscription.OpenStatuses.Contains(s.Status), ct)) return;
+
+        var plan = sp.GetRequiredService<IOptions<BillingOptions>>().Value.Plans[0];
+        var now = DateTimeOffset.UtcNow;
+        var subscription = Subscription.CreatePending(companyId, plan.Code, "Seed", now);
+        subscription.Activate(new SubscriptionPeriod(now, now.AddYears(1)), providerSubscriptionId: null, providerCustomerId: null, now);
+        db.Subscriptions.Add(subscription);
+        await db.SaveChangesAsync(ct);
     }
 
     private sealed class DemoSeeder(IServiceProvider root)

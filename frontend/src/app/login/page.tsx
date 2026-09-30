@@ -6,11 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AuthCard } from "@/components/AuthCard";
 import { Button, ErrorBanner, Field, Input, Notice } from "@/components/ui";
 import { errorMessage } from "@/lib/api";
-import { homeFor, useAuth } from "@/lib/auth";
-
-function safeNext(next: string | null) {
-  return next && next.startsWith("/") && !next.startsWith("//") ? next : null;
-}
+import { destinationAfterSignIn, useAuth } from "@/lib/auth";
 
 function LoginForm() {
   const { login } = useAuth();
@@ -27,7 +23,7 @@ function LoginForm() {
     setError(null);
     try {
       const user = await login(email, password);
-      router.replace(safeNext(params.get("next")) ?? homeFor(user));
+      router.replace(destinationAfterSignIn(user, params.get("next")));
     } catch (err) {
       setError(errorMessage(err));
     } finally {

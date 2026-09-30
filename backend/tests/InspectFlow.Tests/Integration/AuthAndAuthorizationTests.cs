@@ -118,6 +118,7 @@ public class AuthAndAuthorizationTests(TestApp app)
     public async Task Company_actions_require_a_workspace_first()
     {
         var company = await app.CreateClient().RegisterAsync("Company");
+        await Billing.SubscribeAsync(company);
         var res = await company.GetAsync("/api/properties");
         res.EnsureStatus(HttpStatusCode.UnprocessableEntity);
         Assert.Equal("company.workspace_required", res.Code);

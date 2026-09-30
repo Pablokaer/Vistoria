@@ -3,7 +3,21 @@
 export type Role = "Company" | "Agent" | "Tenant";
 
 export interface CompanyMembership { companyId: string; companyName: string; role: string }
-export interface Me { id: string; email: string; fullName: string; roles: Role[]; company: CompanyMembership | null }
+export type SubscriptionStatus = "None" | "Pending" | "Active" | "PastDue" | "Cancelled" | "Expired";
+/** `hasAccess` is true when the role needs no subscription; `status` is effective ("Expired" once the grace period is over). */
+export interface SubscriptionSummary {
+  required: boolean; hasAccess: boolean; status: SubscriptionStatus; planCode: string | null; planName: string | null;
+  currentPeriodEnd: string | null; accessEndsAt: string | null;
+}
+export interface Me { id: string; email: string; fullName: string; roles: Role[]; company: CompanyMembership | null; subscription: SubscriptionSummary }
+
+export type PlanInterval = "Month" | "Year";
+export interface BillingPlan { code: string; name: string; description: string; priceCents: number; currency: string; interval: PlanInterval; features: string[] }
+export interface CheckoutStart { checkoutId: string; checkoutUrl: string; expiresAt: string }
+export type CheckoutSessionStatus = "Open" | "Completed" | "Failed" | "Expired";
+export interface CheckoutStatus { checkoutId: string; status: CheckoutSessionStatus; planCode: string; subscription: SubscriptionSummary }
+export interface SandboxSession { sessionId: string; planName: string; priceCents: number; currency: string; interval: PlanInterval; status: CheckoutSessionStatus; customerEmail: string }
+export interface SandboxPaymentResult { approved: boolean; message: string; redirectUrl: string | null }
 export interface AuthResponse { accessToken: string; accessTokenExpiresAt: string; refreshToken: string | null; user: Me }
 
 export type InspectionType = "MoveIn" | "MoveOut" | "Periodic" | "Other";

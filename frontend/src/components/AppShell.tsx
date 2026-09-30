@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { homeFor, useAuth } from "@/lib/auth";
+import { homeFor, needsSubscription, SUBSCRIPTION_REQUIRED_PATH, useAuth } from "@/lib/auth";
+import { formatDate } from "@/lib/format";
 import type { Role } from "@/lib/types";
 import { DevAccountSwitcher } from "./DevAccountSwitcher";
 import { Loading } from "./ui";
@@ -23,11 +24,12 @@ const NAV: Record<Role, { href: string; label: string }[]> = {
   Tenant: [{ href: "/tenant", label: "My inspections" }],
 };
 
-export function Brand() {
+/** Logo + name. Inside the app it links to the user's home (`/app`); on public pages to the landing page. */
+export function Brand({ href = "/", alwaysShowName }: { href?: string; alwaysShowName?: boolean }) {
   return (
-    <Link href="/" className="flex items-center gap-2 font-semibold text-brand">
+    <Link href={href} className="flex items-center gap-2 font-semibold text-ink">
       <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand text-sm font-bold text-white">IF</span>
-      <span className="hidden sm:inline">InspectFlow</span>
+      <span className={alwaysShowName ? "inline" : "hidden sm:inline"}>InspectFlow</span>
     </Link>
   );
 }
@@ -38,16 +40,18 @@ export function RoleGate({ role, children, allowWithoutCompany }: { role: Role; 
   const router = useRouter();
   const pathname = usePathname();
   const allowed = !!user && user.roles.includes(role);
+  const unpaid = needsSubscription(user);
   const needsWorkspace = role === "Company" && !!user && !user.company && !allowWithoutCompany;
 
   useEffect(() => {
     if (loading) return;
     if (!user) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
     else if (!allowed) router.replace(homeFor(user));
+    else if (unpaid) router.replace(SUBSCRIPTION_REQUIRED_PATH);
     else if (needsWorkspace) router.replace("/company/onboarding");
-  }, [loading, user, allowed, needsWorkspace, router, pathname]);
+  }, [loading, user, allowed, unpaid, needsWorkspace, router, pathname]);
 
-  if (loading || !allowed || needsWorkspace) return <div className="mx-auto max-w-6xl px-4"><Loading /></div>;
+  if (loading || !allowed || unpaid || needsWorkspace) return <div className="mx-auto max-w-6xl px-4"><Loading /></div>;
   return <>{children}</>;
 }
 
@@ -60,7 +64,7 @@ export function AppShell({ role, children, wide }: { role: Role; children: React
     <div className="min-h-screen">
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4">
-          <Brand />
+          <Brand href="/app" />
           <nav className="-mx-1 flex flex-1 gap-1 overflow-x-auto">
             {links.map((l) => {
               const active = l.href === `/${role.toLowerCase()}` ? pathname === l.href : pathname.startsWith(l.href);
@@ -82,7 +86,22 @@ export function AppShell({ role, children, wide }: { role: Role; children: React
           </div>
         </div>
       </header>
+      <BillingWarning />
       <main className={`mx-auto px-4 py-6 ${wide ? "max-w-6xl" : "max-w-5xl"}`}>{children}</main>
+    </div>
+  );
+}
+
+/** A failed renewal keeps access during the grace period; say so before access ends. */
+function BillingWarning() {
+  const { user } = useAuth();
+  if (user?.subscription.status !== "PastDue") return null;
+  return (
+    <div role="status" className="border-b border-amber-200 bg-amber-50">
+      <div className="mx-auto max-w-6xl px-4 py-2 text-sm text-amber-900">
+        Your last payment failed. Access continues until {formatDate(user.subscription.accessEndsAt)} — update your payment method with your
+        payment provider to avoid interruption.
+      </div>
     </div>
   );
 }

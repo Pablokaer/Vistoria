@@ -1,5 +1,6 @@
 using InspectFlow.Infrastructure.AI;
 using InspectFlow.Infrastructure.Background;
+using InspectFlow.Infrastructure.Billing;
 using InspectFlow.Infrastructure.Identity;
 using InspectFlow.Infrastructure.Pdf;
 using InspectFlow.Infrastructure.Persistence;
@@ -7,6 +8,7 @@ using InspectFlow.Infrastructure.Services;
 using InspectFlow.Infrastructure.Storage;
 using InspectFlow.Modules.AI.Application;
 using InspectFlow.Modules.Audit.Application;
+using InspectFlow.Modules.Billing.Application;
 using InspectFlow.Modules.Common;
 using InspectFlow.Modules.Companies.Application;
 using InspectFlow.Modules.Identity.Application;
@@ -41,6 +43,11 @@ public static class DependencyInjection
         services.Configure<AiOptions>(configuration.GetSection("Ai"));
         services.Configure<AppUrlOptions>(configuration.GetSection("App"));
         services.Configure<InspectionRulesOptions>(configuration.GetSection("Inspections"));
+        services.Configure<BillingOptions>(configuration.GetSection("Billing"));
+        services.Configure<StripeOptions>(configuration.GetSection("Billing:Stripe"));
+        services.Configure<SandboxOptions>(configuration.GetSection("Billing:Sandbox"));
+        services.AddOptions<BillingOptions>().Validate(o => o.Plans.Count > 0 && o.Plans.All(p => p.Code.Length > 0 && p.PriceCents > 0),
+            "Billing:Plans must contain at least one plan with a Code and a PriceCents > 0 (there is no free plan).").ValidateOnStart();
         services.AddOptions<JwtOptions>().Validate(o => o.Secret.Length >= 32, "Jwt:Secret (JWT_SECRET) must be at least 32 characters.").ValidateOnStart();
         services.AddOptions<StorageOptions>().Validate(o => o.SigningKey.Length >= 32, "Storage:SigningKey (STORAGE_SIGNING_KEY) must be at least 32 characters.").ValidateOnStart();
         if (!env.IsDevelopment() && !env.IsEnvironment("Testing"))
@@ -114,6 +121,12 @@ public static class DependencyInjection
             services.AddHostedService<AiAnalysisWorker>();
         }
 
+        // ---- Billing ----
+        services.AddSingleton<SandboxPaymentProvider>();
+        services.AddHttpClient<StripePaymentProvider>();
+        services.AddScoped<IPaymentProvider>(sp => PaymentProviderSelector.Resolve(sp, env));
+        services.AddScoped<SandboxCheckoutSimulator>();
+
         // ---- PDF ----
         QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
         QuestPDF.Settings.ThrowOnMissingTextGlyphs = false;
@@ -147,6 +160,9 @@ public static class DependencyInjection
         services.AddScoped<FinalizationService>();
         services.AddScoped<ReportService>();
         services.AddScoped<TenantService>();
+        services.AddScoped<SubscriptionAccessService>();
+        services.AddScoped<CheckoutService>();
+        services.AddScoped<BillingWebhookProcessor>();
         return services;
     }
 
@@ -165,6 +181,23 @@ public static class DependencyInjection
             return new UnavailableImageAnalysisService();
         }
         return sp.GetRequiredService<MockImageAnalysisService>();
+    }
+}
+
+/// <summary>Picks the payment provider, mirroring the AI selection: a real provider when configured, the Sandbox only where allowed.</summary>
+internal static class PaymentProviderSelector
+{
+    public static IPaymentProvider Resolve(IServiceProvider sp, IHostEnvironment env)
+    {
+        var provider = sp.GetRequiredService<IOptions<BillingOptions>>().Value.Provider.ToUpperInvariant();
+        var hasStripeKey = !string.IsNullOrWhiteSpace(sp.GetRequiredService<IOptions<StripeOptions>>().Value.SecretKey);
+        if (provider == "STRIPE" || (provider == "AUTO" && hasStripeKey)) return sp.GetRequiredService<StripePaymentProvider>();
+
+        var sandboxAllowed = env.IsDevelopment() || env.IsEnvironment("Testing") || sp.GetRequiredService<IOptions<SandboxOptions>>().Value.AllowOutsideDevelopment;
+        if (sandboxAllowed) return sp.GetRequiredService<SandboxPaymentProvider>();
+        sp.GetRequiredService<ILoggerFactory>().CreateLogger("Billing")
+            .LogError("No payment provider configured and the sandbox is not allowed in {Env}.", env.EnvironmentName);
+        return new UnavailablePaymentProvider();
     }
 }
 

@@ -1,5 +1,6 @@
 using InspectFlow.Modules.AI.Domain;
 using InspectFlow.Modules.Audit.Domain;
+using InspectFlow.Modules.Billing.Domain;
 using InspectFlow.Modules.Common;
 using InspectFlow.Modules.Companies.Domain;
 using InspectFlow.Modules.Identity.Domain;
@@ -47,6 +48,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<TenantResponse> TenantResponses => Set<TenantResponse>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<Subscription> Subscriptions => Set<Subscription>();
+    public DbSet<CheckoutSession> CheckoutSessions => Set<CheckoutSession>();
+    public DbSet<BillingEvent> BillingEvents => Set<BillingEvent>();
 
     DbSet<User> IAppDbContext.Users => Users;
     DbSet<Role> IAppDbContext.Roles => Roles;
@@ -79,6 +83,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
         builder.Properties<AiAnalysisKind>().HaveConversion<string>().HaveMaxLength(32);
         builder.Properties<AiAnalysisStatus>().HaveConversion<string>().HaveMaxLength(32);
         builder.Properties<TenantDecision>().HaveConversion<string>().HaveMaxLength(32);
+        builder.Properties<SubscriptionStatus>().HaveConversion<string>().HaveMaxLength(32);
+        builder.Properties<CheckoutSessionStatus>().HaveConversion<string>().HaveMaxLength(32);
     }
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)

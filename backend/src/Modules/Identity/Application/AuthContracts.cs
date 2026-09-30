@@ -1,3 +1,4 @@
+using InspectFlow.Modules.Billing.Application;
 using InspectFlow.Modules.Identity.Domain;
 
 namespace InspectFlow.Modules.Identity.Application;
@@ -15,7 +16,8 @@ public sealed record MeResponse(
     string Email,
     string FullName,
     IReadOnlyList<string> Roles,
-    CompanyMembershipDto? Company);
+    CompanyMembershipDto? Company,
+    SubscriptionSummaryDto Subscription);
 
 public sealed record AuthResult(
     string AccessToken,

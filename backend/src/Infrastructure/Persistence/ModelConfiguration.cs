@@ -1,5 +1,6 @@
 using InspectFlow.Modules.AI.Domain;
 using InspectFlow.Modules.Audit.Domain;
+using InspectFlow.Modules.Billing.Domain;
 using InspectFlow.Modules.Companies.Domain;
 using InspectFlow.Modules.Identity.Domain;
 using InspectFlow.Modules.Inspections.Domain;
@@ -298,6 +299,8 @@ internal static class ModelConfiguration
             e.HasIndex(a => a.UserId);
         });
 
+        ApplyBilling(b);
+
         // Module entities receive their Guid ids in the domain (Guid.NewGuid()). Marking keys as never
         // generated makes EF treat new children discovered through navigations as Added (not Modified).
         foreach (var entity in b.Model.GetEntityTypes())
@@ -308,5 +311,46 @@ internal static class ModelConfiguration
             if (key is { Properties.Count: 1 } && key.Properties[0].ClrType == typeof(Guid))
                 key.Properties[0].ValueGenerated = Microsoft.EntityFrameworkCore.Metadata.ValueGenerated.Never;
         }
+    }
+
+    /// <summary>
+    /// Billing schema. The filtered unique indexes are the idempotency guarantees: one open subscription per user,
+    /// one open checkout per subscription, and each provider event processed once.
+    /// </summary>
+    private static void ApplyBilling(ModelBuilder b)
+    {
+        b.Entity<Subscription>(e =>
+        {
+            e.ToTable("subscriptions", "billing");
+            e.Property(s => s.PlanCode).HasMaxLength(64).IsRequired();
+            e.Property(s => s.Provider).HasMaxLength(32).IsRequired();
+            e.Property(s => s.ProviderCustomerId).HasMaxLength(255);
+            e.Property(s => s.ProviderSubscriptionId).HasMaxLength(255);
+            e.Property(s => s.Version).IsRowVersion();
+            e.Ignore(s => s.IsOpen);
+            e.HasIndex(s => s.UserId).IsUnique().HasFilter("status IN ('Pending', 'Active', 'PastDue')").HasDatabaseName("ux_subscriptions_user_open");
+            e.HasIndex(s => new { s.Provider, s.ProviderSubscriptionId });
+            e.HasOne<User>().WithMany().HasForeignKey(s => s.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+        b.Entity<CheckoutSession>(e =>
+        {
+            e.ToTable("checkout_sessions", "billing");
+            e.Property(c => c.PlanCode).HasMaxLength(64).IsRequired();
+            e.Property(c => c.Provider).HasMaxLength(32).IsRequired();
+            e.Property(c => c.ProviderSessionId).HasMaxLength(255);
+            e.Property(c => c.CheckoutUrl).HasMaxLength(2048);
+            e.HasIndex(c => c.SubscriptionId).IsUnique().HasFilter("status = 'Open'").HasDatabaseName("ux_checkout_sessions_subscription_open");
+            e.HasIndex(c => new { c.Provider, c.ProviderSessionId }).IsUnique();
+            e.HasIndex(c => c.UserId);
+            e.HasOne<Subscription>().WithMany().HasForeignKey(c => c.SubscriptionId).OnDelete(DeleteBehavior.Cascade);
+        });
+        b.Entity<BillingEvent>(e =>
+        {
+            e.ToTable("billing_events", "billing");
+            e.Property(x => x.Provider).HasMaxLength(32).IsRequired();
+            e.Property(x => x.ProviderEventId).HasMaxLength(255).IsRequired();
+            e.Property(x => x.EventType).HasMaxLength(100).IsRequired();
+            e.HasIndex(x => new { x.Provider, x.ProviderEventId }).IsUnique();
+        });
     }
 }

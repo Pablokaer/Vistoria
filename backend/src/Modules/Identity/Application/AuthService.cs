@@ -1,5 +1,6 @@
 using InspectFlow.Modules.Audit.Application;
 using InspectFlow.Modules.Audit.Domain;
+using InspectFlow.Modules.Billing.Application;
 using InspectFlow.Modules.Common;
 using InspectFlow.Modules.Identity.Domain;
 using InspectFlow.Modules.Tenants.Domain;
@@ -20,6 +21,7 @@ public sealed class AuthService(
     IAuditLogger audit,
     ICurrentUser currentUser,
     IClock clock,
+    SubscriptionAccessService subscriptions,
     IOptions<AuthOptions> options)
 {
     private readonly AuthOptions _options = options.Value;
@@ -175,7 +177,8 @@ public sealed class AuthService(
                              orderby m.CreatedAt
                              select new CompanyMembershipDto(c.Id, c.Name, m.Role.ToString()))
             .FirstOrDefaultAsync(ct);
-        return new MeResponse(user.Id, user.Email!, user.FullName, roles, company);
+        var subscription = await subscriptions.GetSummaryAsync(user.Id, roles, ct);
+        return new MeResponse(user.Id, user.Email!, user.FullName, roles, company, subscription);
     }
 
     private static ValidationException ToValidation(IdentityResult result)

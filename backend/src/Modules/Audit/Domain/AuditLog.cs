@@ -54,4 +54,9 @@ public static class AuditActions
     public const string TenantCommented = nameof(TenantCommented);
     public const string TenantAccepted = nameof(TenantAccepted);
     public const string TenantDisputed = nameof(TenantDisputed);
+    public const string SubscriptionCheckoutStarted = nameof(SubscriptionCheckoutStarted);
+    public const string SubscriptionActivated = nameof(SubscriptionActivated);
+    public const string SubscriptionPastDue = nameof(SubscriptionPastDue);
+    public const string SubscriptionCancelled = nameof(SubscriptionCancelled);
+    public const string SubscriptionExpired = nameof(SubscriptionExpired);
 }

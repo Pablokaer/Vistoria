@@ -27,6 +27,7 @@ public static class TestData
     public static async Task<ApiClient> CompanyAsync(TestApp app, string? name = null)
     {
         var client = await app.CreateClient().RegisterAsync("Company");
+        await Billing.SubscribeAsync(client);
         (await client.PostAsync("/api/companies", new { name = name ?? $"Company {Guid.NewGuid():N}"[..20] })).EnsureOk();
         // Re-login so the token reflects the workspace (not strictly needed: membership is resolved server-side).
         return client;

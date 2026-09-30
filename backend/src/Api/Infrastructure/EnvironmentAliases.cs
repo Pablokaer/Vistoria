@@ -25,6 +25,10 @@ public static class EnvironmentAliases
         ["SEED_DEMO_DATA"] = "Seed:Enabled",
         ["MIGRATE_ON_STARTUP"] = "Database:MigrateOnStartup",
         ["TRUST_FORWARDED_HEADERS"] = "ForwardedHeaders:Enabled",
+        ["BILLING_PROVIDER"] = "Billing:Provider",
+        ["STRIPE_SECRET_KEY"] = "Billing:Stripe:SecretKey",
+        ["STRIPE_WEBHOOK_SECRET"] = "Billing:Stripe:WebhookSecret",
+        ["STRIPE_PRICE_ID"] = "Billing:Plans:0:StripePriceId",
     };
 
     public static IEnumerable<KeyValuePair<string, string?>> FromEnvironment()

@@ -1,17 +1,24 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand: #0f4c5c;
-  --color-brand-dark: #0b3945;
-  --color-brand-50: #e8f0f2;
+  /* Brand blue (2026-09-30: moved from teal to blue with the public landing page). */
+  --color-brand: #1d4ed8;
+  --color-brand-dark: #1e3a8a;
+  --color-brand-50: #eff6ff;
+  --color-ink: #0f172a;
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 html {
   -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
 }
 
 body {
   background: #f5f7f8;
-  color: #1f2a30;
+  color: #1e293b;
 }

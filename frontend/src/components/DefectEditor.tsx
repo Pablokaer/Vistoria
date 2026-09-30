@@ -76,7 +76,7 @@ export function DefectEditor({ defect, index, base, editable, moveOut, onRoom, r
           </Select>
         </Field>
         <label className="flex min-h-12 items-center gap-3 self-end rounded-lg border border-slate-200 bg-white px-3">
-          <input type="checkbox" className="h-5 w-5 accent-[#0f4c5c]" disabled={!editable || !fields.finalDescription.trim()} checked={fields.agentConfirmed}
+          <input type="checkbox" className="h-5 w-5 accent-brand" disabled={!editable || !fields.finalDescription.trim()} checked={fields.agentConfirmed}
             onChange={(e) => set("agentConfirmed", e.target.checked)} />
           <span className="text-sm font-medium">I confirm this defect</span>
         </label>

@@ -98,7 +98,7 @@ export default function NewPropertyPage() {
         <div className="lg:col-span-2">
           <Card>
             <label className="flex cursor-pointer items-center gap-3">
-              <input type="checkbox" className="h-5 w-5 accent-[#0f4c5c]" checked={withInspection} onChange={(e) => setWithInspection(e.target.checked)} />
+              <input type="checkbox" className="h-5 w-5 accent-brand" checked={withInspection} onChange={(e) => setWithInspection(e.target.checked)} />
               <span><span className="block font-semibold text-slate-900">Also create an inspection for this property</span>
                 <span className="text-sm text-slate-600">Uses this address and these rooms. Saved together with the property.</span></span>
             </label>

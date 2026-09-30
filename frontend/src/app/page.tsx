@@ -1,13 +1,32 @@
-"use client";
+import type { Metadata } from "next";
+import { AudienceSection } from "@/components/landing/AudienceSection";
+import { FeaturesSection } from "@/components/landing/FeaturesSection";
+import { HeroSection } from "@/components/landing/HeroSection";
+import { HighlightsSection } from "@/components/landing/HighlightsSection";
+import { HowItWorksSection } from "@/components/landing/HowItWorksSection";
+import { FinalCallToAction, LandingFooter } from "@/components/landing/LandingFooter";
+import { LandingHeader } from "@/components/landing/LandingHeader";
+import { PricingSection } from "@/components/landing/PricingSection";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { homeFor, useAuth } from "@/lib/auth";
-import { Loading } from "@/components/ui";
+export const metadata: Metadata = {
+  title: { absolute: "InspectFlow — faster, organised and trustworthy property inspections" },
+};
 
-export default function Home() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-  useEffect(() => { if (!loading) router.replace(homeFor(user)); }, [loading, user, router]);
-  return <div className="mx-auto max-w-md px-4"><Loading /></div>;
+/** Public landing page. Signed-in users reach their area through "Open dashboard" (→ /app). */
+export default function LandingPage() {
+  return (
+    <div className="min-h-screen bg-white">
+      <LandingHeader />
+      <main>
+        <HeroSection />
+        <AudienceSection />
+        <HowItWorksSection />
+        <HighlightsSection />
+        <FeaturesSection />
+        <PricingSection />
+        <FinalCallToAction />
+      </main>
+      <LandingFooter />
+    </div>
+  );
 }

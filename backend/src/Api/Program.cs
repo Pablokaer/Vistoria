@@ -6,6 +6,7 @@ using InspectFlow.Infrastructure;
 using InspectFlow.Infrastructure.Identity;
 using InspectFlow.Infrastructure.Seed;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 
@@ -41,10 +42,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
         RoleClaimType = "role",
     };
 });
+// Every role policy also requires an active subscription when Billing:SubscriptionRequiredRoles lists the role.
 builder.Services.AddAuthorizationBuilder()
-    .AddPolicy(Policies.Company, p => p.RequireAuthenticatedUser().RequireRole(Policies.Company))
-    .AddPolicy(Policies.Agent, p => p.RequireAuthenticatedUser().RequireRole(Policies.Agent))
-    .AddPolicy(Policies.Tenant, p => p.RequireAuthenticatedUser().RequireRole(Policies.Tenant));
+    .AddPolicy(Policies.Company, p => p.RequireAuthenticatedUser().RequireRole(Policies.Company).AddRequirements(new ActiveSubscriptionRequirement()))
+    .AddPolicy(Policies.Agent, p => p.RequireAuthenticatedUser().RequireRole(Policies.Agent).AddRequirements(new ActiveSubscriptionRequirement()))
+    .AddPolicy(Policies.Tenant, p => p.RequireAuthenticatedUser().RequireRole(Policies.Tenant).AddRequirements(new ActiveSubscriptionRequirement()));
+builder.Services.AddScoped<IAuthorizationHandler, ActiveSubscriptionHandler>();
+builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, SubscriptionAwareResultHandler>();
 
 var origins = builder.Configuration["Cors:AllowedOrigins"]?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [];
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
@@ -91,6 +95,7 @@ app.MapCompanyEndpoints();
 app.MapAgentEndpoints();
 app.MapTenantEndpoints();
 app.MapSharedEndpoints();
+app.MapBillingEndpoints();
 
 if (!app.Configuration.GetValue("Database:SkipInitialization", false))
     await DatabaseInitializer.InitializeAsync(app.Services);

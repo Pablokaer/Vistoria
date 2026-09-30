@@ -1,5 +1,6 @@
 using InspectFlow.Modules.AI.Domain;
 using InspectFlow.Modules.Audit.Domain;
+using InspectFlow.Modules.Billing.Domain;
 using InspectFlow.Modules.Companies.Domain;
 using InspectFlow.Modules.Identity.Domain;
 using InspectFlow.Modules.Inspections.Domain;
@@ -54,6 +55,10 @@ public interface IAppDbContext
 
     DbSet<Notification> Notifications { get; }
     DbSet<AuditLog> AuditLogs { get; }
+
+    DbSet<Subscription> Subscriptions { get; }
+    DbSet<CheckoutSession> CheckoutSessions { get; }
+    DbSet<BillingEvent> BillingEvents { get; }
 
     DatabaseFacade Database { get; }
 

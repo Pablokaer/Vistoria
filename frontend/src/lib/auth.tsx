@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api, post, refreshSession, setAccessToken, setSessionExpiredHandler } from "./api";
+import { api, post, refreshSession, setAccessToken, setSessionExpiredHandler, setSubscriptionRequiredHandler } from "./api";
 import type { AuthResponse, Me, Role } from "./types";
 
 interface AuthState {
@@ -18,8 +18,28 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+export const SUBSCRIPTION_REQUIRED_PATH = "/subscription/required";
+
+/** True when the user's role needs a subscription and the API reports no access (the API enforces it again). */
+export function needsSubscription(user: Me | null): boolean {
+  return !!user && user.subscription.required && !user.subscription.hasAccess;
+}
+
+/** Only same-origin relative paths are accepted as post-sign-in destinations (no open redirects). */
+export function safeNext(next: string | null): string | null {
+  return next && next.startsWith("/") && !next.startsWith("//") ? next : null;
+}
+
+/** Where to go after signing in: unpaid accounts always land on the subscription page, whatever `next` says. */
+export function destinationAfterSignIn(user: Me, next: string | null): string {
+  const target = safeNext(next);
+  if (needsSubscription(user)) return target?.startsWith("/checkout") ? target : SUBSCRIPTION_REQUIRED_PATH;
+  return target ?? homeFor(user);
+}
+
 export function homeFor(user: Me | null): string {
   if (!user) return "/login";
+  if (needsSubscription(user)) return SUBSCRIPTION_REQUIRED_PATH;
   if (user.roles.includes("Company")) return user.company ? "/company" : "/company/onboarding";
   if (user.roles.includes("Agent")) return "/agent";
   if (user.roles.includes("Tenant")) return "/tenant";
@@ -33,6 +53,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setSessionExpiredHandler(() => { setUser(null); router.replace("/login?expired=1"); });
+    setSubscriptionRequiredHandler(() => {
+      void api<Me>("/api/auth/me").then(setUser).catch(() => undefined);
+      router.replace(SUBSCRIPTION_REQUIRED_PATH);
+    });
     refreshSession().then((res) => setUser(res?.user ?? null)).finally(() => setLoading(false));
   }, [router]);
 
