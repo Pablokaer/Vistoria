@@ -54,7 +54,7 @@ export default function ReviewPage() {
         ) : (
           <div className="mt-3 flex gap-2">
             <Button variant="ghost" onClick={() => { setEditing(roomId); setText(data.preview.rooms.find((r) => r.id === roomId)?.description ?? ""); }}>Edit description</Button>
-            <LinkButton variant="ghost" href={`/agent/inspections/${id}/rooms/${roomId}`}>Open room</LinkButton>
+            <LinkButton variant="ghost" href={`/agent/inspections/${id}/descriptions#room-${roomId}`}>Open room</LinkButton>
           </div>
         )
       )} />

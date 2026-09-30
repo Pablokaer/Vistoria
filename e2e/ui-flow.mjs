@@ -39,55 +39,63 @@ async function uploadPhoto(scope, file) {
   await scope.locator("img").nth(before).waitFor({ timeout: 20000 });
 }
 
-async function inspectRoom(page, roomName, { withAi = false, defect = false, comparison = null } = {}) {
-  await page.getByRole("heading", { level: 1, name: roomName }).waitFor();
-  const general = page.locator("section", { has: page.getByRole("heading", { name: "General photos" }) });
-  await uploadPhoto(general, ROOM_ASSET[roomName] ?? "living-room-2.jpg");
-  const description = page.getByLabel("Room description (as it will appear in the report)");
-  if (withAi) {
-    await page.getByRole("button", { name: /Generate AI description/ }).click();
-    await page.getByText("AI draft (kept for traceability)").waitFor({ timeout: 30000 });
-    await page.waitForFunction(() => document.querySelector("textarea")?.value.length > 20);
-    await description.fill((await description.inputValue()).replace(/^\[Development mock AI[^\]]*\]\s*/, "") + " Inspector checked all sockets.");
-  } else {
-    await description.fill(`${roomName}: walls and ceiling painted white, good visible condition. Floor in good visible condition.`);
+const roomSection = (page, roomName) =>
+  page.locator('section[id^="room-"]', { has: page.getByRole("heading", { level: 2, name: new RegExp(`^\\d+\\. ${roomName}`) }) });
+
+// Step 1 (one page): photos of every room and of its defects, no text.
+async function captureRooms(page, rooms) {
+  await page.waitForURL("**/capture");
+  for (const room of rooms) {
+    const section = roomSection(page, room.name);
+    await section.waitFor();
+    await uploadPhoto(section, ROOM_ASSET[room.name] ?? "living-room-2.jpg");
+    if (room.defect) {
+      await section.getByRole("button", { name: "+ Add defect" }).click();
+      await uploadPhoto(section.getByTestId("defect-card").first(), room.defect.photo);
+    }
   }
-  if (defect) {
-    await page.getByText("Defects found", { exact: true }).click();
-    await page.getByRole("button", { name: "+ Add defect" }).click();
-    const card = page.getByTestId("defect-card").first();
-    await card.getByLabel("Short label").fill(defect.label);
-    await card.getByLabel("Location").fill("Wall left of the window");
-    await uploadPhoto(card, defect.photo);
-    await card.getByRole("button", { name: /Describe defect with AI/ }).click();
-    await card.getByText(/AI draft/).waitFor({ timeout: 30000 });
-    await card.getByLabel("Defect description (as it will appear in the report)").fill(defect.text);
-    await card.getByLabel("Classification").selectOption(defect.classification);
-    await card.getByText("I confirm this defect").click();
-    await page.waitForTimeout(1600); // autosave debounce
+  await snap(page, "agent-capture");
+  await page.getByRole("button", { name: "Continue to descriptions" }).click();
+  await page.waitForURL("**/descriptions");
+}
+
+// Step 2 (one page): the AI texts arrive for every room; the agent reviews and completes them all.
+async function describeRooms(page, rooms) {
+  for (const room of rooms) {
+    const section = roomSection(page, room.name);
+    const description = section.getByLabel("Room description (as it will appear in the report)");
+    await description.waitFor({ timeout: 60000 });
+    if (room.withAi) {
+      await page.waitForFunction((el) => el.value.length > 20, await description.elementHandle());
+      await description.fill((await description.inputValue()).replace(/^\[Development mock AI[^\]]*\]\s*/, "") + " Inspector checked all sockets.");
+    } else {
+      await description.fill(`${room.name}: walls and ceiling painted white, good visible condition. Floor in good visible condition.`);
+    }
+    if (room.defect) {
+      const card = section.getByTestId("defect-card").first();
+      await card.getByLabel("Short label").fill(room.defect.label);
+      await card.getByLabel("Location").fill("Wall left of the window");
+      await card.getByLabel("Defect description (as it will appear in the report)").fill(room.defect.text);
+      await card.getByLabel("Classification").selectOption(room.defect.classification);
+      await card.getByText("I confirm this defect").click();
+    }
+    if (room.comparison) {
+      await section.getByRole("button", { name: "Compare recorded data" }).click();
+      await section.getByRole("button", { name: room.comparison.decision, exact: true }).click();
+      await section.getByLabel("Comparison notes").fill(room.comparison.notes);
+      await section.getByRole("button", { name: "Save decision" }).click();
+      await section.getByText(/^Saved:/).waitFor();
+    }
+    await section.getByLabel("Agent notes").fill(`Checked ${room.name}.`);
+    if (room.screenshot) await snap(page, room.screenshot);
   }
-  if (comparison) {
-    await page.getByText("Move In record").first().waitFor();
-    await page.getByRole("button", { name: "Compare recorded data" }).click();
-    await page.getByText(/Defects recorded at Move In/).waitFor();
-    await page.getByRole("button", { name: comparison.decision, exact: true }).click();
-    await page.getByLabel("Comparison notes").fill(comparison.notes);
-    await page.getByRole("button", { name: "Save decision" }).click();
-    await page.getByText(/^Saved:/).waitFor();
-  }
-  await page.getByLabel("Agent notes").fill(`Checked ${roomName}.`);
-  await page.waitForTimeout(1500);
-  await page.getByText("All changes saved").filter({ visible: true }).first().waitFor({ timeout: 10000 });
+  await page.getByRole("button", { name: "Complete rooms & review" }).click();
+  await page.waitForURL("**/review", { timeout: 30000 });
 }
 
 async function completeInspection(page, rooms) {
-  for (const room of rooms) {
-    await inspectRoom(page, room.name, room);
-    if (room.screenshot) await snap(page, room.screenshot);
-    const before = page.url();
-    await page.getByRole("button", { name: "Mark room complete" }).click();
-    await page.waitForURL((u) => u.toString() !== before, { timeout: 15000 });
-  }
+  await captureRooms(page, rooms);
+  await describeRooms(page, rooms);
 }
 
 const browser = await chromium.launch(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {});
@@ -150,18 +158,12 @@ try {
   await agent.getByRole("button", { name: "Accept inspection" }).click();
   await agent.waitForURL(`**/agent/inspections/${moveInId}`);
   await agent.getByRole("button", { name: "Start inspection" }).click();
-  await agent.getByRole("link", { name: /Continue with Living Room/ }).click();
   log("agent accepted and started");
 
   await completeInspection(agent, [
     { name: "Living Room", withAi: true, defect: { label: "Scuff marks", photo: "defect-scuff.jpg", text: "Light grey scuff marks approx. 30 cm wide.", classification: "PreExisting" }, screenshot: "agent-room-living-room" },
     { name: "Bedroom 1" }, { name: "Bedroom 2" }, { name: "Kitchen" }, { name: "Bathroom" }, { name: "Garage" },
   ]);
-  await agent.waitForURL(`**/agent/inspections/${moveInId}`);
-  await agent.getByText("6 / 6 rooms completed").waitFor();
-  await snap(agent, "agent-all-rooms-complete");
-  await agent.getByRole("button", { name: "Review inspection" }).click();
-  await agent.waitForURL("**/review");
   await agent.getByText("Scuff marks").first().waitFor();
   await snap(agent, "agent-review");
   await agent.getByRole("button", { name: "Finalize inspection" }).click();
@@ -201,15 +203,11 @@ try {
   await agent.getByRole("button", { name: "Accept inspection" }).click();
   await agent.waitForURL(`**/agent/inspections/${moveOutId}`);
   await agent.getByRole("button", { name: "Start inspection" }).click();
-  await agent.getByRole("link", { name: /Continue with Living Room/ }).click();
   await completeInspection(agent, [
     { name: "Living Room", defect: { label: "Wall stain", photo: "defect-scuff.jpg", text: "Brown stain approx. 20 cm above the sofa.", classification: "NewDamage" },
       comparison: { decision: "New damage", notes: "Stain not present at Move In." }, screenshot: "agent-move-out-room" },
     ...["Bedroom 1", "Bedroom 2", "Kitchen", "Bathroom", "Garage"].map((name) => ({ name, comparison: { decision: "Unchanged", notes: "As at Move In." } })),
   ]);
-  await agent.waitForURL(`**/agent/inspections/${moveOutId}`);
-  await agent.getByRole("button", { name: "Review inspection" }).click();
-  await agent.waitForURL("**/review");
   await agent.getByText("Move In / Move Out comparison summary").waitFor();
   await agent.getByRole("button", { name: "Finalize inspection" }).click();
   await agent.waitForURL(/\/reports\/[0-9a-f-]{36}$/, { timeout: 60000 });

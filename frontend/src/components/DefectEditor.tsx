@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { del, get, put } from "@/lib/api";
 import { SaveIndicatorText, useAutosave } from "@/lib/autosave";
 import { humanize } from "@/lib/format";
@@ -11,9 +11,11 @@ import { Button, Field, Input, Select, Textarea } from "./ui";
 
 const CLASSIFICATIONS: DefectClassification[] = ["Unknown", "PreExisting", "NewDamage", "NormalWear", "Unchanged", "Resolved"];
 
-export function DefectEditor({ defect, index, base, editable, moveOut, onRoom, reload }: {
+export function DefectEditor({ defect, index, base, editable, moveOut, onRoom, reload, registerFlush }: {
   defect: Defect; index: number; base: string; editable: boolean; moveOut: boolean;
   onRoom: (room: RoomDetail) => void; reload: () => Promise<void>;
+  /** Lets a parent save pending edits before acting (returns an unregister function). */
+  registerFlush?: (key: string, flush: () => Promise<void>) => () => void;
 }) {
   const [fields, setFields] = useState({
     description: defect.description ?? "", location: defect.location ?? "", finalDescription: defect.finalDescription ?? "",
@@ -23,6 +25,8 @@ export function DefectEditor({ defect, index, base, editable, moveOut, onRoom, r
   const autosave = useAutosave(fields, async (v) => {
     onRoom(await put<RoomDetail>(url, { ...v, description: v.description || null, location: v.location || null, finalDescription: v.finalDescription || null }));
   }, { enabled: editable });
+  const { flush } = autosave;
+  useEffect(() => registerFlush?.(`defect:${defect.id}`, flush), [registerFlush, defect.id, flush]);
   const set = <K extends keyof typeof fields>(k: K, v: (typeof fields)[K]) => setFields((f) => ({ ...f, [k]: v }));
 
   async function afterAi() {

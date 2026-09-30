@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { del, errorMessage, uploadWithProgress } from "@/lib/api";
 import { prepareImage } from "@/lib/image";
 import type { Media } from "@/lib/types";
@@ -12,9 +12,9 @@ interface QueueItem { id: string; name: string; progress: number; error?: string
  * Camera-first uploader: large buttons, sequential uploads with progress, retry on failure.
  * Photos are resized on the device before upload.
  */
-export function PhotoUploader({ uploadUrl, deleteUrlBase, photos, mediaType, defectId, editable, onChanged, label = "Photos" }: {
+export function PhotoUploader({ uploadUrl, deleteUrlBase, photos, mediaType, defectId, editable, onChanged, onBusyChange, label = "Photos" }: {
   uploadUrl: string; deleteUrlBase: string; photos: Media[]; mediaType: "General" | "Defect"; defectId?: string;
-  editable: boolean; onChanged: () => void | Promise<void>; label?: string;
+  editable: boolean; onChanged: () => void | Promise<void>; onBusyChange?: (busy: boolean) => void; label?: string;
 }) {
   const cameraInput = useRef<HTMLInputElement>(null);
   const libraryInput = useRef<HTMLInputElement>(null);
@@ -22,6 +22,7 @@ export function PhotoUploader({ uploadUrl, deleteUrlBase, photos, mediaType, def
   const [viewing, setViewing] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const busy = queue.some((q) => !q.error);
+  useEffect(() => { onBusyChange?.(busy); return () => onBusyChange?.(false); }, [busy, onBusyChange]);
 
   async function process(items: QueueItem[]) {
     for (const item of items) {

@@ -12,7 +12,7 @@ import type { InspectionDetails } from "@/lib/types";
 export default function AgentInspectionPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { data: i, setData, error, loading, reload } = useApi<InspectionDetails>(`/api/agent/inspections/${id}`);
+  const { data: i, error, loading, reload } = useApi<InspectionDetails>(`/api/agent/inspections/${id}`);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -20,13 +20,12 @@ export default function AgentInspectionPage() {
   if (!i) return <ErrorBanner message={error ?? "Inspection not found"} onRetry={reload} />;
 
   const can = (a: string) => i.allowedActions.includes(a);
-  const nextRoom = i.rooms.find((r) => r.status !== "Completed") ?? i.rooms[0];
   const address = [i.property.addressLine1, i.property.addressLine2, i.property.city, i.property.postcode].filter(Boolean).join(", ");
 
   async function start() {
     setBusy(true);
     setActionError(null);
-    try { setData(await post<InspectionDetails>(`/api/agent/inspections/${id}/start`)); }
+    try { await post<InspectionDetails>(`/api/agent/inspections/${id}/start`); router.push(`/agent/inspections/${id}/capture`); }
     catch (e) { setActionError(errorMessage(e)); }
     finally { setBusy(false); }
   }
@@ -52,7 +51,7 @@ export default function AgentInspectionPage() {
 
       {i.status === "Assigned" && (
         <Card className="mb-4">
-          <p className="mb-4 text-sm text-slate-700">When you arrive at the property, start the inspection. You will then go room by room.</p>
+          <p className="mb-4 text-sm text-slate-700">When you arrive at the property, start the inspection. You will first photograph every room, then check the descriptions.</p>
           <Button size="lg" className="w-full sm:w-auto" loading={busy} onClick={() => void start()}>Start inspection</Button>
         </Card>
       )}
@@ -77,20 +76,23 @@ export default function AgentInspectionPage() {
               );
               return (
                 <li key={r.id}>
-                  {can("edit") ? <Link href={`/agent/inspections/${id}/rooms/${r.id}`} className="block hover:bg-slate-50">{content}</Link> : content}
+                  {can("edit") ? <Link href={`/agent/inspections/${id}/capture#room-${r.id}`} className="block hover:bg-slate-50">{content}</Link> : content}
                 </li>
               );
             })}
           </ul>
           {can("edit") && i.status === "InProgress" && (
             <div className="mt-4 flex flex-wrap gap-2">
-              {nextRoom && i.roomsCompleted < i.rooms.length && <LinkButton href={`/agent/inspections/${id}/rooms/${nextRoom.id}`}>Continue with {nextRoom.name}</LinkButton>}
+              {i.roomsCompleted < i.rooms.length && <>
+                <LinkButton href={`/agent/inspections/${id}/capture`}>Photos</LinkButton>
+                <LinkButton variant="secondary" href={`/agent/inspections/${id}/descriptions`}>Descriptions</LinkButton>
+              </>}
               <Button variant={can("submitForReview") ? "primary" : "secondary"} disabled={!can("submitForReview")} loading={busy} onClick={() => void review()}>
                 Review inspection
               </Button>
             </div>
           )}
-          {i.status === "InProgress" && !can("submitForReview") && <p className="mt-2 text-xs text-slate-500">Complete every room to enable the review.</p>}
+          {i.status === "InProgress" && !can("submitForReview") && <p className="mt-2 text-xs text-slate-500">Complete every room on the descriptions page to enable the review.</p>}
         </Card>
         <div className="space-y-4">
           <Card title="Details">
