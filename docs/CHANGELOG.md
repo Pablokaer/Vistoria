@@ -4,6 +4,24 @@ Every code change is recorded here (newest first), together with the docs it tou
 
 ## 2026-09-30
 
+- **PDF report redesign.** See [ADR 0016](architecture/0016-pdf-report-layout.md).
+  - **Structure:**
+    - `PdfTheme` holds the tokens and `PdfIcons` the line icons and logo.
+    - `Components/` has one component each for the cover, the rooms index with page links, the page chrome, the room, the photo grid, the defect, the Move In × Move Out comparison and the summary.
+    - `QuestPdfReportService` only assembles the document.
+  - **Page breaks:**
+    - A room header stays with its photos.
+    - Condition text stays with the last photo row.
+    - A single photo sits beside a short condition.
+    - A defect description sits beside its photos.
+    - "Possible changes" and the inspector's decision form one block, so the decision is never orphaned on the next page.
+    - The summary, including report details, stays on one page.
+  - **Fix:** Move Out reports now load the Move In photos (`ReportImageLoader.PhotoKeys` includes `Comparison.BaselinePhotos`). Before, the Before column showed "Photo unavailable".
+  - **Removed:** the unused `ReportPdfText.Classification` label.
+  - **Tests:**
+    - `ReportPdfRenderingTests` renders seven scenarios from `Support/ReportSamples`: no defects, defects, many photos, long texts, optional data missing, Move Out en and pt-BR.
+    - A regression test checks that the Move In photos are loaded.
+    - With `PDF_PREVIEW_DIR` set, the tests write each PDF and its page PNGs for review.
 - **Product UI redesign (frontend only; no endpoint, rule or state changed).** See [ADR 0015](architecture/0015-design-system.md).
   - **Design system:** tokens in `app/globals.css` (type scale, neutrals, brand blue, semantic tones, Move In / Move Out / Periodic identities, radii, shadows, widths, motion), the Inter font through `next/font`, and inline icons (`components/icons.tsx`). The primitives in `components/ui/*` replace `components/ui.tsx`: StatusBadge with icon and label, MetricCard, EmptyState, Skeleton, Tabs, ProgressRing, Switch, toasts, and `useConfirm` instead of `window.confirm`.
   - **Shell:** a navy sidebar per role with notifications (titles translated from the notification type), profile, language and sign-out. On phones, a top bar, a drawer and bottom tabs; the tabs are hidden during inspection execution. The dev account switcher is now a discreet chip.

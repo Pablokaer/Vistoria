@@ -249,13 +249,16 @@ TEST_DATABASE_CONNECTION_STRING="Host=localhost;Port=5432;Database=postgres;User
 
 cd frontend && npm run lint && npm run build
 
+# PDF report previews for page-by-page review (7 scenarios: PDFs + one PNG per page)
+cd backend && PDF_PREVIEW_DIR=/tmp/pdf-preview dotnet test --filter "FullyQualifiedName~ReportPdf"
+
 # Full UI flow (Move In + Move Out, 3 roles) against a running stack; screenshots in e2e/output
 # (languages: Portuguese browser, switcher + cookie, Portuguese API error; landing + subscribe, abandoned checkout → sign in → resume,
 #  Move In + Move Out; uses the Sandbox payment provider)
 cd e2e && npm install && BASE_URL=http://localhost:3000 node ui-flow.mjs
 ```
 
-178 backend tests cover: languages (Accept-Language resolution incl. q-values and pt-PT, translated ProblemDetails titles/errors/details, Identity and AI errors, 402 in Portuguese, plans per language, report language frozen in the snapshot, PDF labels and dates in both languages, v1 snapshots read as English), the AI writing guide (parsing, prompt order safety → language → guide, output language in the OpenAI system message, prompt version), company report language and localization, subscriptions (no access without an active subscription, 402 on the Company API, the full sandbox payment, resuming an abandoned checkout, success-page parameters and forged or unsigned webhooks never activating, replayed webhooks applied once, past due → grace → cancellation, lapsed → subscribe again, parallel checkout starts, access policy and state machine, Stripe request/signature/event mapping), authorization across companies/roles/tenants, property & rooms, room snapshot, publish rules, public accept (+ 8 parallel agents → exactly one wins), private link + code (hashing, attempt lock, single use, regeneration), state transitions, upload validation (content sniffing, size, ownership, after-finalization), room completion and blocked finalization, finalization + PDF, report immutability (hash, EF guard, DB trigger), share links, tenant access/observations/accept/dispute (+ concurrent decisions), completed rooms reopening when an edit breaks a rule, same-tenancy baselines, the full Move In and Move Out flows through HTTP, the OpenAI adapter contract (strict schema, safety prompt, no key leakage) and architecture boundaries.
+187 backend tests cover: the PDF report (7 layout scenarios render, missing photos become placeholders, Move In photos loaded for Move Out reports), languages (Accept-Language resolution incl. q-values and pt-PT, translated ProblemDetails titles/errors/details, Identity and AI errors, 402 in Portuguese, plans per language, report language frozen in the snapshot, PDF labels and dates in both languages, v1 snapshots read as English), the AI writing guide (parsing, prompt order safety → language → guide, output language in the OpenAI system message, prompt version), company report language and localization, subscriptions (no access without an active subscription, 402 on the Company API, the full sandbox payment, resuming an abandoned checkout, success-page parameters and forged or unsigned webhooks never activating, replayed webhooks applied once, past due → grace → cancellation, lapsed → subscribe again, parallel checkout starts, access policy and state machine, Stripe request/signature/event mapping), authorization across companies/roles/tenants, property & rooms, room snapshot, publish rules, public accept (+ 8 parallel agents → exactly one wins), private link + code (hashing, attempt lock, single use, regeneration), state transitions, upload validation (content sniffing, size, ownership, after-finalization), room completion and blocked finalization, finalization + PDF, report immutability (hash, EF guard, DB trigger), share links, tenant access/observations/accept/dispute (+ concurrent decisions), completed rooms reopening when an edit breaks a rule, same-tenancy baselines, the full Move In and Move Out flows through HTTP, the OpenAI adapter contract (strict schema, safety prompt, no key leakage) and architecture boundaries.
 
 ## API overview
 
@@ -289,6 +292,7 @@ Errors are RFC 7807 problem details with a stable `code` (e.g. `inspection.inval
 - No email verification, password reset, MFA, or company staff management UI (roles/permissions exist in the model).
 - Multiple tenants: the first decision (accept/dispute) closes the review. No dispute-resolution workflow or report re-issuing yet (versioning supports it).
 - Rooms cannot be excluded per inspection (all active rooms are snapshotted; `IsRequired` prepared).
+- PDF: there is no "assessment limited" marker yet, because the snapshot has no reliable flag for it. Short reports leave some empty space at the bottom of the cover.
 - PDF generation runs synchronously during finalization (≈1–2 s for typical reports); very large reports should move to a background job.
 - Accessibility and i18n are basic (English UI, en-IE formats).
 - EF logs one `fail` line on a brand-new database (migrations history table lookup) — harmless.

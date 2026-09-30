@@ -14,7 +14,7 @@ public class ReportPdfTextTests
         var text = ReportPdfText.For("en");
         Assert.Equal("30 Sep 2026 14:05", text.ShortDateTime(Moment));
         Assert.Equal("30 September 2026", text.LongDate(Moment));
-        Assert.Equal("Move In Inspection Report", text.Format(text.ReportTitleFormat, text.Label("MoveIn")));
+        Assert.Equal(("Move In", "Inspection Report"), (text.Label("MoveIn"), text.InspectionReport));
     }
 
     [Fact]
@@ -23,7 +23,7 @@ public class ReportPdfTextTests
         var text = ReportPdfText.For("pt-BR");
         Assert.Equal("30 set. 2026 14:05", text.ShortDateTime(Moment));
         Assert.Equal("30 de setembro de 2026", text.LongDate(Moment));
-        Assert.Equal("Laudo de vistoria — Saída", text.Format(text.ReportTitleFormat, text.Label("MoveOut")));
+        Assert.Equal(("Saída", "Laudo de Vistoria"), (text.Label("MoveOut"), text.InspectionReport));
         Assert.Equal("Sala de estar", text.Label("LivingRoom"));
     }
 

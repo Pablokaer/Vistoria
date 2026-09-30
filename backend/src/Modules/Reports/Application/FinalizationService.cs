@@ -132,10 +132,21 @@ public sealed class FinalizationService(
 /// <summary>Loads the photo bytes referenced by a snapshot (for PDF rendering).</summary>
 public sealed class ReportImageLoader(IStorageService storage, ILogger<ReportImageLoader> logger)
 {
+    /// <summary>
+    /// Every photo the PDF shows: room and defect photos, plus the Move In photos of a Move Out comparison
+    /// (the "Before" column) — without those, real Move Out reports rendered "Photo unavailable" placeholders.
+    /// Example: <c>ReportImageLoader.PhotoKeys(snapshot) // distinct storage keys</c>
+    /// </summary>
+    public static IReadOnlyList<string> PhotoKeys(ReportSnapshot snapshot) =>
+        snapshot.Rooms
+            .SelectMany(r => r.Photos
+                .Concat(r.Defects.SelectMany(d => d.Photos))
+                .Concat(r.Comparison?.BaselinePhotos ?? []))
+            .Select(p => p.StorageKey).Distinct().ToList();
+
     public async Task<IReadOnlyDictionary<string, byte[]>> LoadAsync(ReportSnapshot snapshot, CancellationToken ct)
     {
-        var keys = snapshot.Rooms.SelectMany(r => r.Photos.Concat(r.Defects.SelectMany(d => d.Photos)))
-            .Select(p => p.StorageKey).Distinct().ToList();
+        var keys = PhotoKeys(snapshot);
         var result = new Dictionary<string, byte[]>(keys.Count);
         foreach (var key in keys)
         {

@@ -19,3 +19,4 @@ Short records of *why* things are the way they are. Format: context → decision
 | [0013](0013-ai-writing-guide-and-language.md) | AI writing guide as versioned prompt content; AI text in the company's report language |
 | [0014](0014-localization.md) | English + Brazilian Portuguese: UI language per user (cookie / Accept-Language), report and AI language per company |
 | [0015](0015-design-system.md) | In-house design system (tokens + primitives, no UI library) and a role-aware sidebar app shell |
+| [0016](0016-pdf-report-layout.md) | PDF report built from themed components with explicit keep-together rules, reviewed through rendered page previews |
