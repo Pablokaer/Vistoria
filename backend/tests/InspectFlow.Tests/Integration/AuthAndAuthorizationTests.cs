@@ -16,6 +16,14 @@ public class AuthAndAuthorizationTests(TestApp app)
     }
 
     [Fact]
+    public async Task Dev_account_switcher_is_not_mapped_outside_development()
+    {
+        var client = app.CreateClient();
+        (await client.GetAsync("/api/dev/accounts")).EnsureStatus(HttpStatusCode.NotFound);
+        (await client.PostAsync("/api/dev/switch", new { email = "company@demo.local" })).EnsureStatus(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
     public async Task Registration_rejects_unknown_roles_and_weak_passwords()
     {
         var client = app.CreateClient();

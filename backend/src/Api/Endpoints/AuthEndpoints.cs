@@ -40,7 +40,7 @@ public static class AuthEndpoints
         g.MapGet("/me", (AuthService auth, CancellationToken ct) => auth.MeAsync(ct)).RequireAuthorization();
     }
 
-    private static IResult Respond(HttpContext http, AuthResult result)
+    internal static IResult Respond(HttpContext http, AuthResult result)
     {
         var isWeb = string.Equals(http.Request.Headers["X-Client"], "web", StringComparison.OrdinalIgnoreCase);
         http.Response.Cookies.Append(RefreshCookie, result.RefreshToken, CookieOptions(http, result.RefreshTokenExpiresAt));

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { homeFor, useAuth } from "@/lib/auth";
 import type { Role } from "@/lib/types";
+import { DevAccountSwitcher } from "./DevAccountSwitcher";
 import { Loading } from "./ui";
 
 const NAV: Record<Role, { href: string; label: string }[]> = {
@@ -72,6 +73,7 @@ export function AppShell({ role, children, wide }: { role: Role; children: React
             })}
           </nav>
           <div className="flex items-center gap-3 text-sm">
+            <DevAccountSwitcher />
             <span className="hidden text-right leading-tight md:block">
               <span className="block font-medium text-slate-800">{user?.fullName}</span>
               <span className="block text-xs text-slate-500">{user?.company?.companyName ?? role}</span>

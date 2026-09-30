@@ -80,7 +80,11 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 
-if (app.Environment.IsDevelopment()) app.MapOpenApi();
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapDevEndpoints();
+}
 
 app.MapAuthEndpoints();
 app.MapCompanyEndpoints();

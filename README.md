@@ -169,6 +169,8 @@ Seeded automatically when the environment is `Development` and the database is e
 
 Demo credentials are never created outside Development.
 
+**Switching accounts (Development only):** the header shows a **Dev: switch account** dropdown that signs you in as any of the demo users above in one click. It uses `GET /api/dev/accounts` and `POST /api/dev/switch`, which the API maps only when `ASPNETCORE_ENVIRONMENT=Development`; in any other environment they return 404 and the dropdown is hidden.
+
 ## How to test the flows
 
 **Company** — sign in as `company@demo.local` (or register a Company account → create workspace). Dashboard → *Add property* (rooms editor) → property page: edit rooms, create a tenancy, invite a tenant (copy the invitation link) → *New inspection* → choose type/tenancy/visibility → publish. Private inspections show the link and 6-digit code **once**.

@@ -9,6 +9,8 @@ interface AuthState {
   user: Me | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<Me>;
+  /** Development only: sign in as one of the seeded demo accounts. */
+  switchAccount: (email: string) => Promise<Me>;
   register: (data: { email: string; password: string; fullName: string; role: Role }) => Promise<Me>;
   logout: () => Promise<void>;
   reload: () => Promise<void>;
@@ -40,6 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     loading,
     login: async (email, password) => accept(await post<AuthResponse>("/api/auth/login", { email, password })),
+    switchAccount: async (email) => accept(await post<AuthResponse>("/api/dev/switch", { email })),
     register: async (data) => accept(await post<AuthResponse>("/api/auth/register", data)),
     logout: async () => {
       try { await post("/api/auth/logout"); } finally { setAccessToken(null); setUser(null); router.replace("/login"); }
