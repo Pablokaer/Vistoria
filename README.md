@@ -2,8 +2,8 @@
 
 InspectFlow connects **companies** (letting agents / property managers), **inspectors** (agents) and **tenants**:
 
-- Companies register properties with any number of rooms, manage tenancies and publish inspections (Move In, Move Out, Periodic, Other) — publicly in a marketplace or privately via link + 6-digit code.
-- Inspectors accept an inspection, go room by room on their phone, upload photos, get AI-drafted descriptions (clearly labelled, always editable), record defects, compare with the Move In baseline, review and finalize.
+- Companies register properties with any number of rooms, manage tenancies and publish inspections (Move In, Move Out, Periodic, Other) — publicly in a marketplace or privately via link + 6-digit code. A property and its first inspection can be created together from one form.
+- Inspectors accept an inspection and work in two steps on their phone: first they photograph every room and its defects on a single page, then all AI-drafted descriptions (clearly labelled, always editable) are requested at once and reviewed on a second page; Move Outs are compared with the Move In baseline; then review and finalize.
 - Finalization freezes an immutable, versioned report (JSON snapshot + PDF, both hashed).
 - Tenants review the report, add observations (general or per room) and accept or dispute it.
 
@@ -78,6 +78,15 @@ Prerequisites: Docker with Compose v2.
 ```bash
 cp .env.example .env        # optional for local use: compose has development defaults
 docker compose up --build
+```
+
+Or use the launcher script (Git Bash / WSL on Windows), which checks Docker, creates `.env` from `.env.example` if missing, builds, waits until the web app answers and prints the URLs:
+
+```bash
+./run-project.sh          # build + start, wait until ready
+./run-project.sh stop     # stop containers (data kept)
+./run-project.sh reset    # stop and delete all data (database + uploaded files)
+./run-project.sh logs     # follow logs
 ```
 
 | Service | URL |
@@ -174,15 +183,20 @@ Demo credentials are never created outside Development.
 ## How to test the flows
 
 **Company** — sign in as `company@demo.local` (or register a Company account → create workspace). Dashboard → *Add property* (rooms editor) → property page: edit rooms, create a tenancy, invite a tenant (copy the invitation link) → *New inspection* → choose type/tenancy/visibility → publish. Private inspections show the link and 6-digit code **once**.
+Shortcut: on *Add property*, tick **Also create an inspection for this property** — the inspection form (type Move In / Periodic / Other, tenancy start/end date, visibility, dates, instructions, publish now) becomes active and one button creates the property, the tenancy (when a start date is given; required for Move In) and the inspection. Move Out is not offered there because a new property has no Move In to compare with. If the inspection step fails, the property stays saved and confirming again only retries the inspection.
 
-**Agent** — sign in as `agent@demo.local` (best on a phone or a narrow browser window). *Available* → open → *Accept inspection* → *Start inspection* → each room: *Take photo / Upload photos* → *Generate AI description* → edit the text (autosaved; drafts survive a refresh) → tick *Defects found* → *Add defect* (label, photos, AI description, classification, *I confirm this defect*) → *Mark room complete*. When all rooms are complete: *Review inspection* → edit texts if needed → *Finalize inspection* → report page with *Download PDF*.
+**Agent** — sign in as `agent@demo.local` (best on a phone or a narrow browser window). *Available* → open → *Accept inspection* → *Start inspection*, then two pages:
+1. **Photos** (`/agent/inspections/{id}/capture`) — every room in sequence on one page: *Take photo / Upload photos* for the room, *+ Add defect* and the defect's photos. No text is typed here. *Continue to descriptions* checks that every room and defect has a photo, then requests every missing AI text at once (room descriptions, defect descriptions, Move Out comparisons) and moves on. It is disabled while uploads are running.
+2. **Descriptions** (`/agent/inspections/{id}/descriptions`) — each room shows "Writing the description…" until its texts arrive (the page polls), then the editable room description, defects (label, location, description, classification, *I confirm this defect*), the Move Out comparison and agent notes, all autosaved. *Complete rooms & review* saves pending edits, completes every room (listing anything that blocks it) and submits for review.
+
+Then *Review inspection* → edit texts if needed → *Finalize inspection* → report page with *Download PDF*.
 Private inspection: open the invitation link while signed in as an agent and enter the code (5 attempts, rate limited).
 
 **Tenant** — open the invitation link from the company (register with the invited email, *Accept invitation*), or sign in as `tenant@demo.local`. *My inspections* → open a report awaiting review → *Add observation about this room* / *I want to add observations* → *Everything is correct* or *I disagree* (reason required).
 
 **Move In** — as above on 12 Main Street (seeded open inspection) or any new property with a tenancy.
 
-**Move Out** — as the company: *New inspection* for **48 Oak Avenue** → type *Move Out* → the finalized Move In is pre-selected under *Compare with* → publish. As an agent: accept/start; every room shows the read-only **Move In record** (text, photos, defects). Add photos and defects, use *Compare recorded data* (and optionally *AI visual comparison*), pick your decision (Unchanged, Normal wear, New damage, …) and save it — a room can't be completed without it. Finalize: the report and PDF contain the comparison summary. The tenant then reviews it.
+**Move Out** — as the company: *New inspection* for **48 Oak Avenue** → type *Move Out* → the finalized Move In is pre-selected under *Compare with* → publish. As an agent: accept/start; on the photos page every room can expand its read-only **Move In record** (text, photos, defects). Add photos and defects; on the descriptions page the AI visual comparison has already been requested — use *Compare recorded data* if useful and pick your decision (Unchanged, Normal wear, New damage, …) and save it — a room can't be completed without it. Finalize: the report and PDF contain the comparison summary. The tenant then reviews it.
 
 ## Tests
 

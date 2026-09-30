@@ -14,3 +14,4 @@ Short records of *why* things are the way they are. Format: context → decision
 | [0008](0008-move-in-move-out-comparison.md) | Move Out compares against the Move In *report snapshot* |
 | [0009](0009-authentication.md) | ASP.NET Core Identity + JWT access tokens + rotating refresh tokens |
 | [0010](0010-concurrency.md) | Optimistic concurrency (xmin) + row locks for critical transitions |
+| [0011](0011-capture-then-describe.md) | Agents capture all photos first; every AI text is requested in one batch |

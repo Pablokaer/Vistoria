@@ -8,12 +8,12 @@ The repository was empty (no existing stack, code, tests or conventions), so the
 
 A working, persistent, tested MVP covering the three roles end to end:
 
-- **Company**: sign-up → workspace → properties with configurable rooms → tenancies + tenant invitations → Move In / Move Out / Periodic / Other inspections, public (marketplace) or private (link + hashed 6-digit code) → progress tracking → finalized reports, share links, send-to-tenant.
-- **Agent**: marketplace with privacy-preserving previews → race-safe accept → mobile-first room-by-room execution (camera upload with progress/retry, client-side resize, autosave + local draft recovery, AI descriptions with background processing and polling, defects with photos/AI/classification/confirmation) → Move In baseline view and comparison decision for Move Out → review page (exact report preview, editable text) → finalize.
+- **Company**: sign-up → workspace → properties with configurable rooms (optionally creating the tenancy and first inspection in the same form) → tenancies + tenant invitations → Move In / Move Out / Periodic / Other inspections, public (marketplace) or private (link + hashed 6-digit code) → progress tracking → finalized reports, share links, send-to-tenant.
+- **Agent**: marketplace with privacy-preserving previews → race-safe accept → mobile-first two-step execution — a single photos page for every room and defect (camera upload with progress/retry, client-side resize), then a descriptions page where all AI texts, requested at once, arrive via background processing and polling (autosave, defects with classification/confirmation) → Move In baseline view and comparison decision for Move Out → review page (exact report preview, editable text) → finalize.
 - **Tenant**: invitation acceptance → dashboard (awaiting / accepted / disputed) → report review, room-level and general observations → accept or dispute.
 - **Reports**: immutable versioned JSON snapshot + QuestPDF PDF (SHA-256 of both), web report page, expiring share links, Move Out comparison summary.
 
-Validation performed: backend and frontend build without warnings; ESLint clean; 86 backend tests pass (unit + HTTP/PostgreSQL integration); migrations applied to empty databases (tests and compose); `docker compose up` stack verified; the Playwright UI script runs the full Move In + Move Out scenario across three browser sessions (desktop company/tenant, mobile agent) against the Docker stack, including PDF download.
+Validation performed: backend and frontend build without warnings; ESLint clean; 87 backend tests pass (unit + HTTP/PostgreSQL integration); migrations applied to empty databases (tests and compose); `docker compose up` stack verified; the Playwright UI script runs the full Move In + Move Out scenario across three browser sessions (desktop company/tenant, mobile agent) against the Docker stack, including PDF download.
 
 ## 3. Architecture
 
