@@ -1,6 +1,9 @@
 // Billing API calls and price formatting. The browser never decides that a payment succeeded: it starts a
 // checkout, is sent to the provider, and afterwards only *reads* the subscription status from the API.
 
+import type { Locale } from "@/i18n/locales";
+import { INTL_TAG } from "@/i18n/formatting";
+import { enumMessages } from "@/i18n/messages/enums";
 import { get, post } from "./api";
 import type { BillingPlan, CheckoutStart, CheckoutStatus, PlanInterval, SandboxPaymentResult, SandboxSession } from "./types";
 
@@ -22,18 +25,16 @@ export const fetchSandboxSession = (sessionId: string) => get<SandboxSession>(`/
 export const paySandboxSession = (sessionId: string, cardNumber: string) =>
   post<SandboxPaymentResult>(`/api/billing/sandbox/sessions/${encodeURIComponent(sessionId)}/pay`, { cardNumber });
 
-/** Example: `formatPrice(4900, "EUR") // "€49"` — cents are shown only when the price has them. */
-export function formatPrice(priceCents: number, currency: string): string {
+/** Example: `formatPrice(4900, "EUR", "en") // "€49"` — cents are shown only when the price has them. */
+export function formatPrice(priceCents: number, currency: string, locale: Locale): string {
   const whole = priceCents % 100 === 0;
-  return new Intl.NumberFormat("en-IE", {
+  return new Intl.NumberFormat(INTL_TAG[locale], {
     style: "currency", currency, minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: 2,
   }).format(priceCents / 100);
 }
 
-const INTERVAL_LABEL: Record<PlanInterval, string> = { Month: "month", Year: "year" };
-
-/** Example: `intervalLabel("Month") // "month"` */
-export const intervalLabel = (interval: PlanInterval) => INTERVAL_LABEL[interval] ?? interval.toLowerCase();
+/** Example: `intervalLabel("Month", "pt-BR") // "mês"` */
+export const intervalLabel = (interval: PlanInterval, locale: Locale): string => enumMessages[locale][interval] ?? interval.toLowerCase();
 
 /** Sends the browser to the provider's page; internal (sandbox) URLs keep the SPA, external ones leave it. */
 export function goToCheckout(url: string, navigate: (path: string) => void) {

@@ -4,6 +4,7 @@ using InspectFlow.Modules.Billing.Domain;
 using InspectFlow.Modules.Common;
 using InspectFlow.Shared.Auth;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 using InspectFlow.Shared.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -29,8 +30,15 @@ public sealed class CheckoutService(
     private static readonly TimeSpan InFlightWindow = TimeSpan.FromSeconds(30);
     private readonly BillingOptions _options = options.Value;
 
-    public IReadOnlyList<PlanDto> ListPlans() =>
-        _options.Plans.Select(p => new PlanDto(p.Code, p.Name, p.Description, p.PriceCents, p.Currency, p.Interval, p.Features)).ToList();
+    /// <summary>Plans with their texts in the request's language. Example: <c>service.ListPlans()[0].Name</c>.</summary>
+    public IReadOnlyList<PlanDto> ListPlans()
+    {
+        var language = CurrentLanguage.Get();
+        return _options.Plans.Select(p => ToDto(p, p.TextsIn(language))).ToList();
+    }
+
+    private static PlanDto ToDto(BillingPlan plan, BillingPlanTexts texts) =>
+        new(plan.Code, texts.Name, texts.Description, plan.PriceCents, plan.Currency, plan.Interval, texts.Features);
 
     public async Task<SubscriptionSummaryDto> GetMySubscriptionAsync(CancellationToken ct)
     {
@@ -57,7 +65,7 @@ public sealed class CheckoutService(
     {
         var userId = currentUser.RequireUserId();
         var session = await db.CheckoutSessions.AsNoTracking().FirstOrDefaultAsync(c => c.Id == checkoutId && c.UserId == userId, ct)
-                      ?? throw new NotFoundException("Checkout", checkoutId);
+                      ?? throw new NotFoundException(EntityNames.Checkout, checkoutId);
         return new CheckoutStatusResponse(session.Id, session.Status.ToString(), session.PlanCode, await GetMySubscriptionAsync(ct));
     }
 
@@ -66,7 +74,7 @@ public sealed class CheckoutService(
         var now = clock.UtcNow;
         var current = await db.Subscriptions.FirstOrDefaultAsync(s => s.UserId == userId && Subscription.OpenStatuses.Contains(s.Status), ct);
         if (SubscriptionAccessPolicy.Evaluate(current, now, _options.Grace).HasAccess)
-            throw new ConflictException("Your subscription is already active.", "subscription.already_active");
+            throw new ConflictException(new("Your subscription is already active.", "Sua assinatura já está ativa."), "subscription.already_active");
         if (current is { Status: SubscriptionStatus.Pending }) return ReusePending(current, plan);
 
         // An Active/PastDue row past its grace period no longer grants access: close it (saved first, so the
@@ -101,7 +109,7 @@ public sealed class CheckoutService(
             return open;
         }
         if (open is { CheckoutUrl: null } && now - open.CreatedAt < InFlightWindow)
-            throw new ConflictException("Your checkout is being prepared. Please try again in a moment.", "checkout.in_progress");
+            throw new ConflictException(CheckoutInProgress, "checkout.in_progress");
 
         open?.Expire(now);
         var session = CheckoutSession.Open(subscription, provider.Name, now, TimeSpan.FromMinutes(_options.CheckoutMinutes));
@@ -141,7 +149,10 @@ public sealed class CheckoutService(
         }
         catch (DbUpdateException e) when (e is not DbUpdateConcurrencyException)
         {
-            throw new ConflictException("Your checkout is being prepared. Please try again in a moment.", "checkout.in_progress");
+            throw new ConflictException(CheckoutInProgress, "checkout.in_progress");
         }
     }
+
+    private static readonly LocalizedText CheckoutInProgress =
+        new("Your checkout is being prepared. Please try again in a moment.", "Seu pagamento está sendo preparado. Tente novamente em instantes.");
 }

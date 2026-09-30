@@ -1,4 +1,5 @@
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 
 namespace InspectFlow.Shared.Auth;
 
@@ -10,7 +11,7 @@ public interface ICurrentUser
     bool IsInRole(string role);
     string? IpAddress { get; }
 
-    Guid RequireUserId() => UserId ?? throw new ForbiddenException("Authentication required.");
+    Guid RequireUserId() => UserId ?? throw new ForbiddenException(new("Authentication required.", "Autenticação necessária."));
 }
 
 public static class AppRoles

@@ -207,7 +207,7 @@ internal sealed class UnavailableImageAnalysisService : IImageAnalysisService
     public string ProviderName => "unavailable";
     public string? Model => null;
     public bool IsMock => false;
-    private static AiProviderException Error() => new("AI descriptions are not configured on this server. Please write the description manually.");
+    private static AiProviderException Error() => new(AiErrorTexts.NotConfiguredOnServer);
     public Task<RoomAnalysisResult> AnalyzeRoomAsync(RoomAnalysisRequest request, CancellationToken cancellationToken = default) => throw Error();
     public Task<DefectAnalysisResult> AnalyzeDefectAsync(DefectAnalysisRequest request, CancellationToken cancellationToken = default) => throw Error();
     public Task<ComparisonAnalysisResult> CompareRoomAsync(RoomComparisonRequest request, CancellationToken cancellationToken = default) => throw Error();

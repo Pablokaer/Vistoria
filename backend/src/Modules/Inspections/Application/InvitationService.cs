@@ -3,6 +3,7 @@ using InspectFlow.Modules.Audit.Domain;
 using InspectFlow.Modules.Common;
 using InspectFlow.Modules.Inspections.Domain;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 using InspectFlow.Shared.Security;
 using InspectFlow.Shared.Time;
 using Microsoft.EntityFrameworkCore;
@@ -50,8 +51,8 @@ public sealed class InvitationService(
                 await SaveOrConflictAsync(ct);
                 var remaining = invitation.MaxAttempts - invitation.AttemptCount;
                 if (remaining <= 0)
-                    throw new TooManyAttemptsException("Too many incorrect codes. Ask the company for a new invitation.");
-                throw new ValidationException("AccessCode", $"Incorrect access code. {remaining} attempt(s) remaining.");
+                    throw new TooManyAttemptsException(InspectionMessages.TooManyIncorrectCodes);
+                throw new ValidationException("AccessCode", new($"Incorrect access code. {remaining} attempt(s) remaining.", $"Código de acesso incorreto. {remaining} tentativa(s) restante(s)."));
             }
 
             invitation.MarkUsed(agentId, now);
@@ -78,10 +79,10 @@ public sealed class InvitationService(
 
     private async Task<InspectionInvitation> FindAsync(string token, bool tracking, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(token) || token.Length > 100) throw new NotFoundException("Invitation");
+        if (string.IsNullOrWhiteSpace(token) || token.Length > 100) throw new NotFoundException(EntityNames.Invitation);
         var hash = SecureTokens.Sha256Hex(token);
         var query = tracking ? db.InspectionInvitations : db.InspectionInvitations.AsNoTracking();
-        return await query.FirstOrDefaultAsync(x => x.TokenHash == hash, ct) ?? throw new NotFoundException("Invitation");
+        return await query.FirstOrDefaultAsync(x => x.TokenHash == hash, ct) ?? throw new NotFoundException(EntityNames.Invitation);
     }
 
     private async Task SaveOrConflictAsync(CancellationToken ct)
@@ -92,7 +93,7 @@ public sealed class InvitationService(
         }
         catch (DbUpdateConcurrencyException)
         {
-            throw new ConflictException("Please try again.");
+            throw new ConflictException(new("Please try again.", "Tente novamente."));
         }
     }
 }

@@ -7,6 +7,7 @@ using InspectFlow.Modules.Inspections.Application;
 using InspectFlow.Modules.Inspections.Domain;
 using InspectFlow.Modules.Media.Domain;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 using InspectFlow.Shared.Time;
 using Microsoft.EntityFrameworkCore;
 
@@ -50,7 +51,7 @@ public sealed class AiAnalysisService(
     {
         await access.GetForAssignedAgentAsync(inspectionId, ct, tracking: false);
         var analysis = await db.AiAnalyses.AsNoTracking().FirstOrDefaultAsync(a => a.Id == analysisId && a.InspectionId == inspectionId, ct)
-                       ?? throw new NotFoundException("Analysis", analysisId);
+                       ?? throw new NotFoundException(EntityNames.Analysis, analysisId);
         return ToDto(analysis, analyzer.IsMock);
     }
 
@@ -59,14 +60,14 @@ public sealed class AiAnalysisService(
         var agentId = access.RequireAgent();
         var inspection = await access.GetForAssignedAgentAsync(inspectionId, ct);
         inspection.EnsureEditableBy(agentId);
-        var room = inspection.Rooms.FirstOrDefault(r => r.Id == roomId) ?? throw new NotFoundException("Room", roomId);
+        var room = inspection.Rooms.FirstOrDefault(r => r.Id == roomId) ?? throw new NotFoundException(EntityNames.Room, roomId);
         if (defectId is not null) room.GetDefect(defectId.Value);
 
         Guid? comparisonId = null;
         if (kind == AiAnalysisKind.RoomComparison)
         {
             comparisonId = await db.InspectionComparisons.Where(c => c.InspectionRoomId == roomId).Select(c => (Guid?)c.Id).FirstOrDefaultAsync(ct)
-                           ?? throw new DomainRuleException("comparison.none", "This room has no baseline inspection to compare with.");
+                           ?? throw new DomainRuleException("comparison.none", InspectionMessages.NoBaseline);
         }
 
         // Idempotency: one running job per target.
@@ -82,8 +83,10 @@ public sealed class AiAnalysisService(
             .OrderByDescending(m => m.UploadedAt).Take(MaxImagesPerAnalysis).Select(m => m.Id).ToListAsync(ct);
         if (mediaIds.Count == 0)
             throw new DomainRuleException("ai.no_photos", kind == AiAnalysisKind.DefectDescription
-                ? "Upload at least one photo of the defect before requesting an AI description."
-                : "Upload at least one general photo before requesting an AI description.");
+                ? new("Upload at least one photo of the defect before requesting an AI description.",
+                    "Envie pelo menos uma foto da avaria antes de pedir uma descrição por IA.")
+                : new("Upload at least one general photo before requesting an AI description.",
+                    "Envie pelo menos uma foto geral antes de pedir uma descrição por IA."));
 
         var now = clock.UtcNow;
         var analysis = new AiAnalysis
@@ -122,7 +125,7 @@ public sealed class AiAnalysisService(
     }
 
     public static AiAnalysisDto ToDto(AiAnalysis a, bool isMock) => new(a.Id, a.Kind.ToString(), a.Status.ToString(), a.Provider,
-        a.Model, isMock && a.Provider == MockProviderName, a.Description, a.Confidence, a.Error, a.RequestedAt, a.CompletedAt,
+        a.Model, isMock && a.Provider == MockProviderName, a.Description, a.Confidence, AiErrorTexts.Localize(a.Error), a.RequestedAt, a.CompletedAt,
         a.ResultJson is null ? null : JsonDocument.Parse(a.ResultJson).RootElement.Clone());
 
     public const string MockProviderName = "mock";

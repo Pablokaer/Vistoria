@@ -5,6 +5,7 @@ using InspectFlow.Modules.Companies.Application;
 using InspectFlow.Modules.Companies.Domain;
 using InspectFlow.Modules.Properties.Domain;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 using InspectFlow.Shared.Time;
 using Microsoft.EntityFrameworkCore;
 
@@ -63,7 +64,7 @@ public sealed class PropertyService(IAppDbContext db, CompanyAccess access, IAud
         var companyId = await access.RequireAsync(CompanyPermission.View, ct);
         var property = await db.Properties.AsNoTracking().Include(p => p.Rooms)
                            .FirstOrDefaultAsync(p => p.Id == propertyId && p.CompanyId == companyId, ct)
-                       ?? throw new NotFoundException("Property", propertyId);
+                       ?? throw new NotFoundException(EntityNames.Property, propertyId);
         return ToDto(property);
     }
 
@@ -135,7 +136,7 @@ public sealed class PropertyService(IAppDbContext db, CompanyAccess access, IAud
         var companyId = await access.RequireAsync(CompanyPermission.ManageProperties, ct);
         return await db.Properties.Include(p => p.Rooms)
                    .FirstOrDefaultAsync(p => p.Id == propertyId && p.CompanyId == companyId, ct)
-               ?? throw new NotFoundException("Property", propertyId);
+               ?? throw new NotFoundException(EntityNames.Property, propertyId);
     }
 
     public static PropertyDto ToDto(Property p) => new(p.Id, p.AddressLine1, p.AddressLine2, p.City, p.Postcode, p.Country,

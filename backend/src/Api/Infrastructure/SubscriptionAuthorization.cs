@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using InspectFlow.Modules.Billing.Application;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
+using InspectFlow.Shared.Localization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace InspectFlow.Api.Infrastructure;
@@ -38,6 +39,9 @@ public sealed class ActiveSubscriptionHandler(SubscriptionAccessService access) 
 /// </summary>
 public sealed class SubscriptionAwareResultHandler(IProblemDetailsService problems) : IAuthorizationMiddlewareResultHandler
 {
+    private static readonly LocalizedText SubscriptionRequired =
+        new("An active subscription is required.", "É necessária uma assinatura ativa.");
+
     private readonly AuthorizationMiddlewareResultHandler _default = new();
 
     public async Task HandleAsync(RequestDelegate next, HttpContext context, AuthorizationPolicy policy, PolicyAuthorizationResult authorizeResult)
@@ -51,7 +55,7 @@ public sealed class SubscriptionAwareResultHandler(IProblemDetailsService proble
         var details = new ProblemDetails
         {
             Status = StatusCodes.Status402PaymentRequired,
-            Title = "An active subscription is required.",
+            Title = SubscriptionRequired.In(RequestLanguage.Of(context)),
             Type = $"https://inspectflow.dev/errors/{ActiveSubscriptionRequirement.FailureCode}",
         };
         details.Extensions["code"] = ActiveSubscriptionRequirement.FailureCode;

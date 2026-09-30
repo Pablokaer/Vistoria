@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using InspectFlow.Modules.Billing.Application;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 using InspectFlow.Shared.Time;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -37,7 +38,8 @@ public sealed class StripePaymentProvider(HttpClient http, IOptions<StripeOption
             // The body may echo request data; log only the status.
             logger.LogError("Stripe returned {Status} creating checkout {CheckoutId}", (int)response.StatusCode, request.CheckoutId);
             throw new DomainRuleException("billing.provider_error",
-                $"The payment provider returned {(int)response.StatusCode} for checkout {request.CheckoutId}. Please try again.");
+                new($"The payment provider returned {(int)response.StatusCode} for checkout {request.CheckoutId}. Please try again.",
+                    $"O provedor de pagamento retornou {(int)response.StatusCode} para o pagamento {request.CheckoutId}. Tente novamente."));
         }
         return await ReadCheckoutAsync(response, ct);
     }
@@ -54,7 +56,8 @@ public sealed class StripePaymentProvider(HttpClient http, IOptions<StripeOption
         var priceId = request.Plan.StripePriceId;
         if (string.IsNullOrWhiteSpace(priceId))
             throw new DomainRuleException("billing.plan_not_configured",
-                $"Plan '{request.Plan.Code}' has no StripePriceId; expected Billing:Plans:<n>:StripePriceId = \"price_...\".");
+                new($"Plan '{request.Plan.Code}' has no StripePriceId; expected Billing:Plans:<n>:StripePriceId = \"price_...\".",
+                    $"O plano '{request.Plan.Code}' não tem StripePriceId; esperado Billing:Plans:<n>:StripePriceId = \"price_...\"."));
         return
         [
             new("mode", "subscription"),
@@ -77,7 +80,8 @@ public sealed class StripePaymentProvider(HttpClient http, IOptions<StripeOption
         var id = root.GetProperty("id").GetString();
         var url = root.GetProperty("url").GetString();
         if (id is null || url is null)
-            throw new DomainRuleException("billing.provider_error", $"Stripe checkout response lacks id/url (id: '{id}', url: '{url}').");
+            throw new DomainRuleException("billing.provider_error", new($"Stripe checkout response lacks id/url (id: '{id}', url: '{url}').",
+                $"A resposta de pagamento do Stripe não tem id/url (id: '{id}', url: '{url}')."));
         DateTimeOffset? expires = root.TryGetProperty("expires_at", out var e) && e.ValueKind == JsonValueKind.Number
             ? DateTimeOffset.FromUnixTimeSeconds(e.GetInt64())
             : null;

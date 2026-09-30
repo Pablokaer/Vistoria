@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { autosaveMessages } from "@/i18n/messages/inspectionTools";
+import type { Translate } from "@/i18n/translate";
 
 export type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
 
@@ -28,7 +30,7 @@ export function useAutosave<T>(value: T, save: (value: T) => Promise<void>, { de
     setState("saving");
     const run = saveRef.current(latest.current)
       .then(() => { saved.current = snapshot; setError(null); setState(JSON.stringify(latest.current) === snapshot ? "saved" : "dirty"); })
-      .catch((e: unknown) => { setState("error"); setError(e instanceof Error ? e.message : "Could not save"); throw e; });
+      .catch((e: unknown) => { setState("error"); setError(e instanceof Error ? e.message : null); throw e; });
     inFlight.current = run.finally(() => { inFlight.current = null; }).catch(() => undefined);
     await run;
   }, []);
@@ -49,12 +51,18 @@ export function useAutosave<T>(value: T, save: (value: T) => Promise<void>, { de
   return { state, error, flush, markSaved };
 }
 
-export function SaveIndicatorText(state: SaveState, error: string | null): string {
+export type AutosaveKey = keyof (typeof autosaveMessages)["en"];
+
+/**
+ * Status line under an autosaved form, in the caller's language.
+ * Example: `SaveIndicatorText(autosave.state, autosave.error, useT(autosaveMessages))`.
+ */
+export function SaveIndicatorText(state: SaveState, error: string | null, t: Translate<AutosaveKey>): string {
   switch (state) {
-    case "dirty": return "Unsaved changes…";
-    case "saving": return "Saving…";
-    case "saved": return "All changes saved";
-    case "error": return `Not saved — ${error ?? "retrying on next change"}`;
+    case "dirty": return t("dirty");
+    case "saving": return t("saving");
+    case "saved": return t("saved");
+    case "error": return t("notSaved", { error: error ?? t("retryingOnNextChange") });
     default: return "";
   }
 }

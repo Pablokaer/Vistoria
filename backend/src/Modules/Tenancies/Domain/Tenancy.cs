@@ -1,4 +1,5 @@
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 
 namespace InspectFlow.Modules.Tenancies.Domain;
 
@@ -43,7 +44,7 @@ public class Tenancy
     public void SetDates(DateOnly startDate, DateOnly? endDate, DateTimeOffset now)
     {
         if (endDate is not null && endDate < startDate)
-            throw new ValidationException("EndDate", "End date must be on or after the start date.");
+            throw new ValidationException("EndDate", new("End date must be on or after the start date.", "A data de término deve ser igual ou posterior à data de início."));
         StartDate = startDate;
         EndDate = endDate;
         UpdatedAt = now;
@@ -52,7 +53,7 @@ public class Tenancy
     public void ChangeStatus(TenancyStatus status, DateTimeOffset now)
     {
         if (Status is TenancyStatus.Cancelled or TenancyStatus.Ended && status != Status)
-            throw new DomainRuleException("tenancy.closed", "An ended or cancelled tenancy cannot be reopened.");
+            throw new DomainRuleException("tenancy.closed", new("An ended or cancelled tenancy cannot be reopened.", "Uma locação encerrada ou cancelada não pode ser reaberta."));
         Status = status;
         UpdatedAt = now;
     }

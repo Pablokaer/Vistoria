@@ -8,9 +8,11 @@ import { ComparisonPanel } from "@/components/ComparisonPanel";
 import { DefectEditor } from "@/components/DefectEditor";
 import { PhotoStrip } from "@/components/PhotoUploader";
 import { Badge, Button, Card, ErrorBanner, Field, Loading, Notice, PageHeader, Spinner, Textarea } from "@/components/ui";
+import { useFormatters, useT } from "@/i18n/I18nProvider";
+import { captureMessages } from "@/i18n/messages/capture";
+import { autosaveMessages } from "@/i18n/messages/inspectionTools";
 import { errorMessage, get, post, put } from "@/lib/api";
 import { SaveIndicatorText, useAutosave } from "@/lib/autosave";
-import { humanize } from "@/lib/format";
 import { hasRunningAnalysis, roomUrl, useInspectionRooms } from "@/lib/rooms";
 import type { RoomDetail } from "@/lib/types";
 
@@ -23,6 +25,8 @@ type RegisterFlush = (key: string, flush: () => Promise<void>) => () => void;
 export default function DescriptionsPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const t = useT(captureMessages);
+  const { humanize } = useFormatters();
   const { inspection, rooms, error, load, setRoom, reloadRoom } = useInspectionRooms(id);
   const flushers = useRef(new Map<string, () => Promise<void>>());
   const [busy, setBusy] = useState(false);
@@ -76,13 +80,13 @@ export default function DescriptionsPage() {
 
   return (
     <div className="pb-28">
-      <PageHeader title="Descriptions" subtitle={`${humanize(inspection.inspectionType)} · step 2 of 2 — check the text of every room`}
-        back={{ href: `/agent/inspections/${id}/capture`, label: "Photos" }} />
-      {writing > 0 && <Notice tone="info"><span className="flex items-center gap-2"><Spinner small /> Writing descriptions for {writing} room(s)…</span></Notice>}
+      <PageHeader title={t("descriptionsTitle")} subtitle={t("descriptionsSubtitle", { type: humanize(inspection.inspectionType) })}
+        back={{ href: `/agent/inspections/${id}/capture`, label: t("photosTitle") }} />
+      {writing > 0 && <Notice tone="info"><span className="flex items-center gap-2"><Spinner small /> {t("writingRooms", { count: writing })}</span></Notice>}
       <ErrorBanner message={actionError} />
       {issues.length > 0 && (
         <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">
-          <strong>Some rooms cannot be completed yet:</strong>
+          <strong>{t("cannotComplete")}</strong>
           <ul className="mt-1 list-disc space-y-1 pl-5">{issues.map((i) => <li key={i}>{i}</li>)}</ul>
         </div>
       )}
@@ -95,11 +99,11 @@ export default function DescriptionsPage() {
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-end gap-3 px-4 py-3">
-          <span className="flex-1 text-xs text-slate-500">{writing > 0 ? "Wait for the AI to finish writing." : "Review any AI text before continuing."}</span>
+          <span className="flex-1 text-xs text-slate-500">{writing > 0 ? t("waitForAi") : t("reviewAiText")}</span>
           {inProgress ? (
-            <Button size="lg" loading={busy} disabled={writing > 0} onClick={() => void completeAll()}>Complete rooms & review</Button>
+            <Button size="lg" loading={busy} disabled={writing > 0} onClick={() => void completeAll()}>{t("completeAndReview")}</Button>
           ) : inspection.status === "Review" ? (
-            <Link href={`/agent/inspections/${id}/review`} className="rounded-lg bg-brand px-4 py-3 text-sm font-medium text-white">Continue review</Link>
+            <Link href={`/agent/inspections/${id}/review`} className="rounded-lg bg-brand px-4 py-3 text-sm font-medium text-white">{t("continueReview")}</Link>
           ) : null}
         </div>
       </div>
@@ -110,6 +114,7 @@ export default function DescriptionsPage() {
 /** Shows a placeholder while the room's AI texts are being written, then the editable form. */
 function RoomTexts(props: { room: RoomDetail; inspectionId: string; onRoom: (r: RoomDetail) => void; reload: () => Promise<void>; registerFlush: RegisterFlush }) {
   const { room } = props;
+  const t = useT(captureMessages);
   // Once shown, the form stays mounted (a later AI re-run must not discard what the agent is typing).
   const [ready, setReady] = useState(() => !hasRunningAnalysis(room));
   if (!ready && !hasRunningAnalysis(room)) setReady(true);
@@ -117,8 +122,8 @@ function RoomTexts(props: { room: RoomDetail; inspectionId: string; onRoom: (r: 
   if (!ready) {
     return (
       <Card title={`${room.sequence}. ${room.name}`}>
-        <div className="flex items-center gap-3 text-sm text-slate-600"><Spinner small /> Writing the description from {room.generalPhotos.length} photo(s)
-          {room.defects.length > 0 && ` and ${room.defects.length} defect(s)`}…</div>
+        <div className="flex items-center gap-3 text-sm text-slate-600"><Spinner small /> {t("writingFromPhotos", { count: room.generalPhotos.length })}
+          {room.defects.length > 0 && t("writingAndDefects", { count: room.defects.length })}…</div>
       </Card>
     );
   }
@@ -131,6 +136,8 @@ const fromRoom = (r: RoomDetail): Fields => ({ finalDescription: r.finalDescript
 function RoomTextForm({ room, inspectionId, onRoom, reload, registerFlush }: {
   room: RoomDetail; inspectionId: string; onRoom: (r: RoomDetail) => void; reload: () => Promise<void>; registerFlush: RegisterFlush;
 }) {
+  const t = useT(captureMessages);
+  const tSave = useT(autosaveMessages);
   const base = roomUrl(inspectionId, room.id);
   const [fields, setFields] = useState<Fields>(() => fromRoom(room));
   const editable = room.editable;
@@ -158,21 +165,21 @@ function RoomTextForm({ room, inspectionId, onRoom, reload, registerFlush }: {
   return (
     <section id={`room-${room.id}`} className="scroll-mt-20">
       <Card title={<span className="flex flex-wrap items-center gap-3">{room.sequence}. {room.name} <Badge value={room.status} /></span>}
-        actions={editable && <Link href={`/agent/inspections/${inspectionId}/capture#room-${room.id}`} className="text-sm text-brand hover:underline">Edit photos</Link>}>
+        actions={editable && <Link href={`/agent/inspections/${inspectionId}/capture#room-${room.id}`} className="text-sm text-brand hover:underline">{t("editPhotos")}</Link>}>
         <PhotoStrip urls={room.generalPhotos.map((p) => p.url)} />
 
         <div className="mt-4">
-          <AiAnalysisButton label="Regenerate AI description" requestUrl={`${base}/analysis`} statusUrlBase={base.replace(/\/rooms\/[^/]+$/, "/analyses")}
+          <AiAnalysisButton label={t("regenerateAi")} requestUrl={`${base}/analysis`} statusUrlBase={base.replace(/\/rooms\/[^/]+$/, "/analyses")}
             latest={room.latestAnalysis} disabled={!editable || room.generalPhotos.length === 0} onDone={afterRoomAi} />
           {room.aiDescription && editable && fields.finalDescription !== room.aiDescription && (
             <details className="mt-3 rounded-lg bg-slate-50 p-3 text-sm">
-              <summary className="cursor-pointer font-medium text-slate-700">AI draft (kept for traceability)</summary>
+              <summary className="cursor-pointer font-medium text-slate-700">{t("aiDraftKept")}</summary>
               <p className="mt-2 whitespace-pre-line text-slate-700">{room.aiDescription}</p>
-              <Button variant="ghost" className="mt-1" onClick={() => set("finalDescription", room.aiDescription ?? "")}>Replace my text with AI draft</Button>
+              <Button variant="ghost" className="mt-1" onClick={() => set("finalDescription", room.aiDescription ?? "")}>{t("replaceWithAi")}</Button>
             </details>
           )}
           <div className="mt-3">
-            <Field label="Room description (as it will appear in the report)" hint="Describe only what is visible. Review any AI text before continuing.">
+            <Field label={t("roomDescriptionLabel")} hint={t("roomDescriptionHint")}>
               <Textarea rows={6} disabled={!editable} value={fields.finalDescription} onChange={(e) => set("finalDescription", e.target.value)} />
             </Field>
           </div>
@@ -180,7 +187,7 @@ function RoomTextForm({ room, inspectionId, onRoom, reload, registerFlush }: {
 
         {room.defects.length > 0 && (
           <div className="mt-4 space-y-3">
-            <h3 className="text-sm font-semibold text-slate-700">Defects</h3>
+            <h3 className="text-sm font-semibold text-slate-700">{t("defects")}</h3>
             {room.defects.map((d, i) => (
               <DefectEditor key={d.id} defect={d} index={i} base={base} editable={editable} moveOut={!!room.comparison} onRoom={onRoom} reload={reload} registerFlush={registerFlush} />
             ))}
@@ -190,15 +197,15 @@ function RoomTextForm({ room, inspectionId, onRoom, reload, registerFlush }: {
         {room.comparison && <div className="mt-4"><ComparisonPanel room={room} base={base} onRoom={onRoom} reload={reload} /></div>}
 
         <div className="mt-4">
-          <Field label="Agent notes">
-            <Textarea rows={2} disabled={!editable} value={fields.agentNotes} onChange={(e) => set("agentNotes", e.target.value)} placeholder="Meter readings, keys, anything else worth recording…" />
+          <Field label={t("agentNotes")}>
+            <Textarea rows={2} disabled={!editable} value={fields.agentNotes} onChange={(e) => set("agentNotes", e.target.value)} placeholder={t("agentNotesPlaceholder")} />
           </Field>
         </div>
 
         {room.completionIssues.length > 0 && room.status !== "Completed" && (
           <ul className="mt-3 list-disc space-y-1 rounded-lg bg-amber-50 py-2 pl-8 pr-3 text-sm text-amber-900">{room.completionIssues.map((i) => <li key={i}>{i}</li>)}</ul>
         )}
-        <p className="mt-2 text-xs text-slate-500">{SaveIndicatorText(autosave.state, autosave.error)}</p>
+        <p className="mt-2 text-xs text-slate-500">{SaveIndicatorText(autosave.state, autosave.error, tSave)}</p>
       </Card>
     </section>
   );

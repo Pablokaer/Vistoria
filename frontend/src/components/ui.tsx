@@ -1,6 +1,11 @@
+"use client";
+
+// Client module: several primitives (Loading, Badge, CopyField, ...) read the UI language from I18nProvider.
+// Server components may still render them; they only pass serializable props.
 import Link from "next/link";
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
-import { humanize } from "@/lib/format";
+import { useFormatters, useT } from "@/i18n/I18nProvider";
+import { uiMessages } from "@/i18n/messages/ui";
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
@@ -83,19 +88,22 @@ export const Textarea = (props: TextareaHTMLAttributes<HTMLTextAreaElement>) => 
 export const Select = (props: SelectHTMLAttributes<HTMLSelectElement>) => <select {...props} className={cx(inputClass, "min-h-10", props.className)} />;
 
 export function Spinner({ small }: { small?: boolean }) {
-  return <span className={cx("inline-block animate-spin rounded-full border-2 border-current border-t-transparent", small ? "h-4 w-4" : "h-6 w-6")} aria-label="Loading" />;
+  const t = useT(uiMessages);
+  return <span className={cx("inline-block animate-spin rounded-full border-2 border-current border-t-transparent", small ? "h-4 w-4" : "h-6 w-6")} aria-label={t("loading")} />;
 }
 
-export function Loading({ label = "Loading…" }: { label?: string }) {
-  return <div className="flex items-center gap-3 py-10 text-slate-500"><Spinner /> {label}</div>;
+export function Loading({ label }: { label?: string }) {
+  const t = useT(uiMessages);
+  return <div className="flex items-center gap-3 py-10 text-slate-500"><Spinner /> {label ?? t("loading")}</div>;
 }
 
 export function ErrorBanner({ message, onRetry }: { message: string | null | undefined; onRetry?: () => void }) {
+  const t = useT(uiMessages);
   if (!message) return null;
   return (
     <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
       <span>{message}</span>
-      {onRetry && <button onClick={onRetry} className="font-medium underline">Retry</button>}
+      {onRetry && <button onClick={onRetry} className="font-medium underline">{t("retry")}</button>}
     </div>
   );
 }
@@ -124,14 +132,16 @@ const statusColors: Record<string, string> = {
 };
 
 export function Badge({ value, className }: { value: string; className?: string }) {
+  const { humanize } = useFormatters();
   return <span className={cx("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", statusColors[value] ?? "bg-slate-100 text-slate-700", className)}>{humanize(value)}</span>;
 }
 
 export function ProgressBar({ value, total, label }: { value: number; total: number; label?: string }) {
+  const t = useT(uiMessages);
   const pct = total === 0 ? 0 : Math.round((value / total) * 100);
   return (
     <div>
-      <div className="mb-1 flex justify-between text-xs text-slate-600"><span>{label ?? `${value} / ${total} rooms completed`}</span><span>{pct}%</span></div>
+      <div className="mb-1 flex justify-between text-xs text-slate-600"><span>{label ?? t("roomsCompleted", { value, total })}</span><span>{pct}%</span></div>
       <div className="h-2 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-brand transition-all" style={{ width: `${pct}%` }} /></div>
     </div>
   );
@@ -161,11 +171,12 @@ export function DefinitionList({ items }: { items: [string, ReactNode][] }) {
 }
 
 export function CopyField({ value, label }: { value: string; label: string }) {
+  const t = useT(uiMessages);
   return (
     <Field label={label}>
       <div className="flex gap-2">
         <Input readOnly value={value} onFocus={(e) => e.currentTarget.select()} />
-        <Button type="button" variant="secondary" onClick={() => navigator.clipboard?.writeText(value)}>Copy</Button>
+        <Button type="button" variant="secondary" onClick={() => navigator.clipboard?.writeText(value)}>{t("copy")}</Button>
       </div>
     </Field>
   );

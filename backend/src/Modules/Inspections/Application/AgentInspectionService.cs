@@ -10,6 +10,7 @@ using InspectFlow.Modules.Media.Domain;
 using InspectFlow.Modules.Notifications.Application;
 using InspectFlow.Modules.Reports.Application;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 using InspectFlow.Shared.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -57,9 +58,9 @@ public sealed class AgentInspectionService(
                          join c in db.Companies.AsNoTracking() on i.CompanyId equals c.Id
                          where i.Id == inspectionId && i.Status == InspectionStatus.Open
                          select new { i, p.City, p.Postcode, p.PropertyType, CompanyName = c.Name, Rooms = i.Rooms.OrderBy(r => r.Sequence).Select(r => r.Name).ToList() })
-            .FirstOrDefaultAsync(ct) ?? throw new NotFoundException("Inspection", inspectionId);
+            .FirstOrDefaultAsync(ct) ?? throw new NotFoundException(EntityNames.Inspection, inspectionId);
         if (row.i.Visibility == InspectionVisibility.Private && !await HasVerifiedInvitationAsync(row.i.Id, agentId, ct))
-            throw new NotFoundException("Inspection", inspectionId);
+            throw new NotFoundException(EntityNames.Inspection, inspectionId);
         return ToAvailable(row.i, row.CompanyName, row.City, row.Postcode, row.PropertyType.ToString(), row.Rooms);
     }
 
@@ -72,20 +73,20 @@ public sealed class AgentInspectionService(
         var agentId = access.RequireAgent();
         var inspection = await db.Inspections.Include(i => i.Rooms).ThenInclude(r => r.Defects)
                              .FirstOrDefaultAsync(i => i.Id == inspectionId, ct)
-                         ?? throw new NotFoundException("Inspection", inspectionId);
+                         ?? throw new NotFoundException(EntityNames.Inspection, inspectionId);
 
         if (inspection.Visibility == InspectionVisibility.Private)
         {
             if (!await HasVerifiedInvitationAsync(inspection.Id, agentId, ct))
-                throw new NotFoundException("Inspection", inspectionId);
+                throw new NotFoundException(EntityNames.Inspection, inspectionId);
         }
         else if (inspection.Status is InspectionStatus.Draft)
         {
-            throw new NotFoundException("Inspection", inspectionId); // never published: agents must not learn it exists
+            throw new NotFoundException(EntityNames.Inspection, inspectionId); // never published: agents must not learn it exists
         }
         else if (inspection.Status != InspectionStatus.Open && inspection.AgentId != agentId)
         {
-            throw new DomainRuleException("inspection.not_available", "This inspection has already been accepted or is not available.");
+            throw new DomainRuleException("inspection.not_available", InspectionMessages.NotAvailable);
         }
 
         inspection.Accept(agentId, clock.UtcNow);
@@ -101,7 +102,7 @@ public sealed class AgentInspectionService(
         }
         catch (DbUpdateConcurrencyException)
         {
-            throw new ConflictException("Another agent accepted this inspection moments ago.", "inspection.already_accepted");
+            throw new ConflictException(new("Another agent accepted this inspection moments ago.", "Outro vistoriador aceitou esta vistoria há instantes."), "inspection.already_accepted");
         }
         return await details.BuildAsync(inspection, InspectionViewerKind.Agent, ct);
     }
@@ -264,9 +265,9 @@ public sealed class AgentInspectionService(
         {
             var (_, inspection, room) = await LoadEditableRoomAsync(inspectionId, roomId, ct);
             var comparison = await db.InspectionComparisons.FirstOrDefaultAsync(c => c.InspectionRoomId == roomId, ct)
-                             ?? throw new DomainRuleException("comparison.none", "This room has no baseline inspection to compare with.");
+                             ?? throw new DomainRuleException("comparison.none", InspectionMessages.NoBaseline);
             var baseline = await snapshots.FindRoomAsync(comparison.SourceInspectionId, comparison.SourceInspectionRoomId, ct)
-                           ?? throw new DomainRuleException("comparison.baseline_missing", "The baseline report could not be found.");
+                           ?? throw new DomainRuleException("comparison.baseline_missing", new("The baseline report could not be found.", "O laudo de referência não foi encontrado."));
 
             var baselineAi = await LoadRoomAnalysisAsync(baseline.AiAnalysisId, ct);
             var currentAi = await LoadRoomAnalysisAsync(room.LatestAiAnalysisId, ct);
@@ -286,7 +287,7 @@ public sealed class AgentInspectionService(
         {
             var (agentId, inspection, room) = await LoadEditableRoomAsync(inspectionId, roomId, ct);
             var comparison = await db.InspectionComparisons.FirstOrDefaultAsync(c => c.InspectionRoomId == roomId, ct)
-                             ?? throw new DomainRuleException("comparison.none", "This room has no baseline inspection to compare with.");
+                             ?? throw new DomainRuleException("comparison.none", InspectionMessages.NoBaseline);
             var now = clock.UtcNow;
             comparison.RecordDecision(request.Decision, request.Notes, agentId, now);
             room.MarkActivity(now);
@@ -334,13 +335,13 @@ public sealed class AgentInspectionService(
         var agentId = access.RequireAgent();
         var inspection = await access.GetForAssignedAgentAsync(inspectionId, ct);
         inspection.EnsureEditableBy(agentId);
-        var room = inspection.Rooms.FirstOrDefault(r => r.Id == roomId) ?? throw new NotFoundException("Room", roomId);
+        var room = inspection.Rooms.FirstOrDefault(r => r.Id == roomId) ?? throw new NotFoundException(EntityNames.Room, roomId);
         return (agentId, inspection, room);
     }
 
     private async Task<RoomDetailDto> BuildRoomAsync(Inspection inspection, Guid roomId, CancellationToken ct)
     {
-        var room = inspection.Rooms.FirstOrDefault(r => r.Id == roomId) ?? throw new NotFoundException("Room", roomId);
+        var room = inspection.Rooms.FirstOrDefault(r => r.Id == roomId) ?? throw new NotFoundException(EntityNames.Room, roomId);
         var media = await db.InspectionRoomMedia.AsNoTracking().Where(m => m.InspectionRoomId == roomId)
             .OrderBy(m => m.UploadedAt).ToListAsync(ct);
         var analyses = await db.AiAnalyses.AsNoTracking().Where(a => a.InspectionRoomId == roomId)
@@ -396,7 +397,7 @@ public sealed class AgentInspectionService(
             room.AiDescription, room.AiDescriptionGeneratedAt, room.FinalDescription, room.FinalDescriptionSource.ToString(),
             room.DefectsFound, room.AgentNotes, room.CompletedAt, general, defects,
             latestRoomAnalysis is null ? null : AiAnalysisService.ToDto(latestRoomAnalysis, analyzer.IsMock),
-            comparisonDto, room.GetCompletionIssues(context),
+            comparisonDto, room.GetCompletionIssues(context).ForCurrentLanguage(),
             InspectionStateMachine.IsEditable(inspection.Status), inspection.Status.ToString(),
             index > 0 ? ordered[index - 1].Id : null,
             index < ordered.Count - 1 ? ordered[index + 1].Id : null,
@@ -431,7 +432,7 @@ public sealed class AgentInspectionService(
         }
         catch (DbUpdateConcurrencyException)
         {
-            throw new ConflictException("The inspection was changed at the same time. Refresh and try again.");
+            throw new ConflictException(InspectionMessages.ChangedConcurrently);
         }
     }
 }

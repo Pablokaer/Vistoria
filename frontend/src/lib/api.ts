@@ -1,6 +1,9 @@
 // Minimal API client. The access token lives in memory only; the refresh token is an HttpOnly cookie
 // (set by the API because we send X-Client: web). All calls are same-origin via the Next.js rewrite.
 
+import { DEFAULT_LOCALE, isLocale, type Locale } from "@/i18n/locales";
+import { commonMessages } from "@/i18n/messages/common";
+import { translator } from "@/i18n/translate";
 import type { AuthResponse } from "./types";
 
 export class ApiError extends Error {
@@ -15,6 +18,14 @@ export class ApiError extends Error {
   }
 }
 
+// I18nProvider keeps <html lang> in step with the chosen language; reading it per call avoids a second source of truth.
+function currentLocale(): Locale {
+  const lang = typeof document === "undefined" ? null : document.documentElement.lang;
+  return isLocale(lang) ? lang : DEFAULT_LOCALE;
+}
+
+const tCommon = () => translator(commonMessages, currentLocale());
+
 let accessToken: string | null = null;
 let refreshing: Promise<AuthResponse | null> | null = null;
 let onSessionExpired: (() => void) | null = null;
@@ -28,7 +39,7 @@ export function setSubscriptionRequiredHandler(handler: () => void) { onSubscrip
 async function parseError(res: Response): Promise<ApiError> {
   let body: { title?: string; code?: string; details?: string[]; errors?: Record<string, string[]> } = {};
   try { body = await res.json(); } catch { /* not JSON */ }
-  const fallback = res.status === 429 ? "Too many requests. Please wait a moment." : `Request failed (${res.status})`;
+  const fallback = res.status === 429 ? tCommon()("tooManyRequests") : tCommon()("requestFailed", { status: res.status });
   return new ApiError(res.status, body.title ?? fallback, body.code, body.details ?? [], body.errors ?? {});
 }
 
@@ -51,6 +62,7 @@ export function refreshSession(): Promise<AuthResponse | null> {
 export async function api<T>(path: string, init: RequestInit & { json?: unknown } = {}, retry = true): Promise<T> {
   const headers = new Headers(init.headers);
   headers.set("X-Client", "web");
+  headers.set("Accept-Language", currentLocale());
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
   let body = init.body;
   if (init.json !== undefined) {
@@ -81,10 +93,11 @@ export function uploadWithProgress<T>(path: string, form: FormData, onProgress?:
     const xhr = new XMLHttpRequest();
     xhr.open("POST", path);
     xhr.setRequestHeader("X-Client", "web");
+    xhr.setRequestHeader("Accept-Language", currentLocale());
     if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
     xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress?.(e.loaded / e.total); };
     xhr.onload = () => resolve({ status: xhr.status, body: xhr.responseText });
-    xhr.onerror = () => reject(new ApiError(0, "Network error — check your connection and retry."));
+    xhr.onerror = () => reject(new ApiError(0, tCommon()("networkError")));
     xhr.send(form);
   });
   return (async () => {
@@ -94,7 +107,7 @@ export function uploadWithProgress<T>(path: string, form: FormData, onProgress?:
       let parsed: { title?: string; code?: string; details?: string[]; errors?: Record<string, string[]> } = {};
       try { parsed = JSON.parse(result.body); } catch { /* ignore */ }
       const firstError = parsed.errors ? Object.values(parsed.errors)[0]?.[0] : undefined;
-      throw new ApiError(result.status, firstError ?? parsed.title ?? `Upload failed (${result.status})`, parsed.code, parsed.details ?? [], parsed.errors ?? {});
+      throw new ApiError(result.status, firstError ?? parsed.title ?? tCommon()("uploadFailed", { status: result.status }), parsed.code, parsed.details ?? [], parsed.errors ?? {});
     }
     return JSON.parse(result.body) as T;
   })();
@@ -105,5 +118,5 @@ export function errorMessage(e: unknown): string {
     const fieldErrors = Object.values(e.errors).flat();
     return fieldErrors.length > 0 ? fieldErrors.join(" ") : e.message;
   }
-  return e instanceof Error ? e.message : "Something went wrong.";
+  return e instanceof Error ? e.message : tCommon()("somethingWentWrong");
 }

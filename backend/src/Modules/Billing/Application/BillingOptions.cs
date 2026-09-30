@@ -1,5 +1,6 @@
 using InspectFlow.Modules.Billing.Domain;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 
 namespace InspectFlow.Modules.Billing.Application;
 
@@ -40,6 +41,28 @@ public sealed class BillingPlan
     public List<string> Features { get; set; } = [];
     /// <summary>Stripe Price id (price_...) — only needed when the Stripe provider is active.</summary>
     public string? StripePriceId { get; set; }
+    /// <summary>
+    /// Marketing texts per language tag (e.g. "pt-BR"). Name, Description and Features above are the English texts;
+    /// a language without an entry, or an entry with an empty field, shows the English one.
+    /// </summary>
+    public Dictionary<string, BillingPlanTexts> Translations { get; set; } = [];
+
+    /// <summary>
+    /// The plan's texts for a language, falling back to English field by field.
+    /// Example: <c>plan.TextsIn("pt-BR").Name // "Profissional"</c>
+    /// </summary>
+    public BillingPlanTexts TextsIn(string language)
+    {
+        var english = new BillingPlanTexts { Name = Name, Description = Description, Features = Features };
+        var translated = Translations.FirstOrDefault(t => string.Equals(t.Key, language, StringComparison.OrdinalIgnoreCase)).Value;
+        if (translated is null) return english;
+        return new BillingPlanTexts
+        {
+            Name = string.IsNullOrWhiteSpace(translated.Name) ? Name : translated.Name,
+            Description = string.IsNullOrWhiteSpace(translated.Description) ? Description : translated.Description,
+            Features = translated.Features.Count == 0 ? Features : translated.Features,
+        };
+    }
 
     /// <summary>
     /// The paid period that starts at <paramref name="start"/>.
@@ -53,6 +76,14 @@ public sealed class BillingPlan
     };
 }
 
+/// <summary>The customer-facing texts of a plan in one language (configuration section Plans[i].Translations.{tag}).</summary>
+public sealed class BillingPlanTexts
+{
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public List<string> Features { get; set; } = [];
+}
+
 /// <summary>Looks plans up by code.</summary>
 public static class BillingPlanCatalog
 {
@@ -62,7 +93,7 @@ public static class BillingPlanCatalog
         var plan = options.Plans.FirstOrDefault(p => string.Equals(p.Code, code, StringComparison.OrdinalIgnoreCase));
         if (plan is not null) return plan;
         var known = string.Join(", ", options.Plans.Select(p => p.Code));
-        throw new ValidationException("PlanCode", $"Plan '{code}' does not exist; expected one of: {known}.");
+        throw new ValidationException("PlanCode", new($"Plan '{code}' does not exist; expected one of: {known}.", $"O plano '{code}' não existe; valores aceitos: {known}."));
     }
 
     /// <summary>The plan of a stored subscription, or null when the plan was removed from configuration.</summary>

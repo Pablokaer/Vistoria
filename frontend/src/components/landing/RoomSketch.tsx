@@ -1,6 +1,11 @@
 // Stylised room "photos" for the product mockups (vector, so they stay crisp and weigh nothing).
 
+import { getServerTranslator } from "@/i18n/server";
+import { landingDetailsMessages, type LandingDetailsKey } from "@/i18n/messages/landingDetails";
+
 type RoomVariant = "living" | "kitchen" | "bedroom";
+
+const SKETCH_LABEL: Record<RoomVariant, LandingDetailsKey> = { living: "sketchLiving", kitchen: "sketchKitchen", bedroom: "sketchBedroom" };
 
 const PALETTE: Record<RoomVariant, { wall: string; side: string; floor: string; item: string; accent: string }> = {
   living: { wall: "#eef1f5", side: "#e2e7ee", floor: "#c9a77c", item: "#64748b", accent: "#93c5fd" },
@@ -9,10 +14,11 @@ const PALETTE: Record<RoomVariant, { wall: string; side: string; floor: string; 
 };
 
 /** Example: `<RoomSketch variant="kitchen" scuff className="h-24 w-full" />` — `scuff` draws a wall defect. */
-export function RoomSketch({ variant, scuff, className }: { variant: RoomVariant; scuff?: boolean; className?: string }) {
+export async function RoomSketch({ variant, scuff, className }: { variant: RoomVariant; scuff?: boolean; className?: string }) {
   const c = PALETTE[variant];
+  const t = await getServerTranslator(landingDetailsMessages);
   return (
-    <svg viewBox="0 0 160 120" className={className} role="img" aria-label={`${variant} photo`} preserveAspectRatio="xMidYMid slice">
+    <svg viewBox="0 0 160 120" className={className} role="img" aria-label={t(SKETCH_LABEL[variant])} preserveAspectRatio="xMidYMid slice">
       <rect width="160" height="120" fill={c.wall} />
       <polygon points="0,0 28,0 28,84 0,120" fill={c.side} />
       <polygon points="160,0 132,0 132,84 160,120" fill={c.side} />

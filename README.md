@@ -8,6 +8,7 @@ InspectFlow connects **companies** (letting agents / property managers), **inspe
 - Inspectors accept an inspection and work in two steps on their phone: first they photograph every room and its defects on a single page, then all AI-drafted descriptions (clearly labelled, always editable) are requested at once and reviewed on a second page; Move Outs are compared with the Move In baseline; then review and finalize.
 - Finalization freezes an immutable, versioned report (JSON snapshot + PDF, both hashed).
 - Tenants review the report, add observations (general or per room) and accept or dispute it.
+- **English and Brazilian Portuguese.** Every screen, API message and report exists in both. The UI follows the browser language until the user picks one in the header (EN / PT); reports and AI descriptions follow the company's **report language** (*Settings*).
 
 The web app is the first client; the API is designed so iOS/Android apps can use it unchanged (JWT + refresh token in body for native clients).
 
@@ -45,7 +46,7 @@ backend/
   tests/InspectFlow.Tests/
     Domain/          state machine, room rules, comparison, architecture, OpenAI adapter
     Integration/     real HTTP + PostgreSQL: authorization, flows, concurrency, immutability
-frontend/            Next.js app (Company, Agent and Tenant areas)
+frontend/            Next.js app (Company, Agent and Tenant areas; texts per language in src/i18n)
 e2e/                 Playwright script driving the full Move In + Move Out flow through the UI
 docs/architecture/   ADRs
 ```
@@ -175,9 +176,17 @@ The key is used only by the API process, only in the `Authorization` header of o
 - **Output language:** AI texts are written in the company's **report language** (`en` → British English, `pt-BR` → Brazilian Portuguese). JSON keys and condition/classification codes stay in English.
 - **Tracking:** each analysis stores `prompt_version = <code>+g<guide>+<language>`, e.g. `2026-09-v2+g2026-09-30.1+pt-BR`, so quality can be compared per guide version. See [ADR 0013](docs/architecture/0013-ai-writing-guide-and-language.md).
 
+### Languages
+
+- **UI language:** `en` or `pt-BR`. The `locale` cookie set by the header switcher wins; otherwise the browser's `Accept-Language` decides (any `pt*` → `pt-BR`, anything else → English). Texts live in `frontend/src/i18n/messages/*.ts`; the Portuguese object must have every English key, so a missing translation fails `npx tsc --noEmit`.
+- **API messages** follow the `Accept-Language` header, which the web app sends with every call. Error `code` values do not change; `title`, `errors` and `details` are translated. Without the header the API answers in English.
+- **Report language** (company-wide, Owner/Admin, *Settings* page or `PUT /api/companies/me/report-language`): AI drafts are written in it and the PDF labels use it. It is frozen into each report at finalization, so changing it only affects future reports. New companies start in the language the owner is using.
+- **Plans:** optional `Billing:Plans[i]:Translations:pt-BR` with `Name`, `Description` and `Features`; missing fields fall back to English.
+- See [ADR 0014](docs/architecture/0014-localization.md).
+
 ### Subscriptions and payments
 
-- **Plans** are configured under `Billing:Plans` in `backend/src/Api/appsettings.json`. Today there is one plan: **Professional, €49 / month**. Plans are served publicly at `GET /api/billing/plans`, and the landing page and checkout render them, so adding a plan needs configuration only.
+- **Plans** are configured under `Billing:Plans` in `backend/src/Api/appsettings.json`. Today there is one plan: **Professional, €49 / month**. Plans are served publicly at `GET /api/billing/plans` in the request language (see *Languages*), and the landing page and checkout render them, so adding a plan needs configuration only.
 - **Who pays:** `Billing:SubscriptionRequiredRoles` (default `["Company"]`). `Billing:GraceDays` (default 7) keeps access after a period ends or a renewal fails. `Billing:CheckoutMinutes` (default 60) is how long an abandoned checkout can be resumed.
 - **Enforcement:** every Company API call checks the subscription in the database and answers **402** `subscription.required` without an active one. The web app routes such users to `/subscription/required`. See [ADR 0012](docs/architecture/0012-subscription-billing.md).
 - **Stripe setup:**
@@ -206,6 +215,8 @@ Demo credentials are never created outside Development.
 **Switching accounts (Development only):** the header shows a **Dev: switch account** dropdown that signs you in as any of the demo users above in one click. It uses `GET /api/dev/accounts` and `POST /api/dev/switch`, which the API maps only when `ASPNETCORE_ENVIRONMENT=Development`; in any other environment they return 404 and the dropdown is hidden.
 
 ## How to test the flows
+
+**Languages.** Open http://localhost:3000 in a browser set to Portuguese (or pick **PT** in the header): the landing page, sign-in, checkout and every area switch to Portuguese, and the choice survives a reload. A wrong sign-in shows "E-mail ou senha inválidos." As the company, open *Settings* (*Configurações*) and set **Report language** to Português (Brasil): the next finalized report, its PDF and the AI descriptions (use `AI_PROVIDER=Mock` to avoid OpenAI costs) are in Portuguese, while earlier reports keep their language.
 
 **Landing and subscription.** Open http://localhost:3000 and click *Get started*. Register the company (`/register?plan=professional`), then *Continue to payment* on `/checkout`. On the sandbox page, pay with `4242 4242 4242 4242`. `/subscription/success` confirms once the webhook has been processed and takes you to the workspace onboarding.
 *Abandoned checkout:* register, leave the payment page, then sign in again later. You land on **Subscription required** → *Continue to payment* resumes the same checkout → pay → dashboard. `/pricing` shows the plans on their own page, and `/app` sends a signed-in user to their home.
@@ -237,11 +248,12 @@ TEST_DATABASE_CONNECTION_STRING="Host=localhost;Port=5432;Database=postgres;User
 cd frontend && npm run lint && npm run build
 
 # Full UI flow (Move In + Move Out, 3 roles) against a running stack; screenshots in e2e/output
-# (landing + subscribe, abandoned checkout → sign in → resume, Move In + Move Out; uses the Sandbox payment provider)
+# (languages: Portuguese browser, switcher + cookie, Portuguese API error; landing + subscribe, abandoned checkout → sign in → resume,
+#  Move In + Move Out; uses the Sandbox payment provider)
 cd e2e && npm install && BASE_URL=http://localhost:3000 node ui-flow.mjs
 ```
 
-141 backend tests cover: the AI writing guide (parsing, prompt order safety → language → guide, output language in the OpenAI system message, prompt version), company report language and localization, subscriptions (no access without an active subscription, 402 on the Company API, the full sandbox payment, resuming an abandoned checkout, success-page parameters and forged or unsigned webhooks never activating, replayed webhooks applied once, past due → grace → cancellation, lapsed → subscribe again, parallel checkout starts, access policy and state machine, Stripe request/signature/event mapping), authorization across companies/roles/tenants, property & rooms, room snapshot, publish rules, public accept (+ 8 parallel agents → exactly one wins), private link + code (hashing, attempt lock, single use, regeneration), state transitions, upload validation (content sniffing, size, ownership, after-finalization), room completion and blocked finalization, finalization + PDF, report immutability (hash, EF guard, DB trigger), share links, tenant access/observations/accept/dispute (+ concurrent decisions), completed rooms reopening when an edit breaks a rule, same-tenancy baselines, the full Move In and Move Out flows through HTTP, the OpenAI adapter contract (strict schema, safety prompt, no key leakage) and architecture boundaries.
+178 backend tests cover: languages (Accept-Language resolution incl. q-values and pt-PT, translated ProblemDetails titles/errors/details, Identity and AI errors, 402 in Portuguese, plans per language, report language frozen in the snapshot, PDF labels and dates in both languages, v1 snapshots read as English), the AI writing guide (parsing, prompt order safety → language → guide, output language in the OpenAI system message, prompt version), company report language and localization, subscriptions (no access without an active subscription, 402 on the Company API, the full sandbox payment, resuming an abandoned checkout, success-page parameters and forged or unsigned webhooks never activating, replayed webhooks applied once, past due → grace → cancellation, lapsed → subscribe again, parallel checkout starts, access policy and state machine, Stripe request/signature/event mapping), authorization across companies/roles/tenants, property & rooms, room snapshot, publish rules, public accept (+ 8 parallel agents → exactly one wins), private link + code (hashing, attempt lock, single use, regeneration), state transitions, upload validation (content sniffing, size, ownership, after-finalization), room completion and blocked finalization, finalization + PDF, report immutability (hash, EF guard, DB trigger), share links, tenant access/observations/accept/dispute (+ concurrent decisions), completed rooms reopening when an edit breaks a rule, same-tenancy baselines, the full Move In and Move Out flows through HTTP, the OpenAI adapter contract (strict schema, safety prompt, no key leakage) and architecture boundaries.
 
 ## API overview
 

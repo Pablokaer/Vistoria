@@ -94,6 +94,7 @@ public sealed class ReportSnapshotBuilder(IAppDbContext db, ReportSnapshotStore 
             agent,
             tenancy?.Members.OrderBy(m => m.InvitedAt).Select(m => new ReportPerson(m.UserId, m.FullName, m.Email)).ToList() ?? [],
             rooms,
-            summary);
+            summary,
+            company.ReportLanguage);
     }
 }

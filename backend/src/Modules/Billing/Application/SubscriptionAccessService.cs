@@ -1,5 +1,6 @@
 using InspectFlow.Modules.Billing.Domain;
 using InspectFlow.Modules.Common;
+using InspectFlow.Shared.Localization;
 using InspectFlow.Shared.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -41,6 +42,6 @@ public sealed class SubscriptionAccessService(IAppDbContext db, IClock clock, IO
         var required = IsRequiredFor(roles);
         var plan = current is null ? null : _options.FindPlan(current.PlanCode);
         return new SubscriptionSummaryDto(required, access.HasAccess || !required, access.EffectiveStatus,
-            current?.PlanCode, plan?.Name, current?.CurrentPeriodEnd, access.AccessEndsAt);
+            current?.PlanCode, plan?.TextsIn(CurrentLanguage.Get()).Name, current?.CurrentPeriodEnd, access.AccessEndsAt);
     }
 }

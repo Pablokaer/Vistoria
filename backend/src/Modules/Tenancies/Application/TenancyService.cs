@@ -7,6 +7,7 @@ using InspectFlow.Modules.Notifications.Application;
 using InspectFlow.Modules.Tenancies.Domain;
 using InspectFlow.Shared.Auth;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 using InspectFlow.Shared.Security;
 using InspectFlow.Shared.Time;
 using Microsoft.EntityFrameworkCore;
@@ -55,7 +56,7 @@ public sealed class TenancyService(
     {
         var companyId = await access.RequireAsync(CompanyPermission.ManageProperties, ct);
         var propertyExists = await db.Properties.AnyAsync(p => p.Id == request.PropertyId && p.CompanyId == companyId, ct);
-        if (!propertyExists) throw new NotFoundException("Property", request.PropertyId);
+        if (!propertyExists) throw new NotFoundException(EntityNames.Property, request.PropertyId);
 
         var tenancy = Tenancy.Create(companyId, request.PropertyId, request.StartDate, request.EndDate, request.Reference, clock.UtcNow);
         db.Tenancies.Add(tenancy);
@@ -80,11 +81,11 @@ public sealed class TenancyService(
         var tenancy = await LoadAsync(tenancyId, CompanyPermission.ManageProperties, ct, tracking: true);
         var email = request.Email?.Trim() ?? string.Empty;
         if (!email.Contains('@', StringComparison.Ordinal) || email.Length > 256)
-            throw new ValidationException("Email", "A valid email is required.");
+            throw new ValidationException("Email", new("A valid email is required.", "Informe um e-mail válido."));
         if (string.IsNullOrWhiteSpace(request.FullName))
-            throw new ValidationException("FullName", "Tenant name is required.");
+            throw new ValidationException("FullName", new("Tenant name is required.", "O nome do inquilino é obrigatório."));
         if (tenancy.Members.Any(m => string.Equals(m.Email, email, StringComparison.OrdinalIgnoreCase)))
-            throw new ValidationException("Email", "This tenant is already part of the tenancy.");
+            throw new ValidationException("Email", new("This tenant is already part of the tenancy.", "Este inquilino já faz parte da locação."));
 
         var now = clock.UtcNow;
         var token = SecureTokens.Create();
@@ -127,11 +128,11 @@ public sealed class TenancyService(
     {
         var userId = currentUser.RequireUserId();
         if (!currentUser.IsInRole(AppRoles.Tenant))
-            throw new ForbiddenException("Sign in with a tenant account to accept this invitation.");
+            throw new ForbiddenException(new("Sign in with a tenant account to accept this invitation.", "Entre com uma conta de inquilino para aceitar este convite."));
         var member = await FindInvitationAsync(token, ct, tracking: true);
         var user = await db.Users.AsNoTracking().FirstAsync(u => u.Id == userId, ct);
         if (!string.Equals(user.Email, member.Email, StringComparison.OrdinalIgnoreCase))
-            throw new ForbiddenException("This invitation was sent to a different email address.");
+            throw new ForbiddenException(new("This invitation was sent to a different email address.", "Este convite foi enviado para outro endereço de e-mail."));
 
         var now = clock.UtcNow;
         member.UserId = userId;
@@ -144,19 +145,19 @@ public sealed class TenancyService(
         }
         catch (DbUpdateConcurrencyException)
         {
-            throw new ConflictException("This invitation was just used. Refresh and try again.");
+            throw new ConflictException(new("This invitation was just used. Refresh and try again.", "Este convite acabou de ser utilizado. Atualize a página e tente novamente."));
         }
         return ToMemberDto(member);
     }
 
     private async Task<TenancyMember> FindInvitationAsync(string token, CancellationToken ct, bool tracking = false)
     {
-        if (string.IsNullOrWhiteSpace(token)) throw new NotFoundException("Invitation");
+        if (string.IsNullOrWhiteSpace(token)) throw new NotFoundException(EntityNames.Invitation);
         var hash = SecureTokens.Sha256Hex(token);
         var query = tracking ? db.TenancyMembers : db.TenancyMembers.AsNoTracking();
         var member = await query.FirstOrDefaultAsync(m => m.InvitationTokenHash == hash, ct);
         if (member is null || member.UserId is not null || member.InvitationExpiresAt <= clock.UtcNow)
-            throw new NotFoundException("Invitation");
+            throw new NotFoundException(EntityNames.Invitation);
         return member;
     }
 
@@ -165,7 +166,7 @@ public sealed class TenancyService(
         var companyId = await access.RequireAsync(permission, ct);
         var query = tracking ? db.Tenancies.Include(t => t.Members) : db.Tenancies.AsNoTracking().Include(t => t.Members);
         return await query.FirstOrDefaultAsync(t => t.Id == tenancyId && t.CompanyId == companyId, ct)
-               ?? throw new NotFoundException("Tenancy", tenancyId);
+               ?? throw new NotFoundException(EntityNames.Tenancy, tenancyId);
     }
 
     private static string MaskEmail(string email)

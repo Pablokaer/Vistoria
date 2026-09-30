@@ -1,4 +1,5 @@
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 
 namespace InspectFlow.Modules.Billing.Domain;
 
@@ -62,7 +63,8 @@ public class CheckoutSession
     {
         if (Status == status) return;
         if (Status != CheckoutSessionStatus.Open)
-            throw new DomainRuleException("checkout.closed", $"Checkout session {Id} is {Status}; only an Open session can become {status}.");
+            throw new DomainRuleException("checkout.closed", new($"Checkout session {Id} is {Status}; only an Open session can become {status}.",
+                $"A sessão de pagamento {Id} está {Status}; apenas uma sessão Open pode passar para {status}."));
         Status = status;
         ClosedAt = now;
     }

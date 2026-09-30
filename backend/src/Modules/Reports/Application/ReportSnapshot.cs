@@ -1,3 +1,5 @@
+using InspectFlow.Shared.Localization;
+
 namespace InspectFlow.Modules.Reports.Application;
 
 /// <summary>
@@ -17,9 +19,12 @@ public sealed record ReportSnapshot(
     ReportPerson? Agent,
     IReadOnlyList<ReportPerson> Tenants,
     IReadOnlyList<ReportRoom> Rooms,
-    ReportComparisonSummary? Comparison)
+    ReportComparisonSummary? Comparison,
+    string Language = SupportedLanguages.English)
 {
-    public const int CurrentSchemaVersion = 1;
+    // v2 adds Language (the company's report language at finalization). v1 snapshots have none and read as English,
+    // which is what every report was before languages existed.
+    public const int CurrentSchemaVersion = 2;
 }
 
 public sealed record ReportCompany(Guid Id, string Name, string? ContactEmail, string? Phone);

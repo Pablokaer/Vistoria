@@ -1,24 +1,30 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { Brand } from "@/components/AppShell";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useT } from "@/i18n/I18nProvider";
+import { billingMessages, type BillingKey } from "@/i18n/messages/billing";
 
 export type CheckoutStep = "account" | "plan" | "payment" | "done";
 
-const STEPS: { key: CheckoutStep; label: string }[] = [
-  { key: "account", label: "Account" },
-  { key: "plan", label: "Plan" },
-  { key: "payment", label: "Payment" },
-  { key: "done", label: "Done" },
+const STEPS: { key: CheckoutStep; label: BillingKey }[] = [
+  { key: "account", label: "stepAccount" },
+  { key: "plan", label: "stepPlan" },
+  { key: "payment", label: "stepPayment" },
+  { key: "done", label: "stepDone" },
 ];
 
 /** Progress indicator for Register → Plan → Payment → Done. */
 export function CheckoutSteps({ current }: { current: CheckoutStep }) {
+  const t = useT(billingMessages);
   const index = STEPS.findIndex((s) => s.key === current);
   return (
-    <ol aria-label="Sign-up progress" className="flex items-center gap-2 text-xs font-medium">
+    <ol aria-label={t("progressLabel")} className="flex items-center gap-2 text-xs font-medium">
       {STEPS.map((s, i) => (
         <li key={s.key} className="flex items-center gap-2" aria-current={i === index ? "step" : undefined}>
           <span className={`grid h-6 w-6 place-items-center rounded-full ${i < index ? "bg-brand text-white" : i === index ? "border-2 border-brand text-brand" : "border border-slate-300 text-slate-400"}`}>{i + 1}</span>
-          <span className={i === index ? "text-ink" : "hidden text-slate-500 sm:inline"}>{s.label}</span>
+          <span className={i === index ? "text-ink" : "hidden text-slate-500 sm:inline"}>{t(s.label)}</span>
           {i < STEPS.length - 1 && <span className="h-px w-4 bg-slate-300 sm:w-8" aria-hidden="true" />}
         </li>
       ))}
@@ -36,7 +42,10 @@ export function CheckoutLayout({ step, title, subtitle, children, wide }: { step
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-16 max-w-4xl items-center justify-between gap-4 px-4">
           <Brand alwaysShowName />
-          {step && <CheckoutSteps current={step} />}
+          <div className="flex items-center gap-3">
+            {step && <CheckoutSteps current={step} />}
+            <LanguageSwitcher />
+          </div>
         </div>
       </header>
       <main className={`mx-auto px-4 py-8 sm:py-12 ${wide ? "max-w-4xl" : "max-w-lg"}`}>

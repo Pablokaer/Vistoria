@@ -13,8 +13,9 @@ A working, persistent, tested MVP covering the three roles end to end:
 - **Tenant**: invitation acceptance → dashboard (awaiting / accepted / disputed) → report review, room-level and general observations → accept or dispute.
 - **Public entry & billing**: landing page (hero product mockup, audiences, how it works, features, pricing) → company registration → plan → checkout at the payment provider (Stripe, or the Sandbox in development) → activation only from signed, idempotent webhooks → dashboard. Company API access requires an active subscription, enforced by an authorization requirement (402 `subscription.required`), and abandoned checkouts are resumed after signing in again (ADR 0012).
 - **Reports**: immutable versioned JSON snapshot + QuestPDF PDF (SHA-256 of both), web report page, expiring share links, Move Out comparison summary.
+- **Languages**: English and Brazilian Portuguese everywhere. The UI language is per user (browser language or header switcher, remembered in a cookie). API messages follow `Accept-Language`, plans are translated in config, and reports, PDFs and AI drafts follow the company's report language, which is frozen into each report (ADR 0014).
 
-Validation performed: backend and frontend build without warnings; ESLint clean; 141 backend tests pass (unit + HTTP/PostgreSQL integration); migrations applied to empty databases (tests and compose); `docker compose up` stack verified; the Playwright UI script runs the full Move In + Move Out scenario across three browser sessions (desktop company/tenant, mobile agent) against the Docker stack, including PDF download.
+Validation performed: backend and frontend build without warnings; ESLint clean; 178 backend tests pass (unit + HTTP/PostgreSQL integration); migrations applied to empty databases (tests and compose); `docker compose up` stack verified; the Playwright UI script checks the Portuguese and English UI (browser language, switcher, Portuguese API error) and runs the full Move In + Move Out scenario across three browser sessions (desktop company/tenant, mobile agent) against the Docker stack, including PDF download.
 
 ## 3. Architecture
 
@@ -30,7 +31,7 @@ Abstractions keeping the domain vendor-free: `IImageAnalysisService` (OpenAI / m
 | Use cases | `Modules/Identity/Application/AuthService.cs`, `Companies/Application/{CompanyAccess,CompanyService}.cs`, `Properties/Application/PropertyService.cs`, `Tenancies/Application/TenancyService.cs`, `Inspections/Application/{InspectionService,AgentInspectionService,InvitationService,InspectionAccess,InspectionWriteScope,RoomContextLoader,InspectionDetailsBuilder,BasicComparisonBuilder}.cs`, `Media/Application/MediaService.cs`, `AI/Application/{AiAnalysisService,AiAnalysisProcessor,AiPrompts,IImageAnalysisService}.cs`, `Reports/Application/{FinalizationService,ReportService,ReportSnapshotBuilder,ReportSnapshot,ReportSnapshotStore}.cs`, `Tenants/Application/TenantService.cs` |
 | Infrastructure | `Infrastructure/Persistence/{AppDbContext,ModelConfiguration,PostgresInspectionLock}.cs`, `Migrations/*`, `AI/{OpenAiImageAnalysisService,MockImageAnalysisService,AnalysisSchemas,AiQueue}.cs`, `Storage/{LocalFileStorageService,UrlSigner}.cs`, `Pdf/QuestPdfReportService.cs`, `Identity/*`, `Seed/DatabaseInitializer.cs`, `DependencyInjection.cs` |
 | API | `backend/src/Api/Program.cs`, `Endpoints/{Auth,Company,Agent,Tenant,Shared}Endpoints.cs`, `Infrastructure/{ErrorHandling,RateLimits,EnvironmentAliases}.cs` |
-| Frontend | `frontend/src/lib/{api,auth,hooks,autosave,image,types}.ts*`, `components/*`, `app/**/page.tsx` |
+| Frontend | `frontend/src/i18n/{locales,translate,formatting,server,I18nProvider}.ts*` + `messages/*.ts` (texts per language), `frontend/src/lib/{api,auth,hooks,autosave,image,types}.ts*`, `components/*`, `app/**/page.tsx` |
 | Tests | `backend/tests/InspectFlow.Tests/{Domain,Integration,Support}/*`, `e2e/ui-flow.mjs` |
 | Ops/docs | `docker-compose.yml`, `backend/Dockerfile`, `frontend/Dockerfile`, `.env.example`, `README.md`, `docs/architecture/*` |
 
@@ -38,6 +39,7 @@ Abstractions keeping the domain vendor-free: `IImageAnalysisService` (OpenAI / m
 
 - `InitialCreate` — all tables, schemas (`identity, companies, properties, tenancies, inspections, media, ai, reports, tenants, notifications, audit`), indexes, FKs, xmin concurrency tokens.
 - `AddBilling` — schema `billing`: `subscriptions` (filtered unique index: one open subscription per user), `checkout_sessions` (one Open session per subscription), `billing_events` (unique provider event id).
+- `AddCompanyReportLanguage` — `companies.companies.report_language` (`en` | `pt-BR`, default `en`).
 - `AppendOnlyTriggers` — PostgreSQL triggers rejecting UPDATE/DELETE on report versions, audit logs, tenant responses and observations.
 
 ## 6. Pages

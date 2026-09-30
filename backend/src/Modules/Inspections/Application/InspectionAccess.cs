@@ -4,6 +4,7 @@ using InspectFlow.Modules.Companies.Domain;
 using InspectFlow.Modules.Inspections.Domain;
 using InspectFlow.Shared.Auth;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 using Microsoft.EntityFrameworkCore;
 
 namespace InspectFlow.Modules.Inspections.Application;
@@ -28,7 +29,7 @@ public sealed class InspectionAccess(IAppDbContext db, ICurrentUser currentUser,
         var query = tracking ? db.Inspections : db.Inspections.AsNoTracking();
         return await query.Include(i => i.Rooms).ThenInclude(r => r.Defects)
                    .FirstOrDefaultAsync(i => i.Id == inspectionId && i.CompanyId == companyId, ct)
-               ?? throw new NotFoundException("Inspection", inspectionId);
+               ?? throw new NotFoundException(EntityNames.Inspection, inspectionId);
     }
 
     /// <summary>Loads an inspection assigned to the calling agent (tracked, with rooms and defects).</summary>
@@ -38,20 +39,20 @@ public sealed class InspectionAccess(IAppDbContext db, ICurrentUser currentUser,
         var query = tracking ? db.Inspections : db.Inspections.AsNoTracking();
         return await query.Include(i => i.Rooms).ThenInclude(r => r.Defects)
                    .FirstOrDefaultAsync(i => i.Id == inspectionId && i.AgentId == agentId, ct)
-               ?? throw new NotFoundException("Inspection", inspectionId);
+               ?? throw new NotFoundException(EntityNames.Inspection, inspectionId);
     }
 
     public Guid RequireAgent()
     {
         var userId = currentUser.RequireUserId();
-        if (!currentUser.IsInRole(AppRoles.Agent)) throw new ForbiddenException("Only agents can perform this action.");
+        if (!currentUser.IsInRole(AppRoles.Agent)) throw new ForbiddenException(new("Only agents can perform this action.", "Apenas vistoriadores podem realizar esta ação."));
         return userId;
     }
 
     public Guid RequireTenant()
     {
         var userId = currentUser.RequireUserId();
-        if (!currentUser.IsInRole(AppRoles.Tenant)) throw new ForbiddenException("Only tenants can perform this action.");
+        if (!currentUser.IsInRole(AppRoles.Tenant)) throw new ForbiddenException(new("Only tenants can perform this action.", "Apenas inquilinos podem realizar esta ação."));
         return userId;
     }
 
@@ -73,6 +74,6 @@ public sealed class InspectionAccess(IAppDbContext db, ICurrentUser currentUser,
         if (currentUser.IsInRole(AppRoles.Tenant) &&
             await TenantVisibleInspections(userId).AnyAsync(i => i.Id == inspection.Id, ct))
             return InspectionViewerKind.Tenant;
-        throw new NotFoundException("Report");
+        throw new NotFoundException(EntityNames.Report);
     }
 }

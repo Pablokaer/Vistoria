@@ -44,11 +44,11 @@ public sealed class CompanyService(
     {
         var userId = currentUser.RequireUserId();
         if (!currentUser.IsInRole(AppRoles.Company))
-            throw new ForbiddenException("Only company accounts can create a company workspace.");
+            throw new ForbiddenException(new("Only company accounts can create a company workspace.", "Apenas contas de empresa podem criar um espaço de empresa."));
         if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 200)
-            throw new ValidationException("Name", "Company name is required (max 200 characters).");
+            throw new ValidationException("Name", new("Company name is required (max 200 characters).", "O nome da empresa é obrigatório (máximo de 200 caracteres)."));
         if (await db.CompanyMembers.AnyAsync(m => m.UserId == userId, ct))
-            throw new DomainRuleException("company.already_exists", "You already belong to a company workspace.");
+            throw new DomainRuleException("company.already_exists", new("You already belong to a company workspace.", "Você já faz parte de um espaço de empresa."));
 
         var reportLanguage = RequireSupportedLanguage(request.ReportLanguage ?? SupportedLanguages.English);
         var now = clock.UtcNow;
@@ -96,7 +96,9 @@ public sealed class CompanyService(
     private static string RequireSupportedLanguage(string language) =>
         SupportedLanguages.IsSupported(language)
             ? SupportedLanguages.Canonical(language)
-            : throw new ValidationException("ReportLanguage", $"Report language '{language}' is not supported; expected one of: {string.Join(", ", SupportedLanguages.All)}.");
+            : throw new ValidationException("ReportLanguage", new(
+                $"Report language '{language}' is not supported; expected one of: {string.Join(", ", SupportedLanguages.All)}.",
+                $"O idioma de laudo '{language}' não é suportado; valores aceitos: {string.Join(", ", SupportedLanguages.All)}."));
 
     public async Task<CompanyDashboardDto> GetDashboardAsync(CancellationToken ct)
     {

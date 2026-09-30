@@ -6,7 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { DEFAULT_SETTINGS, InspectionCreated, InspectionSettingsFields, InspectionTypePicker, settingsPayload, type InspectionSettings } from "@/components/InspectionForm";
 import { Button, Card, ErrorBanner, Field, Notice, PageHeader, Select } from "@/components/ui";
 import { errorMessage, post } from "@/lib/api";
-import { formatDate } from "@/lib/format";
+import { useFormatters, useT } from "@/i18n/I18nProvider";
+import { companyNewMessages } from "@/i18n/messages/company-new";
 import { useApi } from "@/lib/hooks";
 import type { InspectionSummary, InspectionType, PropertySummary, PublishResult, Tenancy } from "@/lib/types";
 
@@ -14,6 +15,8 @@ const TYPES: InspectionType[] = ["MoveIn", "MoveOut", "Periodic", "Other"];
 
 function NewInspectionForm() {
   const params = useSearchParams();
+  const t = useT(companyNewMessages);
+  const { formatDate } = useFormatters();
   const properties = useApi<PropertySummary[]>("/api/properties");
   const [propertyChoice, setPropertyId] = useState(params.get("propertyId") ?? "");
   const propertyId = propertyChoice || (properties.data?.length === 1 ? properties.data[0].id : "");
@@ -29,7 +32,7 @@ function NewInspectionForm() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<PublishResult | null>(null);
 
-  const defaultTenancy = (tenancies.data ?? []).find((t) => t.status === "Active" || t.status === "Upcoming") ?? tenancies.data?.[0];
+  const defaultTenancy = (tenancies.data ?? []).find((tn) => tn.status === "Active" || tn.status === "Upcoming") ?? tenancies.data?.[0];
   const tenancyId = tenancyChoice ?? defaultTenancy?.id ?? "";
   // Baselines must come from the same tenancy (enforced by the API).
   const tenancyCandidates = (candidates.data ?? []).filter((c) => c.tenancyId === (tenancyId || null));
@@ -56,34 +59,34 @@ function NewInspectionForm() {
   const tenancyRequired = type === "MoveIn" || type === "MoveOut";
   return (
     <div className="mx-auto max-w-2xl">
-      <PageHeader title="New inspection" back={{ href: "/company", label: "Dashboard" }} />
+      <PageHeader title={t("newInspection")} back={{ href: "/company", label: t("dashboard") }} />
       <ErrorBanner message={error ?? properties.error} />
       <Card>
         <form onSubmit={submit} className="space-y-4">
-          <Field label="Property">
+          <Field label={t("property")}>
             <Select required value={propertyId} onChange={(e) => { setPropertyId(e.target.value); setTenancyId(null); setComparisonId(null); }}>
-              <option value="">Select a property…</option>
-              {properties.data?.map((p) => <option key={p.id} value={p.id}>{p.addressLine1}, {p.city} ({p.roomCount} rooms)</option>)}
+              <option value="">{t("selectProperty")}</option>
+              {properties.data?.map((p) => <option key={p.id} value={p.id}>{t("propertyOption", { address: p.addressLine1, city: p.city, rooms: p.roomCount })}</option>)}
             </Select>
           </Field>
-          {properties.data?.length === 0 && <Notice>You have no properties yet. <Link className="underline" href="/company/properties/new">Add one first.</Link></Notice>}
+          {properties.data?.length === 0 && <Notice>{t("noPropertiesYet")} <Link className="underline" href="/company/properties/new">{t("addOneFirst")}</Link></Notice>}
           <InspectionTypePicker types={TYPES} value={type} onChange={setType} />
-          <Field label={`Tenancy${tenancyRequired ? "" : " (optional)"}`} hint={propertyId && tenancies.data?.length === 0 ? "This property has no tenancy yet — create one on the property page." : undefined}>
+          <Field label={tenancyRequired ? t("tenancy") : t("tenancyOptional")} hint={propertyId && tenancies.data?.length === 0 ? t("noTenancyHint") : undefined}>
             <Select value={tenancyId} required={tenancyRequired} onChange={(e) => setTenancyId(e.target.value)}>
-              <option value="">{tenancyRequired ? "Select a tenancy…" : "No tenancy"}</option>
-              {tenancies.data?.map((t) => <option key={t.id} value={t.id}>{formatDate(t.startDate)} – {t.endDate ? formatDate(t.endDate) : "ongoing"} · {t.members.map((m) => m.fullName).join(", ") || "no tenants"}</option>)}
+              <option value="">{tenancyRequired ? t("selectTenancy") : t("noTenancy")}</option>
+              {tenancies.data?.map((tn) => <option key={tn.id} value={tn.id}>{formatDate(tn.startDate)} – {tn.endDate ? formatDate(tn.endDate) : t("ongoing")} · {tn.members.map((m) => m.fullName).join(", ") || t("noTenants")}</option>)}
             </Select>
           </Field>
           {(type === "MoveOut" || type === "Periodic") && (
-            <Field label="Compare with (Move In baseline)" hint="The agent will see the Move In record of each room while inspecting.">
+            <Field label={t("compareWith")} hint={t("compareWithHint")}>
               <Select value={comparisonId} onChange={(e) => setComparisonId(e.target.value)}>
-                <option value="">No comparison</option>
-                {tenancyCandidates.map((c) => <option key={c.id} value={c.id}>Move In · completed {formatDate(c.completedAt)} · {c.agentName}</option>)}
+                <option value="">{t("noComparison")}</option>
+                {tenancyCandidates.map((c) => <option key={c.id} value={c.id}>{t("comparisonOption", { date: formatDate(c.completedAt), agent: c.agentName ?? "" })}</option>)}
               </Select>
             </Field>
           )}
           <InspectionSettingsFields value={settings} onChange={setSettings} />
-          <Button type="submit" size="lg" loading={busy} disabled={!propertyId || tenancies.loading || candidates.loading}>{settings.publishNow ? "Create and publish" : "Save draft"}</Button>
+          <Button type="submit" size="lg" loading={busy} disabled={!propertyId || tenancies.loading || candidates.loading}>{settings.publishNow ? t("createAndPublish") : t("saveDraft")}</Button>
         </form>
       </Card>
     </div>

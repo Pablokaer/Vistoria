@@ -7,13 +7,15 @@ import { AuthCard } from "@/components/AuthCard";
 import { CheckoutLayout } from "@/components/billing/CheckoutLayout";
 import { Button, ErrorBanner, Field, Input } from "@/components/ui";
 import { ApiError, errorMessage } from "@/lib/api";
+import { useT } from "@/i18n/I18nProvider";
+import { authMessages, type AuthKey } from "@/i18n/messages/auth";
 import { homeFor, needsSubscription, safeNext, useAuth } from "@/lib/auth";
 import type { Me, Role } from "@/lib/types";
 
-const ROLES: { value: Role; title: string; text: string }[] = [
-  { value: "Company", title: "Company", text: "I manage properties and order inspections." },
-  { value: "Agent", title: "Inspector", text: "I carry out inspections." },
-  { value: "Tenant", title: "Tenant", text: "I want to review my inspection report." },
+const ROLES: { value: Role; title: AuthKey; text: AuthKey }[] = [
+  { value: "Company", title: "roleCompanyTitle", text: "roleCompanyText" },
+  { value: "Agent", title: "roleAgentTitle", text: "roleAgentText" },
+  { value: "Tenant", title: "roleTenantTitle", text: "roleTenantText" },
 ];
 
 /** Accounts that need a subscription continue to the plan step; others go where they were heading. */
@@ -28,6 +30,7 @@ function afterRegistration(user: Me, next: string | null, plan: string | null): 
  */
 function RegisterForm() {
   const { register } = useAuth();
+  const t = useT(authMessages);
   const router = useRouter();
   const params = useSearchParams();
   const plan = params.get("plan");
@@ -59,31 +62,32 @@ function RegisterForm() {
     <form onSubmit={submit} className="space-y-4">
       <ErrorBanner message={error} />
       {!plan && <RolePicker role={role} onChange={setRole} />}
-      <Field label="Full name" error={fieldErrors.FullName?.[0]}><Input required value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" /></Field>
-      <Field label="Email" error={fieldErrors.Email?.[0]}><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" /></Field>
-      <Field label="Password" hint="At least 8 characters with upper-case, lower-case and a digit." error={fieldErrors.Password?.join(" ")}>
+      <Field label={t("fullName")} error={fieldErrors.FullName?.[0]}><Input required value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" /></Field>
+      <Field label={t("email")} error={fieldErrors.Email?.[0]}><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" /></Field>
+      <Field label={t("password")} hint={t("passwordHint")} error={fieldErrors.Password?.join(" ")}>
         <Input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
       </Field>
-      <Button type="submit" size="lg" className="w-full" loading={busy}>{plan ? "Create account & continue" : "Create account"}</Button>
+      <Button type="submit" size="lg" className="w-full" loading={busy}>{plan ? t("createAccountContinue") : t("createAccount")}</Button>
     </form>
   );
-  const signIn = <p className="mt-6 text-center text-sm text-slate-600">Already registered? <Link className="font-medium text-brand hover:underline" href="/login">Sign in</Link></p>;
+  const signIn = <p className="mt-6 text-center text-sm text-slate-600">{t("alreadyRegistered")} <Link className="font-medium text-brand hover:underline" href="/login">{t("signInLink")}</Link></p>;
 
-  if (!plan) return <AuthCard title="Create your account" subtitle="Choose how you will use InspectFlow.">{form}{signIn}</AuthCard>;
+  if (!plan) return <AuthCard title={t("registerTitle")} subtitle={t("registerSubtitle")}>{form}{signIn}</AuthCard>;
   return (
-    <CheckoutLayout step="account" title="Create your company account" subtitle="Next you will choose your plan and pay securely. Inspectors and tenants join for free.">
+    <CheckoutLayout step="account" title={t("companyRegisterTitle")} subtitle={t("companyRegisterSubtitle")}>
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">{form}{signIn}</div>
     </CheckoutLayout>
   );
 }
 
 function RolePicker({ role, onChange }: { role: Role; onChange: (role: Role) => void }) {
+  const t = useT(authMessages);
   return (
     <fieldset className="grid gap-2">
       {ROLES.map((r) => (
         <label key={r.value} className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 ${role === r.value ? "border-brand bg-brand-50" : "border-slate-200"}`}>
           <input type="radio" name="role" className="mt-1 accent-brand" checked={role === r.value} onChange={() => onChange(r.value)} />
-          <span><span className="block text-sm font-medium">{r.title}</span><span className="block text-xs text-slate-600">{r.text}</span></span>
+          <span><span className="block text-sm font-medium">{t(r.title)}</span><span className="block text-xs text-slate-600">{t(r.text)}</span></span>
         </label>
       ))}
     </fieldset>

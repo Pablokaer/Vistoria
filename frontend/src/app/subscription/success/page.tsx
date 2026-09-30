@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { CheckoutLayout } from "@/components/billing/CheckoutLayout";
 import { Icon } from "@/components/landing/icons";
 import { ErrorBanner, LinkButton, Spinner } from "@/components/ui";
+import { useT } from "@/i18n/I18nProvider";
+import { billingMessages, type BillingKey } from "@/i18n/messages/billing";
 import { errorMessage } from "@/lib/api";
 import { homeFor, useAuth } from "@/lib/auth";
 import { fetchCheckoutStatus } from "@/lib/billing";
@@ -27,6 +29,7 @@ function SuccessContent() {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("waiting");
   const [error, setError] = useState<string | null>(null);
+  const t = useT(billingMessages);
   const signedIn = !!user;
   // Kept in a ref: `reload` changes identity whenever the user changes, which must not restart the polling loop.
   const reloadRef = useRef(reload);
@@ -61,18 +64,18 @@ function SuccessContent() {
   }, [phase, user, router]);
 
   return (
-    <CheckoutLayout step={phase === "active" ? "done" : "payment"} title={TITLES[phase]}>
-      <ErrorBanner message={checkoutId ? error : "This page needs a checkout reference. Start again from checkout."} />
+    <CheckoutLayout step={phase === "active" ? "done" : "payment"} title={t(TITLES[phase])}>
+      <ErrorBanner message={checkoutId ? error : t("missingCheckout")} />
       <PhaseBody phase={phase} />
     </CheckoutLayout>
   );
 }
 
-const TITLES: Record<Phase, string> = {
-  waiting: "Confirming your payment…",
-  active: "Your subscription is active",
-  failed: "The payment was not completed",
-  slow: "Still waiting for confirmation",
+const TITLES: Record<Phase, BillingKey> = {
+  waiting: "confirmingTitle",
+  active: "activeTitle",
+  failed: "failedTitle",
+  slow: "slowTitle",
 };
 
 function decidePhase(status: CheckoutStatus, elapsedMs: number): Phase {
@@ -82,24 +85,25 @@ function decidePhase(status: CheckoutStatus, elapsedMs: number): Phase {
 }
 
 function PhaseBody({ phase }: { phase: Phase }) {
+  const t = useT(billingMessages);
   if (phase === "waiting") {
-    return <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-6 text-slate-600"><Spinner /> Waiting for the payment provider to confirm. This usually takes a few seconds.</div>;
+    return <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-6 text-slate-600"><Spinner /> {t("waitingText")}</div>;
   }
   if (phase === "active") {
     return (
       <div className="rounded-2xl border border-emerald-200 bg-white p-6">
         <span className="grid h-12 w-12 place-items-center rounded-full bg-emerald-100 text-emerald-700"><Icon name="check" className="h-6 w-6" strokeWidth={2.5} /></span>
-        <p className="mt-4 text-slate-700">Payment confirmed. Taking you to InspectFlow…</p>
+        <p className="mt-4 text-slate-700">{t("confirmedText")}</p>
       </div>
     );
   }
   const text = phase === "failed"
-    ? "The payment provider reported that this checkout did not complete. Nothing was activated."
-    : "We have not received the confirmation yet. If you completed the payment, it will appear shortly — you can safely leave this page and sign in again later.";
+    ? t("failedText")
+    : t("slowText");
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6">
       <p className="text-slate-700">{text}</p>
-      <LinkButton href="/checkout" className="mt-4">Back to checkout</LinkButton>
+      <LinkButton href="/checkout" className="mt-4">{t("backToCheckout")}</LinkButton>
     </div>
   );
 }

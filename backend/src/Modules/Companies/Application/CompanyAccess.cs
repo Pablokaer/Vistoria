@@ -2,6 +2,7 @@ using InspectFlow.Modules.Common;
 using InspectFlow.Modules.Companies.Domain;
 using InspectFlow.Shared.Auth;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 using Microsoft.EntityFrameworkCore;
 
 namespace InspectFlow.Modules.Companies.Application;
@@ -19,10 +20,10 @@ public sealed class CompanyAccess(IAppDbContext db, ICurrentUser currentUser)
         if (_membership is not null) return _membership;
         var userId = currentUser.RequireUserId();
         if (!currentUser.IsInRole(AppRoles.Company))
-            throw new ForbiddenException("Only company accounts can perform this action.");
+            throw new ForbiddenException(new("Only company accounts can perform this action.", "Apenas contas de empresa podem realizar esta ação."));
         _membership = await db.CompanyMembers.AsNoTracking()
                           .Where(m => m.UserId == userId).OrderBy(m => m.CreatedAt).FirstOrDefaultAsync(ct)
-                      ?? throw new DomainRuleException("company.workspace_required", "Create your company workspace first.");
+                      ?? throw new DomainRuleException("company.workspace_required", new("Create your company workspace first.", "Crie primeiro o espaço da sua empresa."));
         return _membership;
     }
 
@@ -31,7 +32,7 @@ public sealed class CompanyAccess(IAppDbContext db, ICurrentUser currentUser)
     {
         var membership = await GetMembershipAsync(ct);
         if (!CompanyRolePermissions.Has(membership.Role, permission))
-            throw new ForbiddenException("Your company role does not allow this action.");
+            throw new ForbiddenException(new("Your company role does not allow this action.", "Seu papel na empresa não permite esta ação."));
         return membership.CompanyId;
     }
 

@@ -1,4 +1,5 @@
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 
 namespace InspectFlow.Modules.Inspections.Domain;
 
@@ -31,12 +32,12 @@ public class InspectionInvitation
     /// <summary>Throws when the invitation cannot be used by <paramref name="agentId"/> any more.</summary>
     public void EnsureUsable(Guid agentId, DateTimeOffset now)
     {
-        if (RevokedAt is not null) throw new DomainRuleException("invitation.revoked", "This invitation is no longer valid.");
-        if (ExpiresAt <= now) throw new DomainRuleException("invitation.expired", "This invitation has expired.");
+        if (RevokedAt is not null) throw new DomainRuleException("invitation.revoked", new("This invitation is no longer valid.", "Este convite não é mais válido."));
+        if (ExpiresAt <= now) throw new DomainRuleException("invitation.expired", new("This invitation has expired.", "Este convite expirou."));
         if (UsedByUserId is not null && UsedByUserId != agentId)
-            throw new DomainRuleException("invitation.used", "This invitation has already been used.");
+            throw new DomainRuleException("invitation.used", new("This invitation has already been used.", "Este convite já foi utilizado."));
         if (IsLocked && UsedByUserId is null)
-            throw new TooManyAttemptsException("Too many incorrect codes. Ask the company for a new invitation.");
+            throw new TooManyAttemptsException(InspectionMessages.TooManyIncorrectCodes);
     }
 
     public void RegisterFailedAttempt(DateTimeOffset now)

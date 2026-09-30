@@ -35,13 +35,13 @@ public class RoomCompletionTests
         var room = Room();
         room.EditFinalDescription("Room text", Agent, Now);
         room.SetDefectsFound(true, Now);
-        Assert.Contains(room.GetCompletionIssues(Ctx()), i => i.Contains("no defect has been recorded", StringComparison.Ordinal));
+        Assert.Contains(room.GetCompletionIssues(Ctx()), i => i.En.Contains("no defect has been recorded", StringComparison.Ordinal));
 
         var defect = room.AddDefect("Scratch", "Door", Agent, Now);
         var issues = room.GetCompletionIssues(Ctx());
-        Assert.Contains(issues, i => i.Contains("needs a description", StringComparison.Ordinal));
-        Assert.Contains(issues, i => i.Contains("needs at least one photo", StringComparison.Ordinal));
-        Assert.Contains(issues, i => i.Contains("confirmed", StringComparison.Ordinal));
+        Assert.Contains(issues, i => i.En.Contains("needs a description", StringComparison.Ordinal));
+        Assert.Contains(issues, i => i.En.Contains("needs at least one photo", StringComparison.Ordinal));
+        Assert.Contains(issues, i => i.En.Contains("confirmed", StringComparison.Ordinal));
 
         defect.Update("Scratch", "Door", "Visible scratch on the door.", DefectClassification.PreExisting, agentConfirmed: true, Now);
         Assert.Empty(room.GetCompletionIssues(Ctx(defectPhotos: new() { [defect.Id] = 1 })));
@@ -52,9 +52,21 @@ public class RoomCompletionTests
     {
         var room = Room();
         room.EditFinalDescription("Room text", Agent, Now);
-        Assert.Contains(room.GetCompletionIssues(Ctx(pendingAnalyses: 1)), i => i.Contains("AI analysis", StringComparison.Ordinal));
-        Assert.Contains(room.GetCompletionIssues(Ctx(comparisonRequired: true)), i => i.Contains("Move In", StringComparison.Ordinal));
+        Assert.Contains(room.GetCompletionIssues(Ctx(pendingAnalyses: 1)), i => i.En.Contains("AI analysis", StringComparison.Ordinal));
+        Assert.Contains(room.GetCompletionIssues(Ctx(comparisonRequired: true)), i => i.En.Contains("Move In", StringComparison.Ordinal));
         Assert.Empty(room.GetCompletionIssues(Ctx(comparisonRequired: true, decided: true)));
+    }
+
+    [Fact]
+    public void Completion_issues_are_written_in_both_languages()
+    {
+        var room = Room();
+        room.AddDefect("Scratch", "Door", Agent, Now);
+        var issues = room.GetCompletionIssues(Ctx(photos: 0, pendingAnalyses: 1));
+        Assert.Contains(issues, i => i.PtBr == "Kitchen: são necessárias pelo menos 1 foto(s) gerais.");
+        Assert.Contains(issues, i => i.PtBr == "Kitchen: avaria nº 1 precisa de pelo menos uma foto.");
+        Assert.Contains(issues, i => i.PtBr == "Kitchen: a análise por IA ainda está em andamento.");
+        Assert.All(issues, i => Assert.False(string.IsNullOrWhiteSpace(i.En)));
     }
 
     [Fact]

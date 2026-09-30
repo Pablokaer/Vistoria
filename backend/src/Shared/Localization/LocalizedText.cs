@@ -1,5 +1,3 @@
-using System.Globalization;
-
 namespace InspectFlow.Shared.Localization;
 
 /// <summary>
@@ -41,9 +39,34 @@ public sealed record LocalizedText(string En, string PtBr)
     public string In(string? language) =>
         SupportedLanguages.Resolve(language) == SupportedLanguages.PortugueseBrazil ? PtBr : En;
 
-    /// <summary>The text for the current thread's UI culture (set per request by the localization middleware).</summary>
-    public string ForCurrentCulture() => In(CultureInfo.CurrentUICulture.Name);
+    /// <summary>The text in the language of the request being handled (see <see cref="CurrentLanguage"/>).</summary>
+    public string ForCurrentLanguage() => In(CurrentLanguage.Get());
 
     /// <summary>English, so logs and exception messages stay in one language.</summary>
     public override string ToString() => En;
+}
+
+public static class LocalizedTextExtensions
+{
+    /// <summary>
+    /// Resolves texts for a response DTO in the request's language.
+    /// Example: <c>room.GetCompletionIssues(context).ForCurrentLanguage()</c>.
+    /// </summary>
+    public static IReadOnlyList<string> ForCurrentLanguage(this IEnumerable<LocalizedText> texts) =>
+        texts.Select(t => t.ForCurrentLanguage()).ToList();
+}
+
+/// <summary>
+/// The language of the request being handled, set once per request by the API middleware. An AsyncLocal rather than
+/// CultureInfo.CurrentUICulture because the app runs with invariant globalization (no pt-BR CultureInfo available)
+/// and because only texts, not number/date formatting, should follow the reader. Outside a request it is English.
+/// Example: <c>CurrentLanguage.Set("pt-BR"); CurrentLanguage.Get() // "pt-BR"</c>.
+/// </summary>
+public static class CurrentLanguage
+{
+    private static readonly AsyncLocal<string?> Value = new();
+
+    public static string Get() => Value.Value ?? SupportedLanguages.English;
+
+    public static void Set(string language) => Value.Value = SupportedLanguages.Resolve(language);
 }

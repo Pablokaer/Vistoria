@@ -6,6 +6,7 @@ using InspectFlow.Modules.Media.Application;
 using InspectFlow.Modules.Media.Domain;
 using InspectFlow.Modules.Reports.Application;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
@@ -54,7 +55,8 @@ public static class AgentEndpoints
                 MediaService s, IOptions<InspectionRulesOptions> rules, CancellationToken ct) =>
             {
                 var type = string.Equals(mediaType, nameof(MediaType.Defect), StringComparison.OrdinalIgnoreCase) ? MediaType.Defect : MediaType.General;
-                if (file.Length > rules.Value.MaxUploadBytes) throw new ValidationException("File", "The file is too large.");
+                if (file.Length > rules.Value.MaxUploadBytes) throw new ValidationException("File", new($"The file is too large ({file.Length} bytes; maximum {rules.Value.MaxUploadBytes}).",
+                    $"O arquivo é grande demais ({file.Length} bytes; máximo {rules.Value.MaxUploadBytes})."));
                 await using var stream = file.OpenReadStream();
                 return await s.UploadAsync(new UploadMediaCommand(id, roomId, type, defectId, stream, file.FileName, file.ContentType, file.Length), ct);
             })

@@ -8,6 +8,7 @@ using InspectFlow.Modules.Media.Application;
 using InspectFlow.Modules.Reports.Domain;
 using InspectFlow.Shared.Auth;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 using InspectFlow.Shared.Security;
 using InspectFlow.Shared.Time;
 using Microsoft.EntityFrameworkCore;
@@ -57,10 +58,10 @@ public sealed class ReportService(
     public async Task<ReportViewDto> GetForInspectionAsync(Guid inspectionId, CancellationToken ct)
     {
         var inspection = await db.Inspections.AsNoTracking().FirstOrDefaultAsync(i => i.Id == inspectionId, ct)
-                         ?? throw new NotFoundException("Report");
+                         ?? throw new NotFoundException(EntityNames.Report);
         var viewer = await access.RequireReportViewerAsync(inspection, ct);
         var report = await db.InspectionReports.AsNoTracking().FirstOrDefaultAsync(r => r.InspectionId == inspectionId, ct)
-                     ?? throw new NotFoundException("Report");
+                     ?? throw new NotFoundException(EntityNames.Report);
         if (viewer == InspectionViewerKind.Tenant)
             audit.Record(AuditActions.TenantViewed, nameof(InspectionReport), report.Id, new { inspectionId });
         await db.SaveChangesAsync(ct);
@@ -70,18 +71,18 @@ public sealed class ReportService(
     public async Task<ReportViewDto> GetAsync(Guid reportId, CancellationToken ct)
     {
         var report = await db.InspectionReports.AsNoTracking().FirstOrDefaultAsync(r => r.Id == reportId, ct)
-                     ?? throw new NotFoundException("Report");
+                     ?? throw new NotFoundException(EntityNames.Report);
         return await GetForInspectionAsync(report.InspectionId, ct);
     }
 
     /// <summary>Anonymous access through a share link (token stored as a hash, expiring, revocable).</summary>
     public async Task<ReportViewDto> GetSharedAsync(string token, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(token) || token.Length > 100) throw new NotFoundException("Report");
+        if (string.IsNullOrWhiteSpace(token) || token.Length > 100) throw new NotFoundException(EntityNames.Report);
         var hash = SecureTokens.Sha256Hex(token);
         var now = clock.UtcNow;
         var link = await db.ReportShareLinks.FirstOrDefaultAsync(l => l.TokenHash == hash, ct);
-        if (link is null || !link.IsActive(now)) throw new NotFoundException("Report");
+        if (link is null || !link.IsActive(now)) throw new NotFoundException(EntityNames.Report);
         link.LastAccessedAt = now;
         await db.SaveChangesAsync(ct);
         var report = await db.InspectionReports.AsNoTracking().FirstAsync(r => r.Id == link.ReportId, ct);
@@ -92,7 +93,7 @@ public sealed class ReportService(
     public async Task<ShareLinkDto> CreateShareLinkAsync(Guid reportId, int? days, CancellationToken ct)
     {
         var report = await db.InspectionReports.AsNoTracking().FirstOrDefaultAsync(r => r.Id == reportId, ct)
-                     ?? throw new NotFoundException("Report");
+                     ?? throw new NotFoundException(EntityNames.Report);
         await access.GetForCompanyAsync(report.InspectionId, CompanyPermission.ManageInspections, ct, tracking: false);
         var now = clock.UtcNow;
         var token = SecureTokens.Create();
@@ -115,10 +116,10 @@ public sealed class ReportService(
     public async Task RevokeShareLinkAsync(Guid reportId, Guid linkId, CancellationToken ct)
     {
         var report = await db.InspectionReports.AsNoTracking().FirstOrDefaultAsync(r => r.Id == reportId, ct)
-                     ?? throw new NotFoundException("Report");
+                     ?? throw new NotFoundException(EntityNames.Report);
         await access.GetForCompanyAsync(report.InspectionId, CompanyPermission.ManageInspections, ct, tracking: false);
         var link = await db.ReportShareLinks.FirstOrDefaultAsync(l => l.Id == linkId && l.ReportId == reportId, ct)
-                   ?? throw new NotFoundException("Share link", linkId);
+                   ?? throw new NotFoundException(EntityNames.ShareLink, linkId);
         link.RevokedAt ??= clock.UtcNow;
         await db.SaveChangesAsync(ct);
     }
@@ -131,7 +132,7 @@ public sealed class ReportService(
         preview = preview with { Tenants = preview.Tenants.Select(t => t with { Email = null }).ToList() }; // agents don't need tenant emails
         var issues = InspectionReadiness.GetBlockingIssues(inspection, await contexts.LoadAsync(inspection, ct), requireRoomsCompleted: true);
         return new ReviewDto(await details.BuildAsync(inspection, InspectionViewerKind.Agent, ct), preview,
-            await PhotoUrlsAsync(preview, ct), issues, inspection.Status == InspectionStatus.Review && issues.Count == 0);
+            await PhotoUrlsAsync(preview, ct), issues.ForCurrentLanguage(), inspection.Status == InspectionStatus.Review && issues.Count == 0);
     }
 
     private async Task<ReportViewDto> BuildViewAsync(InspectionReport report, Inspection inspection, string viewerKind,

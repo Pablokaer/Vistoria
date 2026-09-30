@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using System.Threading.RateLimiting;
+using System.Text.Json;
+using InspectFlow.Shared.Localization;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace InspectFlow.Api.Infrastructure;
@@ -12,6 +14,9 @@ public static class RateLimits
     public const string Public = "public";
     public const string Upload = "upload";
     public const string Ai = "ai";
+
+    private static readonly LocalizedText TooManyRequests =
+        new("Too many requests. Please wait a moment and try again.", "Muitas solicitações. Aguarde um momento e tente novamente.");
 
     /// <summary>Limits are configurable (RateLimiting:*) so automated tests can raise them.</summary>
     public static IServiceCollection AddAppRateLimiting(this IServiceCollection services, IConfiguration config) => services.AddRateLimiter(o =>
@@ -31,8 +36,9 @@ public static class RateLimits
         o.OnRejected = async (ctx, ct) =>
         {
             ctx.HttpContext.Response.ContentType = "application/problem+json";
+            var title = TooManyRequests.In(RequestLanguage.Of(ctx.HttpContext));
             await ctx.HttpContext.Response.WriteAsync(
-                """{"status":429,"title":"Too many requests. Please wait a moment and try again.","code":"rate_limited"}""", ct);
+                JsonSerializer.Serialize(new { status = 429, title, code = "rate_limited" }), ct);
         };
     });
 

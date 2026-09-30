@@ -4,6 +4,7 @@ using InspectFlow.Modules.Common;
 using InspectFlow.Modules.Inspections.Application;
 using InspectFlow.Modules.Media.Domain;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 using InspectFlow.Shared.Security;
 using InspectFlow.Shared.Time;
 using Microsoft.EntityFrameworkCore;
@@ -79,38 +80,38 @@ public sealed class MediaService(
         var agentId = access.RequireAgent();
         var inspection = await access.GetForAssignedAgentAsync(command.InspectionId, ct);
         inspection.EnsureEditableBy(agentId);
-        var room = inspection.Rooms.FirstOrDefault(r => r.Id == command.RoomId) ?? throw new NotFoundException("Room", command.RoomId);
+        var room = inspection.Rooms.FirstOrDefault(r => r.Id == command.RoomId) ?? throw new NotFoundException(EntityNames.Room, command.RoomId);
 
         if (command.MediaType == MediaType.Defect)
         {
-            if (command.DefectId is null) throw new ValidationException("DefectId", "Defect photos must reference a defect.");
+            if (command.DefectId is null) throw new ValidationException("DefectId", new("Defect photos must reference a defect.", "Fotos de avaria precisam indicar a avaria."));
             room.GetDefect(command.DefectId.Value);
         }
         else if (command.DefectId is not null)
         {
-            throw new ValidationException("DefectId", "General photos cannot reference a defect.");
+            throw new ValidationException("DefectId", new("General photos cannot reference a defect.", "Fotos gerais não podem indicar uma avaria."));
         }
 
         var max = rules.Value.MaxUploadBytes;
-        if (command.Length <= 0) throw new ValidationException("File", "The file is empty.");
-        if (command.Length > max) throw new ValidationException("File", $"The file exceeds the maximum size of {max / (1024 * 1024)} MB.");
+        if (command.Length <= 0) throw new ValidationException("File", new("The file is empty.", "O arquivo está vazio."));
+        if (command.Length > max) throw new ValidationException("File", FileTooLarge(max));
 
         var existing = await db.InspectionRoomMedia.CountAsync(m => m.InspectionRoomId == room.Id, ct);
         if (existing >= rules.Value.MaxPhotosPerRoom)
-            throw new DomainRuleException("media.limit", $"A room can have at most {rules.Value.MaxPhotosPerRoom} photos.");
+            throw new DomainRuleException("media.limit", new($"A room can have at most {rules.Value.MaxPhotosPerRoom} photos.", $"Um cômodo pode ter no máximo {rules.Value.MaxPhotosPerRoom} fotos."));
 
         // Buffer (bounded by MaxUploadBytes) so we can sniff the real type and hash the content.
         using var buffer = new MemoryStream();
         await command.Content.CopyToAsync(buffer, ct);
-        if (buffer.Length > max) throw new ValidationException("File", "The file exceeds the maximum size.");
+        if (buffer.Length > max) throw new ValidationException("File", FileTooLarge(max));
         var bytes = buffer.GetBuffer().AsSpan(0, (int)buffer.Length);
         var detected = ImageFileValidator.DetectMimeType(bytes);
         if (detected is null)
-            throw new ValidationException("File", "Only JPEG, PNG or WebP images are accepted.");
+            throw new ValidationException("File", new($"Only JPEG, PNG or WebP images are accepted (got '{command.DeclaredContentType}').", $"Apenas imagens JPEG, PNG ou WebP são aceitas (recebido: '{command.DeclaredContentType}')."));
         if (command.DeclaredContentType is { Length: > 0 } declared &&
             !string.Equals(declared, detected, StringComparison.OrdinalIgnoreCase) &&
             !(declared.Equals("image/jpg", StringComparison.OrdinalIgnoreCase) && detected == "image/jpeg"))
-            throw new ValidationException("File", "The file content does not match its declared type.");
+            throw new ValidationException("File", new($"The file content ({detected}) does not match its declared type ({declared}).", $"O conteúdo do arquivo ({detected}) não corresponde ao tipo informado ({declared})."));
 
         var now = clock.UtcNow;
         var mediaId = Guid.NewGuid();
@@ -162,7 +163,7 @@ public sealed class MediaService(
         var inspection = await access.GetForAssignedAgentAsync(inspectionId, ct);
         inspection.EnsureEditableBy(agentId);
         var media = await db.InspectionRoomMedia.FirstOrDefaultAsync(m => m.Id == mediaId && m.InspectionId == inspectionId, ct)
-                    ?? throw new NotFoundException("Photo", mediaId);
+                    ?? throw new NotFoundException(EntityNames.Photo, mediaId);
         var room = inspection.Rooms.First(r => r.Id == media.InspectionRoomId);
         if (room.Status == Inspections.Domain.InspectionRoomStatus.Completed) room.Reopen(clock.UtcNow);
 
@@ -186,4 +187,8 @@ public sealed class MediaService(
         try { await storage.DeleteAsync(key); }
         catch (Exception ex) { logger.LogWarning(ex, "Could not delete storage object {Key}", key); }
     }
+
+    private static LocalizedText FileTooLarge(long maxBytes) => new(
+        $"The file exceeds the maximum size of {maxBytes / (1024 * 1024)} MB.",
+        $"O arquivo excede o tamanho máximo de {maxBytes / (1024 * 1024)} MB.");
 }

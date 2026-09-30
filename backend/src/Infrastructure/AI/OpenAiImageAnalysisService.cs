@@ -54,7 +54,7 @@ public sealed class OpenAiImageAnalysisService(HttpClient http, IOptions<AiOptio
 
     private async Task<T> CallAsync<T>(string schemaName, JsonObject schema, string userText, List<AnalysisImage> images, AiOutputLanguage language, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(O.ApiKey)) throw new AiProviderException("The AI provider is not configured.");
+        if (string.IsNullOrWhiteSpace(O.ApiKey)) throw new AiProviderException(AiErrorTexts.NotConfigured);
 
         var content = new JsonArray { new JsonObject { ["type"] = "text", ["text"] = userText } };
         foreach (var image in images)
@@ -100,11 +100,11 @@ public sealed class OpenAiImageAnalysisService(HttpClient http, IOptions<AiOptio
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            throw new AiProviderException("The AI service timed out. Please retry.");
+            throw new AiProviderException(AiErrorTexts.TimedOut);
         }
         catch (HttpRequestException ex)
         {
-            throw new AiProviderException("The AI service could not be reached. Please retry.", ex);
+            throw new AiProviderException(AiErrorTexts.Unreachable, ex);
         }
 
         using (response)
@@ -115,25 +115,25 @@ public sealed class OpenAiImageAnalysisService(HttpClient http, IOptions<AiOptio
                 logger.LogWarning("OpenAI request failed with status {Status}", (int)response.StatusCode);
                 throw response.StatusCode switch
                 {
-                    HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => new AiProviderException("The AI provider rejected the configured credentials."),
-                    HttpStatusCode.TooManyRequests => new AiProviderException("The AI provider is busy (rate limit). Please retry shortly."),
-                    HttpStatusCode.BadRequest => new AiProviderException("The AI provider could not process these photos."),
-                    _ => new AiProviderException("The AI service returned an error. Please retry."),
+                    HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => new AiProviderException(AiErrorTexts.CredentialsRejected),
+                    HttpStatusCode.TooManyRequests => new AiProviderException(AiErrorTexts.RateLimited),
+                    HttpStatusCode.BadRequest => new AiProviderException(AiErrorTexts.CouldNotProcess),
+                    _ => new AiProviderException(AiErrorTexts.ProviderError),
                 };
             }
 
             using var doc = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
             var message = doc.RootElement.GetProperty("choices")[0].GetProperty("message");
             if (message.TryGetProperty("refusal", out var refusal) && refusal.ValueKind == JsonValueKind.String)
-                throw new AiProviderException("The AI declined to analyse these photos. Please describe the room manually.");
-            var json = message.GetProperty("content").GetString() ?? throw new AiProviderException("The AI returned an empty response.");
+                throw new AiProviderException(AiErrorTexts.Declined);
+            var json = message.GetProperty("content").GetString() ?? throw new AiProviderException(AiErrorTexts.EmptyResponse);
             try
             {
-                return JsonSerializer.Deserialize<T>(json, Json) ?? throw new AiProviderException("The AI returned an empty response.");
+                return JsonSerializer.Deserialize<T>(json, Json) ?? throw new AiProviderException(AiErrorTexts.EmptyResponse);
             }
             catch (JsonException ex)
             {
-                throw new AiProviderException("The AI returned an unexpected format.", ex);
+                throw new AiProviderException(AiErrorTexts.UnexpectedFormat, ex);
             }
         }
     }

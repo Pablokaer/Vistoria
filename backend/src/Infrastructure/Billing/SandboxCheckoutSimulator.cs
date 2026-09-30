@@ -4,6 +4,7 @@ using InspectFlow.Modules.Billing.Domain;
 using InspectFlow.Modules.Common;
 using InspectFlow.Shared.Auth;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 using InspectFlow.Shared.Security;
 using InspectFlow.Shared.Time;
 using Microsoft.EntityFrameworkCore;
@@ -35,6 +36,8 @@ public sealed class SandboxCheckoutSimulator(
     public const string ApprovedCard = "4242424242424242";
     public const string DeclinedCard = "4000000000000002";
 
+    private static readonly LocalizedText CardDeclined = new("Your card was declined. Try another card.", "Seu cartão foi recusado. Tente outro cartão.");
+
     /// <summary>Example: <c>var session = await simulator.GetSessionAsync("cs_sandbox_abc", ct);</c></summary>
     public async Task<SandboxSessionDto> GetSessionAsync(string sessionId, CancellationToken ct)
     {
@@ -52,11 +55,13 @@ public sealed class SandboxCheckoutSimulator(
     {
         var session = await FindOwnedSessionAsync(sessionId, ct);
         if (EffectiveStatus(session) != nameof(CheckoutSessionStatus.Open))
-            throw new DomainRuleException("checkout.closed", $"Checkout session '{sessionId}' is {EffectiveStatus(session)}; start a new checkout.");
+            throw new DomainRuleException("checkout.closed", new($"Checkout session '{sessionId}' is {EffectiveStatus(session)}; start a new checkout.",
+                $"A sessão de pagamento '{sessionId}' está {EffectiveStatus(session)}; inicie um novo pagamento."));
         var card = new string((request.CardNumber ?? string.Empty).Where(char.IsDigit).ToArray());
-        if (card == DeclinedCard) return new SandboxPaymentResult(false, "Your card was declined. Try another card.", null);
+        if (card == DeclinedCard) return new SandboxPaymentResult(false, CardDeclined.ForCurrentLanguage(), null);
         if (card != ApprovedCard)
-            throw new ValidationException("CardNumber", $"Card '{card}' is not a sandbox test card; expected {ApprovedCard} (approve) or {DeclinedCard} (decline).");
+            throw new ValidationException("CardNumber", new($"Card '{card}' is not a sandbox test card; expected {ApprovedCard} (approve) or {DeclinedCard} (decline).",
+                $"O cartão '{card}' não é um cartão de teste; use {ApprovedCard} (aprovar) ou {DeclinedCard} (recusar)."));
 
         var payload = CheckoutCompletedEvent(session);
         await webhooks.ProcessAsync(sandbox.Name, payload, sandbox.Sign(payload), ct);
@@ -65,11 +70,11 @@ public sealed class SandboxCheckoutSimulator(
 
     private async Task<CheckoutSession> FindOwnedSessionAsync(string sessionId, CancellationToken ct)
     {
-        if (activeProvider is not SandboxPaymentProvider) throw new NotFoundException("Sandbox checkout", sessionId);
+        if (activeProvider is not SandboxPaymentProvider) throw new NotFoundException(EntityNames.SandboxCheckout, sessionId);
         var userId = currentUser.RequireUserId();
         return await db.CheckoutSessions.AsNoTracking().FirstOrDefaultAsync(c =>
                    c.Provider == SandboxPaymentProvider.ProviderName && c.ProviderSessionId == sessionId && c.UserId == userId, ct)
-               ?? throw new NotFoundException("Sandbox checkout", sessionId);
+               ?? throw new NotFoundException(EntityNames.SandboxCheckout, sessionId);
     }
 
     private string EffectiveStatus(CheckoutSession session) =>

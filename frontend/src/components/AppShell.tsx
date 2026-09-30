@@ -4,24 +4,31 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { homeFor, needsSubscription, SUBSCRIPTION_REQUIRED_PATH, useAuth } from "@/lib/auth";
-import { formatDate } from "@/lib/format";
+import { useFormatters, useT } from "@/i18n/I18nProvider";
+import { shellMessages } from "@/i18n/messages/shell";
 import type { Role } from "@/lib/types";
 import { DevAccountSwitcher } from "./DevAccountSwitcher";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Loading } from "./ui";
 
-const NAV: Record<Role, { href: string; label: string }[]> = {
+type ShellKey = keyof (typeof shellMessages)["en"];
+
+const ROLE_LABEL: Record<Role, ShellKey> = { Company: "roleCompany", Agent: "roleAgent", Tenant: "roleTenant" };
+
+const NAV: Record<Role, { href: string; label: ShellKey }[]> = {
   Company: [
-    { href: "/company", label: "Dashboard" },
-    { href: "/company/properties", label: "Properties" },
-    { href: "/company/inspections/new", label: "New inspection" },
+    { href: "/company", label: "navDashboard" },
+    { href: "/company/properties", label: "navProperties" },
+    { href: "/company/inspections/new", label: "navNewInspection" },
+    { href: "/company/settings", label: "navSettings" },
   ],
   Agent: [
-    { href: "/agent", label: "Dashboard" },
-    { href: "/agent/available", label: "Available" },
-    { href: "/agent/inspections", label: "My inspections" },
-    { href: "/agent/completed", label: "Completed" },
+    { href: "/agent", label: "navDashboard" },
+    { href: "/agent/available", label: "navAvailable" },
+    { href: "/agent/inspections", label: "navMyInspections" },
+    { href: "/agent/completed", label: "navCompleted" },
   ],
-  Tenant: [{ href: "/tenant", label: "My inspections" }],
+  Tenant: [{ href: "/tenant", label: "navMyInspections" }],
 };
 
 /** Logo + name. Inside the app it links to the user's home (`/app`); on public pages to the landing page. */
@@ -57,6 +64,7 @@ export function RoleGate({ role, children, allowWithoutCompany }: { role: Role; 
 
 export function AppShell({ role, children, wide }: { role: Role; children: React.ReactNode; wide?: boolean }) {
   const { user, logout } = useAuth();
+  const t = useT(shellMessages);
   const pathname = usePathname();
   const links = role === "Company" && !user?.company ? [] : NAV[role];
 
@@ -71,18 +79,19 @@ export function AppShell({ role, children, wide }: { role: Role; children: React
               return (
                 <Link key={l.href} href={l.href}
                   className={`whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium ${active ? "bg-brand-50 text-brand" : "text-slate-600 hover:text-slate-900"}`}>
-                  {l.label}
+                  {t(l.label)}
                 </Link>
               );
             })}
           </nav>
           <div className="flex items-center gap-3 text-sm">
             <DevAccountSwitcher />
+            <LanguageSwitcher />
             <span className="hidden text-right leading-tight md:block">
               <span className="block font-medium text-slate-800">{user?.fullName}</span>
-              <span className="block text-xs text-slate-500">{user?.company?.companyName ?? role}</span>
+              <span className="block text-xs text-slate-500">{user?.company?.companyName ?? t(ROLE_LABEL[role])}</span>
             </span>
-            <button onClick={() => void logout()} className="rounded-md px-2 py-1 text-slate-600 hover:bg-slate-100">Sign out</button>
+            <button onClick={() => void logout()} className="rounded-md px-2 py-1 text-slate-600 hover:bg-slate-100">{t("signOut")}</button>
           </div>
         </div>
       </header>
@@ -95,12 +104,13 @@ export function AppShell({ role, children, wide }: { role: Role; children: React
 /** A failed renewal keeps access during the grace period; say so before access ends. */
 function BillingWarning() {
   const { user } = useAuth();
+  const t = useT(shellMessages);
+  const { formatDate } = useFormatters();
   if (user?.subscription.status !== "PastDue") return null;
   return (
     <div role="status" className="border-b border-amber-200 bg-amber-50">
       <div className="mx-auto max-w-6xl px-4 py-2 text-sm text-amber-900">
-        Your last payment failed. Access continues until {formatDate(user.subscription.accessEndsAt)} — update your payment method with your
-        payment provider to avoid interruption.
+        {t("pastDueWarning", { date: formatDate(user.subscription.accessEndsAt) })}
       </div>
     </div>
   );

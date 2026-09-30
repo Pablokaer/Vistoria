@@ -3,11 +3,15 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, ErrorBanner, Field, Input, PageHeader } from "@/components/ui";
+import { useLocale, useT } from "@/i18n/I18nProvider";
+import { companyPageMessages } from "@/i18n/messages/company-pages";
 import { errorMessage, post } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 export default function OnboardingPage() {
   const { user, reload } = useAuth();
+  const { locale } = useLocale();
+  const t = useT(companyPageMessages);
   const router = useRouter();
   const [name, setName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
@@ -22,7 +26,8 @@ export default function OnboardingPage() {
     setBusy(true);
     setError(null);
     try {
-      await post("/api/companies", { name, contactEmail: contactEmail || null, phone: phone || null });
+      // The owner's UI language becomes the default report language; it can be changed later in Settings.
+      await post("/api/companies", { name, contactEmail: contactEmail || null, phone: phone || null, reportLanguage: locale });
       await reload();
       router.replace("/company");
     } catch (err) {
@@ -34,14 +39,14 @@ export default function OnboardingPage() {
 
   return (
     <div className="mx-auto max-w-xl">
-      <PageHeader title="Create your company workspace" subtitle="Your properties, tenancies and inspections live in this workspace." />
+      <PageHeader title={t("onboardingTitle")} subtitle={t("onboardingSubtitle")} />
       <Card>
         <ErrorBanner message={error} />
         <form onSubmit={submit} className="space-y-4">
-          <Field label="Company name"><Input required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Dublin Lettings Ltd" /></Field>
-          <Field label="Contact email (optional)" hint="Shown on reports."><Input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} /></Field>
-          <Field label="Phone (optional)"><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></Field>
-          <Button type="submit" size="lg" loading={busy}>Create workspace</Button>
+          <Field label={t("companyName")}><Input required value={name} onChange={(e) => setName(e.target.value)} placeholder={t("companyNamePlaceholder")} /></Field>
+          <Field label={t("contactEmail")} hint={t("contactEmailHint")}><Input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} /></Field>
+          <Field label={t("phone")}><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></Field>
+          <Button type="submit" size="lg" loading={busy}>{t("createWorkspace")}</Button>
         </form>
       </Card>
     </div>

@@ -7,6 +7,7 @@ using InspectFlow.Modules.Inspections.Domain;
 using InspectFlow.Modules.Media.Application;
 using InspectFlow.Modules.Media.Domain;
 using InspectFlow.Modules.Reports.Application;
+using InspectFlow.Shared.Localization;
 using InspectFlow.Shared.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -100,7 +101,7 @@ public sealed class AiAnalysisProcessor(
         {
             logger.LogWarning(ex, "AI analysis {AnalysisId} failed", analysisId);
             analysis.Status = AiAnalysisStatus.Failed;
-            analysis.Error = ex is AiProviderException ? ex.Message : "The AI service could not process these photos. You can retry or write the description manually.";
+            analysis.Error = ex is AiProviderException ? ex.Message : AiErrorTexts.Generic.En;
             analysis.CompletedAt = clock.UtcNow;
             audit.Record(AuditActions.AIAnalysisFailed, nameof(AiAnalysis), analysis.Id,
                 new { analysis.InspectionId, kind = analysis.Kind.ToString(), provider = analysis.Provider }, analysis.RequestedBy);
@@ -188,7 +189,7 @@ public sealed class AiAnalysisProcessor(
             .Where(m => mediaIds.Contains(m.Id) && m.Status == MediaStatus.Ready).ToListAsync(ct);
         var images = new List<AnalysisImage>(media.Count);
         foreach (var m in media) images.Add(new AnalysisImage(m.MimeType, await ReadAllAsync(m.StorageKey, ct)));
-        if (images.Count == 0) throw new AiProviderException("The photos for this analysis are no longer available.");
+        if (images.Count == 0) throw new AiProviderException(AiErrorTexts.PhotosGone);
         return images;
     }
 
@@ -202,4 +203,5 @@ public sealed class AiAnalysisProcessor(
 }
 
 /// <summary>Provider failure with a message that is safe to show to users (never contains secrets).</summary>
-public sealed class AiProviderException(string message, Exception? inner = null) : Exception(message, inner);
+/// <summary>An expected AI failure whose text is safe to show; stored in English (see <see cref="AiErrorTexts"/>).</summary>
+public sealed class AiProviderException(LocalizedText text, Exception? inner = null) : Exception(text.En, inner);

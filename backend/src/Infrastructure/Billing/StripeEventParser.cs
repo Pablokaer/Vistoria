@@ -2,6 +2,7 @@ using System.Text.Json;
 using InspectFlow.Modules.Billing.Application;
 using InspectFlow.Modules.Billing.Domain;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 
 namespace InspectFlow.Infrastructure.Billing;
 
@@ -76,12 +77,15 @@ public static class StripeEventParser
         }
         catch (JsonException e)
         {
-            throw new ValidationException("Payload", $"Webhook payload is not valid JSON ({e.Message}); expected a Stripe event object.");
+            throw new ValidationException("Payload", new($"Webhook payload is not valid JSON ({e.Message}); expected a Stripe event object.",
+                $"O conteúdo do webhook não é um JSON válido ({e.Message}); esperado um evento do Stripe."));
         }
     }
 
     private static string RequiredString(JsonElement element, string name) =>
-        OptionalString(element, name) ?? throw new ValidationException("Payload", $"Webhook event has no string '{name}'; expected a Stripe event with 'id' and 'type'.");
+        OptionalString(element, name) ?? throw new ValidationException("Payload", new(
+            $"Webhook event has no string '{name}'; expected a Stripe event with 'id' and 'type'.",
+            $"O evento do webhook não tem o texto '{name}'; esperado um evento do Stripe com 'id' e 'type'."));
 
     private static string? OptionalString(JsonElement element, string name) =>
         element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String

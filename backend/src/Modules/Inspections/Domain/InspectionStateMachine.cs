@@ -1,4 +1,5 @@
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 
 namespace InspectFlow.Modules.Inspections.Domain;
 
@@ -32,7 +33,8 @@ public static class InspectionStateMachine
     {
         if (!CanTransition(from, to))
             throw new DomainRuleException("inspection.invalid_transition",
-                $"An inspection cannot move from {from} to {to}.");
+                new($"An inspection cannot move from {from} to {to}.",
+                    $"Uma vistoria não pode passar de {InspectionTerms.Of(from).PtBr} para {InspectionTerms.Of(to).PtBr}."));
     }
 
     /// <summary>Statuses in which the report is final and immutable.</summary>

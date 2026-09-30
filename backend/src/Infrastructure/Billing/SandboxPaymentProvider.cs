@@ -47,8 +47,9 @@ public sealed class UnavailablePaymentProvider : IPaymentProvider
 
     public Task<ProviderCheckout> CreateCheckoutAsync(ProviderCheckoutRequest request, CancellationToken ct) =>
         throw new Shared.Errors.DomainRuleException("billing.unavailable",
-            $"Payments are not configured on this server (checkout {request.CheckoutId}). Set Billing:Provider=Stripe with STRIPE_SECRET_KEY.");
+            new($"Payments are not configured on this server (checkout {request.CheckoutId}). Set Billing:Provider=Stripe with STRIPE_SECRET_KEY.",
+                $"Os pagamentos não estão configurados neste servidor (pagamento {request.CheckoutId}). Defina Billing:Provider=Stripe com STRIPE_SECRET_KEY."));
 
     public ProviderEvent ParseWebhook(string payload, string? signature) =>
-        throw new Shared.Errors.DomainRuleException("billing.unavailable", "Payments are not configured on this server; webhook rejected.");
+        throw new Shared.Errors.DomainRuleException("billing.unavailable", new("Payments are not configured on this server; webhook rejected.", "Os pagamentos não estão configurados neste servidor; webhook recusado."));
 }

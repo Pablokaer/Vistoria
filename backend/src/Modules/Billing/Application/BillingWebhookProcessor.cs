@@ -3,6 +3,7 @@ using InspectFlow.Modules.Audit.Domain;
 using InspectFlow.Modules.Billing.Domain;
 using InspectFlow.Modules.Common;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 using InspectFlow.Shared.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -29,7 +30,7 @@ public sealed class BillingWebhookProcessor(
     public async Task<WebhookOutcome> ProcessAsync(string providerName, string payload, string? signature, CancellationToken ct)
     {
         if (!string.Equals(providerName, provider.Name, StringComparison.OrdinalIgnoreCase))
-            throw new NotFoundException("Payment provider", providerName);
+            throw new NotFoundException(EntityNames.PaymentProvider, providerName);
         var providerEvent = provider.ParseWebhook(payload, signature);
         return await ApplyOnceAsync(providerEvent, ct);
     }
@@ -147,7 +148,8 @@ public sealed class BillingWebhookProcessor(
         }
         catch (DbUpdateException ex)
         {
-            throw new ConflictException($"Billing event '{e.EventId}' is being processed concurrently; retry later. ({ex.GetType().Name})", "billing.event_in_progress");
+            throw new ConflictException(new($"Billing event '{e.EventId}' is being processed concurrently; retry later. ({ex.GetType().Name})",
+                $"O evento de cobrança '{e.EventId}' está sendo processado em paralelo; tente mais tarde. ({ex.GetType().Name})"), "billing.event_in_progress");
         }
     }
 }

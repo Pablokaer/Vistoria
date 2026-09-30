@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useT } from "@/i18n/I18nProvider";
+import { inspectionToolsMessages } from "@/i18n/messages/inspectionTools";
 import { del, errorMessage, uploadWithProgress } from "@/lib/api";
 import { prepareImage } from "@/lib/image";
 import type { Media } from "@/lib/types";
@@ -12,10 +14,11 @@ interface QueueItem { id: string; name: string; progress: number; error?: string
  * Camera-first uploader: large buttons, sequential uploads with progress, retry on failure.
  * Photos are resized on the device before upload.
  */
-export function PhotoUploader({ uploadUrl, deleteUrlBase, photos, mediaType, defectId, editable, onChanged, onBusyChange, label = "Photos" }: {
+export function PhotoUploader({ uploadUrl, deleteUrlBase, photos, mediaType, defectId, editable, onChanged, onBusyChange, label }: {
   uploadUrl: string; deleteUrlBase: string; photos: Media[]; mediaType: "General" | "Defect"; defectId?: string;
   editable: boolean; onChanged: () => void | Promise<void>; onBusyChange?: (busy: boolean) => void; label?: string;
 }) {
+  const t = useT(inspectionToolsMessages);
   const cameraInput = useRef<HTMLInputElement>(null);
   const libraryInput = useRef<HTMLInputElement>(null);
   const [queue, setQueue] = useState<QueueItem[]>([]);
@@ -54,7 +57,7 @@ export function PhotoUploader({ uploadUrl, deleteUrlBase, photos, mediaType, def
   };
 
   async function remove(photo: Media) {
-    if (!confirm("Delete this photo?")) return;
+    if (!confirm(t("confirmDeletePhoto"))) return;
     setDeleteError(null);
     try { await del(`${deleteUrlBase}/${photo.id}`); await onChanged(); } catch (e) { setDeleteError(errorMessage(e)); }
   }
@@ -62,8 +65,8 @@ export function PhotoUploader({ uploadUrl, deleteUrlBase, photos, mediaType, def
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-sm font-medium text-slate-700">{label} ({photos.length})</span>
-        {busy && <span className="flex items-center gap-2 text-xs text-slate-500"><Spinner small /> Uploading…</span>}
+        <span className="text-sm font-medium text-slate-700">{label ?? t("photosDefault")} ({photos.length})</span>
+        {busy && <span className="flex items-center gap-2 text-xs text-slate-500"><Spinner small /> {t("uploading")}</span>}
       </div>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
         {photos.map((p) => (
@@ -71,7 +74,7 @@ export function PhotoUploader({ uploadUrl, deleteUrlBase, photos, mediaType, def
             {/* eslint-disable-next-line @next/next/no-img-element -- signed, short-lived URLs from the API */}
             <img src={p.url} alt={p.originalFilename} loading="lazy" className="h-full w-full cursor-zoom-in object-cover" onClick={() => setViewing(p.url)} />
             {editable && (
-              <button onClick={() => void remove(p)} aria-label="Delete photo"
+              <button onClick={() => void remove(p)} aria-label={t("deletePhoto")}
                 className="absolute right-1 top-1 grid h-8 w-8 place-items-center rounded-full bg-black/60 text-white">✕</button>
             )}
           </div>
@@ -81,8 +84,8 @@ export function PhotoUploader({ uploadUrl, deleteUrlBase, photos, mediaType, def
             {q.error ? (
               <>
                 <span className="line-clamp-3">{q.error}</span>
-                <button className="font-medium underline" onClick={() => retry(q)}>Retry</button>
-                <button className="underline" onClick={() => setQueue((x) => x.filter((i) => i.id !== q.id))}>Dismiss</button>
+                <button className="font-medium underline" onClick={() => retry(q)}>{t("retry")}</button>
+                <button className="underline" onClick={() => setQueue((x) => x.filter((i) => i.id !== q.id))}>{t("dismiss")}</button>
               </>
             ) : (
               <>
@@ -96,8 +99,8 @@ export function PhotoUploader({ uploadUrl, deleteUrlBase, photos, mediaType, def
       {deleteError && <p className="mt-2 text-sm text-red-600">{deleteError}</p>}
       {editable && (
         <div className="mt-3 grid grid-cols-2 gap-2">
-          <Button type="button" size="lg" onClick={() => cameraInput.current?.click()}>📷 Take photo</Button>
-          <Button type="button" size="lg" variant="secondary" onClick={() => libraryInput.current?.click()}>Upload photos</Button>
+          <Button type="button" size="lg" onClick={() => cameraInput.current?.click()}>{t("takePhoto")}</Button>
+          <Button type="button" size="lg" variant="secondary" onClick={() => libraryInput.current?.click()}>{t("uploadPhotos")}</Button>
           <input ref={cameraInput} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} />
           <input ref={libraryInput} type="file" accept="image/jpeg,image/png,image/webp,image/*" multiple className="hidden" onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} />
         </div>
@@ -114,8 +117,9 @@ export function PhotoUploader({ uploadUrl, deleteUrlBase, photos, mediaType, def
 
 /** Read-only photo strip (baseline, reports). */
 export function PhotoStrip({ urls }: { urls: string[] }) {
+  const t = useT(inspectionToolsMessages);
   const [viewing, setViewing] = useState<string | null>(null);
-  if (urls.length === 0) return <p className="text-sm text-slate-500">No photos.</p>;
+  if (urls.length === 0) return <p className="text-sm text-slate-500">{t("noPhotos")}</p>;
   return (
     <>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">

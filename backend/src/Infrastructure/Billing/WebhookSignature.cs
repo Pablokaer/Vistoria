@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 
 namespace InspectFlow.Infrastructure.Billing;
 
@@ -51,5 +52,6 @@ public static class WebhookSignature
 
     private static string Truncate(string? value) => value is null ? "(missing)" : value.Length <= 40 ? value : value[..40] + "…";
 
-    private static ValidationException Rejected(string message) => new("Signature", message);
+    // Only payment providers call webhooks, never people: the text stays English in both languages on purpose.
+    private static ValidationException Rejected(string message) => new("Signature", new LocalizedText(message, message));
 }

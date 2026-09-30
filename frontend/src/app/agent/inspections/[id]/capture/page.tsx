@@ -5,8 +5,9 @@ import { useCallback, useState } from "react";
 import { BaselinePanel } from "@/components/ComparisonPanel";
 import { PhotoUploader } from "@/components/PhotoUploader";
 import { Badge, Button, Card, ErrorBanner, Loading, Notice, PageHeader } from "@/components/ui";
+import { useFormatters, useT } from "@/i18n/I18nProvider";
+import { captureMessages } from "@/i18n/messages/capture";
 import { del, errorMessage, post, put } from "@/lib/api";
-import { humanize } from "@/lib/format";
 import { roomUrl, useInspectionRooms } from "@/lib/rooms";
 import type { Defect, RoomDetail } from "@/lib/types";
 
@@ -19,6 +20,8 @@ type OnBusy = (key: string, busy: boolean) => void;
 export default function CapturePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const t = useT(captureMessages);
+  const { humanize } = useFormatters();
   const { inspection, rooms, error, load, setRoom, reloadRoom } = useInspectionRooms(id);
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
@@ -35,8 +38,8 @@ export default function CapturePage() {
   async function next() {
     setActionError(null);
     const missing = rooms!.flatMap((r) => [
-      ...(r.generalPhotos.length === 0 ? [`${r.name}: add at least one photo.`] : []),
-      ...r.defects.filter((d) => d.photos.length === 0).map((d) => `${r.name}: defect #${r.defects.indexOf(d) + 1} needs a photo.`),
+      ...(r.generalPhotos.length === 0 ? [t("missingRoomPhoto", { room: r.name })] : []),
+      ...r.defects.filter((d) => d.photos.length === 0).map((d) => t("missingDefectPhoto", { room: r.name, number: r.defects.indexOf(d) + 1 })),
     ]);
     setIssues(missing);
     if (missing.length > 0) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
@@ -54,7 +57,7 @@ export default function CapturePage() {
     const results = await Promise.allSettled(requests);
     const failed = results.filter((x): x is PromiseRejectedResult => x.status === "rejected");
     if (failed.length > 0) {
-      setActionError(`${failed.length} AI request(s) failed: ${errorMessage(failed[0].reason)}`);
+      setActionError(t("aiRequestsFailed", { count: failed.length, error: errorMessage(failed[0].reason) }));
       setBusy(false);
       return;
     }
@@ -63,9 +66,9 @@ export default function CapturePage() {
 
   return (
     <div className="pb-28">
-      <PageHeader title="Photos" subtitle={`${humanize(inspection.inspectionType)} · step 1 of 2 — photos of every room and its defects`}
-        back={{ href: `/agent/inspections/${id}`, label: "Inspection" }} />
-      {!editable && <Notice tone="info">This inspection is read-only ({humanize(inspection.status)}).</Notice>}
+      <PageHeader title={t("photosTitle")} subtitle={t("captureSubtitle", { type: humanize(inspection.inspectionType) })}
+        back={{ href: `/agent/inspections/${id}`, label: t("inspection") }} />
+      {!editable && <Notice tone="info">{t("readOnly", { status: humanize(inspection.status) })}</Notice>}
       <ErrorBanner message={actionError} />
       {issues.length > 0 && <ul className="mb-4 list-disc space-y-1 rounded-lg bg-red-50 py-3 pl-8 pr-4 text-sm text-red-800">{issues.map((i) => <li key={i}>{i}</li>)}</ul>}
 
@@ -79,9 +82,9 @@ export default function CapturePage() {
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur">
           <div className="mx-auto flex max-w-6xl items-center justify-end gap-3 px-4 py-3">
             <span className="flex-1 text-xs text-slate-500">
-              {anyUploading ? "Waiting for uploads to finish…" : "Descriptions are generated for every room when you continue."}
+              {anyUploading ? t("waitingUploads") : t("descriptionsGenerated")}
             </span>
-            <Button size="lg" loading={busy} disabled={anyUploading} onClick={() => void next()}>Continue to descriptions</Button>
+            <Button size="lg" loading={busy} disabled={anyUploading} onClick={() => void next()}>{t("continueToDescriptions")}</Button>
           </div>
         </div>
       )}
@@ -92,6 +95,7 @@ export default function CapturePage() {
 function RoomCapture({ room, base, onRoom, reload, onBusy }: {
   room: RoomDetail; base: string; onRoom: (r: RoomDetail) => void; reload: () => Promise<void>; onBusy: OnBusy;
 }) {
+  const t = useT(captureMessages);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const onGeneralBusy = useCallback((b: boolean) => onBusy(`${room.id}:general`, b), [onBusy, room.id]);
@@ -106,7 +110,7 @@ function RoomCapture({ room, base, onRoom, reload, onBusy }: {
   const addDefect = () => run(async () => onRoom(await post<RoomDetail>(`${base}/defects`, { description: null, location: null })));
 
   const removeDefect = (d: Defect) => {
-    if (!confirm("Remove this defect and its photos?")) return;
+    if (!confirm(t("confirmRemoveDefect"))) return;
     void run(async () => {
       let updated = await del<RoomDetail>(`${base}/defects/${d.id}`);
       // Removing the last defect leaves "defects found" set, which would block completing the room.
@@ -121,23 +125,23 @@ function RoomCapture({ room, base, onRoom, reload, onBusy }: {
       <Card title={<span className="flex flex-wrap items-center gap-3">{room.sequence}. {room.name} <Badge value={room.status} /></span>}>
         {room.comparison?.baseline && (
           <details className="mb-4">
-            <summary className="cursor-pointer text-sm font-medium text-brand">Show Move In record</summary>
+            <summary className="cursor-pointer text-sm font-medium text-brand">{t("showMoveInRecord")}</summary>
             <div className="mt-2"><BaselinePanel room={room} /></div>
           </details>
         )}
 
         <PhotoUploader uploadUrl={`${base}/photos`} deleteUrlBase={photosBase} photos={room.generalPhotos} mediaType="General"
-          editable={room.editable} onChanged={reload} onBusyChange={onGeneralBusy} label="Room photos" />
+          editable={room.editable} onChanged={reload} onBusyChange={onGeneralBusy} label={t("roomPhotos")} />
 
         <div className="mt-6 border-t border-slate-100 pt-4">
-          <h3 className="mb-3 text-sm font-semibold text-slate-700">Defects ({room.defects.length})</h3>
+          <h3 className="mb-3 text-sm font-semibold text-slate-700">{t("defectsCount", { count: room.defects.length })}</h3>
           <div className="space-y-3">
             {room.defects.map((d, i) => (
               <DefectCapture key={d.id} defect={d} index={i} base={base} editable={room.editable} reload={reload} onBusy={onBusy} onRemove={() => removeDefect(d)} />
             ))}
           </div>
           {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-          {room.editable && <Button variant="secondary" className="mt-3 w-full" loading={busy} onClick={() => void addDefect()}>+ Add defect</Button>}
+          {room.editable && <Button variant="secondary" className="mt-3 w-full" loading={busy} onClick={() => void addDefect()}>{t("addDefect")}</Button>}
         </div>
       </Card>
     </section>
@@ -147,14 +151,15 @@ function RoomCapture({ room, base, onRoom, reload, onBusy }: {
 function DefectCapture({ defect, index, base, editable, reload, onBusy, onRemove }: {
   defect: Defect; index: number; base: string; editable: boolean; reload: () => Promise<void>; onBusy: OnBusy; onRemove: () => void;
 }) {
+  const t = useT(captureMessages);
   const onDefectBusy = useCallback((b: boolean) => onBusy(`defect:${defect.id}`, b), [onBusy, defect.id]);
   return (
     <div data-testid="defect-card" className="rounded-xl border border-amber-200 bg-amber-50/40 p-3 sm:p-4">
       <div className="mb-2 flex items-center justify-between">
-        <h4 className="font-medium">Defect #{index + 1}</h4>
-        {editable && <Button variant="ghost" onClick={onRemove}>Remove</Button>}
+        <h4 className="font-medium">{t("defectNumber", { number: index + 1 })}</h4>
+        {editable && <Button variant="ghost" onClick={onRemove}>{t("remove")}</Button>}
       </div>
-      <PhotoUploader label="Defect photos" uploadUrl={`${base}/photos`} deleteUrlBase={base.replace(/\/rooms\/[^/]+$/, "/photos")}
+      <PhotoUploader label={t("defectPhotos")} uploadUrl={`${base}/photos`} deleteUrlBase={base.replace(/\/rooms\/[^/]+$/, "/photos")}
         photos={defect.photos} mediaType="Defect" defectId={defect.id} editable={editable} onChanged={reload} onBusyChange={onDefectBusy} />
     </div>
   );

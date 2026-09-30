@@ -7,6 +7,7 @@ using InspectFlow.Modules.Notifications.Application;
 using InspectFlow.Modules.Reports.Application;
 using InspectFlow.Modules.Tenants.Domain;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 using InspectFlow.Shared.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -73,12 +74,12 @@ public sealed class TenantService(
         var tenantId = access.RequireTenant();
         var inspection = await LoadVisibleAsync(inspectionId, tracking: false, ct);
         if (inspection.Status != InspectionStatus.AwaitingTenant)
-            throw new DomainRuleException("tenant.review_closed", "Observations can only be added while the report awaits your review.");
+            throw new DomainRuleException("tenant.review_closed", new("Observations can only be added while the report awaits your review.", "Observações só podem ser adicionadas enquanto o laudo aguarda a sua revisão."));
         var text = request.Text?.Trim();
         if (string.IsNullOrEmpty(text) || text.Length > 4000)
-            throw new ValidationException("Text", "Observation text is required (max 4000 characters).");
+            throw new ValidationException("Text", new("Observation text is required (max 4000 characters).", "O texto da observação é obrigatório (máximo de 4000 caracteres)."));
         if (request.RoomId is not null && !await db.InspectionRooms.AnyAsync(r => r.Id == request.RoomId && r.InspectionId == inspectionId, ct))
-            throw new ValidationException("RoomId", "The room does not belong to this inspection.");
+            throw new ValidationException("RoomId", new($"Room {request.RoomId} does not belong to this inspection.", $"O cômodo {request.RoomId} não pertence a esta vistoria."));
 
         var versionId = await LatestVersionIdAsync(inspectionId, ct);
         var observation = new TenantObservation
@@ -103,7 +104,7 @@ public sealed class TenantService(
     public Task<ReportViewDto> DisputeAsync(Guid inspectionId, TenantDecisionRequest request, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.Comment))
-            throw new ValidationException("Comment", "Please explain what you disagree with.");
+            throw new ValidationException("Comment", new("Please explain what you disagree with.", "Explique com o que você não concorda."));
         return RespondAsync(inspectionId, TenantDecision.Disputed, request.Comment, ct);
     }
 
@@ -116,7 +117,7 @@ public sealed class TenantService(
         inspection.RecordTenantDecision(decision == TenantDecision.Accepted, tenantId, now);
 
         var trimmed = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim();
-        if (trimmed is { Length: > 4000 }) throw new ValidationException("Comment", "Comment must be at most 4000 characters.");
+        if (trimmed is { Length: > 4000 }) throw new ValidationException("Comment", new("Comment must be at most 4000 characters.", "O comentário deve ter no máximo 4000 caracteres."));
         db.TenantResponses.Add(new TenantResponse
         {
             Id = Guid.NewGuid(),
@@ -141,7 +142,7 @@ public sealed class TenantService(
         }
         catch (DbUpdateConcurrencyException)
         {
-            throw new ConflictException("This report was already answered. Refresh to see the latest status.");
+            throw new ConflictException(new("This report was already answered. Refresh to see the latest status.", "Este laudo já foi respondido. Atualize a página para ver o status mais recente."));
         }
         return await reports.GetForInspectionAsync(inspectionId, ct);
     }
@@ -151,7 +152,7 @@ public sealed class TenantService(
         var tenantId = access.RequireTenant();
         var query = access.TenantVisibleInspections(tenantId);
         if (!tracking) query = query.AsNoTracking();
-        return await query.FirstOrDefaultAsync(i => i.Id == inspectionId, ct) ?? throw new NotFoundException("Inspection", inspectionId);
+        return await query.FirstOrDefaultAsync(i => i.Id == inspectionId, ct) ?? throw new NotFoundException(EntityNames.Inspection, inspectionId);
     }
 
     private Task<Guid> LatestVersionIdAsync(Guid inspectionId, CancellationToken ct) =>

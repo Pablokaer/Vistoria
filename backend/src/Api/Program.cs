@@ -70,6 +70,8 @@ if (builder.Configuration.GetValue("ForwardedHeaders:Enabled", false))
 var app = builder.Build();
 
 if (builder.Configuration.GetValue("ForwardedHeaders:Enabled", false)) app.UseForwardedHeaders();
+// Before the exception handler so the request language is set for everything below; the handler itself reads the header.
+app.UseRequestLanguage();
 app.UseExceptionHandler();
 app.Use(async (ctx, next) =>
 {

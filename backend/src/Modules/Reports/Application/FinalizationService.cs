@@ -8,6 +8,7 @@ using InspectFlow.Modules.Media.Application;
 using InspectFlow.Modules.Notifications.Application;
 using InspectFlow.Modules.Reports.Domain;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 using InspectFlow.Shared.Security;
 using InspectFlow.Shared.Time;
 using Microsoft.EntityFrameworkCore;
@@ -52,7 +53,7 @@ public sealed class FinalizationService(
                 inspection.Finalize(agentId, issues, now);
 
                 if (await db.InspectionReports.AnyAsync(r => r.InspectionId == inspection.Id, ct))
-                    throw new DomainRuleException("report.exists", "A report already exists for this inspection.");
+                    throw new DomainRuleException("report.exists", new("A report already exists for this inspection.", "Já existe um laudo para esta vistoria."));
 
                 var report = new InspectionReport
                 {
@@ -99,11 +100,11 @@ public sealed class FinalizationService(
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    throw new ConflictException("The inspection was changed while finalizing. Refresh and try again.");
+                    throw new ConflictException(new("The inspection was changed while finalizing. Refresh and try again.", "A vistoria foi alterada durante a finalização. Atualize a página e tente novamente."));
                 }
                 catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("duplicate key", StringComparison.OrdinalIgnoreCase) == true)
                 {
-                    throw new ConflictException("This inspection has already been finalized.");
+                    throw new ConflictException(new("This inspection has already been finalized.", "Esta vistoria já foi finalizada."));
                 }
                 return new FinalizeResultDto(inspection.Id, inspection.Status.ToString(), report.Id, report.ReportNumber,
                     version.VersionNumber, version.SnapshotSha256);

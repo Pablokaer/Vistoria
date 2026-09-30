@@ -111,7 +111,7 @@ public class InspectionStateMachineTests
         inspection.Publish(Rooms(), Now);
         inspection.Accept(Agent, Now);
         inspection.Start(Agent, Now);
-        var ex = Assert.Throws<DomainRuleException>(() => inspection.SubmitForReview(Agent, ["Bedroom 1: not complete"], Now));
+        var ex = Assert.Throws<DomainRuleException>(() => inspection.SubmitForReview(Agent, [new("Bedroom 1: not complete", "Quarto 1: não concluído")], Now));
         Assert.Equal("inspection.not_ready", ex.Code);
         Assert.Single(ex.Details);
         Assert.Equal(InspectionStatus.InProgress, inspection.Status);

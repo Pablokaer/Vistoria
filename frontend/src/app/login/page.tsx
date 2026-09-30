@@ -6,10 +6,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AuthCard } from "@/components/AuthCard";
 import { Button, ErrorBanner, Field, Input, Notice } from "@/components/ui";
 import { errorMessage } from "@/lib/api";
+import { useT } from "@/i18n/I18nProvider";
+import { authMessages } from "@/i18n/messages/auth";
 import { destinationAfterSignIn, useAuth } from "@/lib/auth";
 
 function LoginForm() {
   const { login } = useAuth();
+  const t = useT(authMessages);
   const router = useRouter();
   const params = useSearchParams();
   const [email, setEmail] = useState("");
@@ -32,16 +35,16 @@ function LoginForm() {
   }
 
   return (
-    <AuthCard title="Sign in" subtitle="Companies, inspectors and tenants all sign in here.">
-      {params.get("expired") && <Notice tone="warning">Your session expired. Please sign in again.</Notice>}
+    <AuthCard title={t("signInTitle")} subtitle={t("signInSubtitle")}>
+      {params.get("expired") && <Notice tone="warning">{t("sessionExpired")}</Notice>}
       <ErrorBanner message={error} />
       <form onSubmit={submit} className="space-y-4">
-        <Field label="Email"><Input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
-        <Field label="Password"><Input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></Field>
-        <Button type="submit" size="lg" className="w-full" loading={busy}>Sign in</Button>
+        <Field label={t("email")}><Input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
+        <Field label={t("password")}><Input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></Field>
+        <Button type="submit" size="lg" className="w-full" loading={busy}>{t("signInButton")}</Button>
       </form>
       <p className="mt-6 text-center text-sm text-slate-600">
-        No account? <Link className="font-medium text-brand hover:underline" href={`/register${params.get("next") ? `?next=${encodeURIComponent(params.get("next")!)}` : ""}`}>Create one</Link>
+        {t("noAccount")} <Link className="font-medium text-brand hover:underline" href={`/register${params.get("next") ? `?next=${encodeURIComponent(params.get("next")!)}` : ""}`}>{t("createOne")}</Link>
       </p>
     </AuthCard>
   );

@@ -1,4 +1,5 @@
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 
 namespace InspectFlow.Modules.Billing.Domain;
 
@@ -104,8 +105,11 @@ public class Subscription
     {
         if (SubscriptionTransitions.IsAllowed(Status, target)) return;
         throw new DomainRuleException("subscription.invalid_transition",
-            $"Subscription {Id} cannot move from {Status} to {target}; allowed from {Status}: [{string.Join(", ", SubscriptionTransitions.From(Status))}].");
+            new($"Subscription {Id} cannot move from {Status} to {target}; allowed from {Status}: [{AllowedTargets()}].",
+                $"A assinatura {Id} não pode passar de {Status} para {target}; permitido a partir de {Status}: [{AllowedTargets()}]."));
     }
+
+    private string AllowedTargets() => string.Join(", ", SubscriptionTransitions.From(Status));
 }
 
 /// <summary>A paid period [Start, End).</summary>

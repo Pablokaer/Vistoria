@@ -1,4 +1,5 @@
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 
 namespace InspectFlow.Modules.Properties.Domain;
 
@@ -69,7 +70,7 @@ public class Property
     {
         var trimmed = Required(name, "Name", 100);
         if (ActiveRooms.Any(r => string.Equals(r.Name, trimmed, StringComparison.OrdinalIgnoreCase)))
-            throw new ValidationException("Name", $"A room named '{trimmed}' already exists in this property.");
+            throw new ValidationException("Name", DuplicateRoomName(trimmed));
 
         var sequence = Rooms.Count == 0 ? 1 : Rooms.Max(r => r.Sequence) + 1;
         var room = new PropertyRoom
@@ -88,10 +89,10 @@ public class Property
 
     public void UpdateRoom(Guid roomId, RoomType type, string name, DateTimeOffset now)
     {
-        var room = ActiveRooms.FirstOrDefault(r => r.Id == roomId) ?? throw new NotFoundException("Room", roomId);
+        var room = ActiveRooms.FirstOrDefault(r => r.Id == roomId) ?? throw new NotFoundException(EntityNames.Room, roomId);
         var trimmed = Required(name, "Name", 100);
         if (ActiveRooms.Any(r => r.Id != roomId && string.Equals(r.Name, trimmed, StringComparison.OrdinalIgnoreCase)))
-            throw new ValidationException("Name", $"A room named '{trimmed}' already exists in this property.");
+            throw new ValidationException("Name", DuplicateRoomName(trimmed));
         room.RoomType = type;
         room.Name = trimmed;
         UpdatedAt = now;
@@ -103,7 +104,7 @@ public class Property
     /// </summary>
     public void ArchiveRoom(Guid roomId, DateTimeOffset now)
     {
-        var room = ActiveRooms.FirstOrDefault(r => r.Id == roomId) ?? throw new NotFoundException("Room", roomId);
+        var room = ActiveRooms.FirstOrDefault(r => r.Id == roomId) ?? throw new NotFoundException(EntityNames.Room, roomId);
         room.ArchivedAt = now;
         UpdatedAt = now;
     }
@@ -114,7 +115,7 @@ public class Property
         var active = ActiveRooms.ToList();
         if (orderedRoomIds.Count != active.Count || orderedRoomIds.Distinct().Count() != active.Count ||
             active.Any(r => !orderedRoomIds.Contains(r.Id)))
-            throw new ValidationException("RoomIds", "The new order must list every room exactly once.");
+            throw new ValidationException("RoomIds", new("The new order must list every room exactly once.", "A nova ordem deve listar cada cômodo exatamente uma vez."));
 
         for (var i = 0; i < orderedRoomIds.Count; i++)
             active.Single(r => r.Id == orderedRoomIds[i]).Sequence = i + 1;
@@ -124,11 +125,27 @@ public class Property
     public string FullAddress => string.Join(", ",
         new[] { AddressLine1, AddressLine2, City, Postcode, Country }.Where(s => !string.IsNullOrWhiteSpace(s)));
 
+    private static LocalizedText DuplicateRoomName(string name) =>
+        new($"A room named '{name}' already exists in this property.", $"Já existe um cômodo chamado '{name}' neste imóvel.");
+
+    // Portuguese field labels for validation messages; English keeps the field name clients already match on.
+    private static readonly Dictionary<string, string> FieldLabelsPtBr = new()
+    {
+        [nameof(AddressLine1)] = "Endereço",
+        [nameof(City)] = "Cidade",
+        [nameof(Postcode)] = "CEP",
+        [nameof(Country)] = "País",
+        ["Name"] = "Nome",
+    };
+
     private static string Required(string? value, string field, int maxLength)
     {
-        if (string.IsNullOrWhiteSpace(value)) throw new ValidationException(field, $"{field} is required.");
+        var label = FieldLabelsPtBr.GetValueOrDefault(field, field);
+        if (string.IsNullOrWhiteSpace(value))
+            throw new ValidationException(field, new($"{field} is required.", $"{label} é obrigatório."));
         var trimmed = value.Trim();
-        if (trimmed.Length > maxLength) throw new ValidationException(field, $"{field} must be at most {maxLength} characters.");
+        if (trimmed.Length > maxLength)
+            throw new ValidationException(field, new($"{field} must be at most {maxLength} characters.", $"{label} deve ter no máximo {maxLength} caracteres."));
         return trimmed;
     }
 }

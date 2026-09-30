@@ -1,5 +1,6 @@
 using InspectFlow.Modules.Properties.Domain;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 
 namespace InspectFlow.Modules.Inspections.Domain;
 
@@ -62,7 +63,7 @@ public class InspectionRoom
     public void SetDefectsFound(bool value, DateTimeOffset now)
     {
         if (!value && Defects.Count > 0)
-            throw new DomainRuleException("room.defects_present", "Remove the recorded defects before unchecking 'Defects found'.");
+            throw new DomainRuleException("room.defects_present", new("Remove the recorded defects before unchecking 'Defects found'.", "Remova as avarias registradas antes de desmarcar 'Avarias encontradas'."));
         DefectsFound = value;
         MarkActivity(now);
     }
@@ -107,7 +108,7 @@ public class InspectionRoom
     }
 
     public InspectionDefect GetDefect(Guid defectId) =>
-        Defects.FirstOrDefault(d => d.Id == defectId) ?? throw new NotFoundException("Defect", defectId);
+        Defects.FirstOrDefault(d => d.Id == defectId) ?? throw new NotFoundException(EntityNames.Defect, defectId);
 
     public void RemoveDefect(Guid defectId, DateTimeOffset now)
     {
@@ -115,42 +116,54 @@ public class InspectionRoom
         MarkActivity(now);
     }
 
-    public IReadOnlyList<string> GetCompletionIssues(RoomCompletionContext context)
+    public IReadOnlyList<LocalizedText> GetCompletionIssues(RoomCompletionContext context)
     {
-        var issues = new List<string>();
+        var issues = new List<LocalizedText>();
         if (context.GeneralPhotoCount < context.MinimumGeneralPhotos)
-            issues.Add($"{Name}: at least {context.MinimumGeneralPhotos} general photo(s) required.");
+            issues.Add(new($"{Name}: at least {context.MinimumGeneralPhotos} general photo(s) required.",
+                $"{Name}: são necessárias pelo menos {context.MinimumGeneralPhotos} foto(s) gerais."));
         if (string.IsNullOrWhiteSpace(FinalDescription))
-            issues.Add($"{Name}: a room description is required.");
+            issues.Add(new($"{Name}: a room description is required.", $"{Name}: a descrição do cômodo é obrigatória."));
         if (DefectsFound && Defects.Count == 0)
-            issues.Add($"{Name}: 'Defects found' is checked but no defect has been recorded.");
+            issues.Add(new($"{Name}: 'Defects found' is checked but no defect has been recorded.",
+                $"{Name}: 'Avarias encontradas' está marcado, mas nenhuma avaria foi registrada."));
+        issues.AddRange(GetDefectIssues(context));
+        issues.AddRange(GetPendingWorkIssues(context));
+        return issues;
+    }
 
+    private IEnumerable<LocalizedText> GetDefectIssues(RoomCompletionContext context)
+    {
         var index = 1;
         foreach (var defect in Defects.OrderBy(d => d.CreatedAt))
         {
-            var label = $"{Name}: defect #{index++}";
+            var label = new LocalizedText($"{Name}: defect #{index}", $"{Name}: avaria nº {index}");
+            index++;
             if (string.IsNullOrWhiteSpace(defect.FinalDescription))
-                issues.Add($"{label} needs a description.");
+                yield return new($"{label.En} needs a description.", $"{label.PtBr} precisa de uma descrição.");
             if (context.DefectPhotoCounts.GetValueOrDefault(defect.Id) < 1)
-                issues.Add($"{label} needs at least one photo.");
+                yield return new($"{label.En} needs at least one photo.", $"{label.PtBr} precisa de pelo menos uma foto.");
             if (!defect.AgentConfirmed)
-                issues.Add($"{label} must be confirmed by the agent.");
+                yield return new($"{label.En} must be confirmed by the agent.", $"{label.PtBr} precisa ser confirmada pelo vistoriador.");
         }
+    }
 
+    private IEnumerable<LocalizedText> GetPendingWorkIssues(RoomCompletionContext context)
+    {
         if (context.PendingUploads > 0)
-            issues.Add($"{Name}: {context.PendingUploads} upload(s) still pending.");
+            yield return new($"{Name}: {context.PendingUploads} upload(s) still pending.", $"{Name}: {context.PendingUploads} envio(s) ainda pendente(s).");
         if (context.PendingAnalyses > 0)
-            issues.Add($"{Name}: AI analysis is still running.");
+            yield return new($"{Name}: AI analysis is still running.", $"{Name}: a análise por IA ainda está em andamento.");
         if (context.ComparisonRequired && !context.ComparisonDecided)
-            issues.Add($"{Name}: record your decision comparing this room with the Move In inspection.");
-        return issues;
+            yield return new($"{Name}: record your decision comparing this room with the Move In inspection.",
+                $"{Name}: registre sua decisão comparando este cômodo com a vistoria de entrada.");
     }
 
     public void Complete(RoomCompletionContext context, DateTimeOffset now)
     {
         var issues = GetCompletionIssues(context);
         if (issues.Count > 0)
-            throw new DomainRuleException("room.incomplete", $"{Name} cannot be completed yet.", issues);
+            throw new DomainRuleException("room.incomplete", new($"{Name} cannot be completed yet.", $"{Name} ainda não pode ser concluído."), issues);
         Status = InspectionRoomStatus.Completed;
         CompletedAt = now;
         UpdatedAt = now;

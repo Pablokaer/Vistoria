@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { errorMessage, get } from "@/lib/api";
+import { useT } from "@/i18n/I18nProvider";
+import { authMessages } from "@/i18n/messages/auth";
 import { homeFor, useAuth } from "@/lib/auth";
 
 interface DevAccount { email: string; role: string; label: string }
@@ -13,6 +15,7 @@ interface DevAccount { email: string; role: string; label: string }
  */
 export function DevAccountSwitcher() {
   const { user, switchAccount } = useAuth();
+  const t = useT(authMessages);
   const router = useRouter();
   const [accounts, setAccounts] = useState<DevAccount[] | null>(null);
   const [open, setOpen] = useState(false);
@@ -49,7 +52,7 @@ export function DevAccountSwitcher() {
     <div ref={ref} className="relative">
       <button onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open}
         className="flex items-center gap-1 whitespace-nowrap rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100">
-        Dev: switch account <span aria-hidden>▾</span>
+        {t("devSwitch")} <span aria-hidden>▾</span>
       </button>
       {open && (
         <div role="menu" className="absolute right-0 z-40 mt-1 w-72 rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
@@ -58,7 +61,7 @@ export function DevAccountSwitcher() {
             return (
               <button key={a.email} role="menuitem" disabled={current || busy !== null} onClick={() => void pick(a)}
                 className={`block w-full rounded-md px-3 py-2 text-left text-sm ${current ? "bg-brand-50 text-brand" : "hover:bg-slate-50"} disabled:cursor-default`}>
-                <span className="block font-medium">{a.label}{current && " (current)"}{busy === a.email && " …"}</span>
+                <span className="block font-medium">{a.label}{current && t("devCurrent")}{busy === a.email && " …"}</span>
                 <span className="block text-xs text-slate-500">{a.email}</span>
               </button>
             );

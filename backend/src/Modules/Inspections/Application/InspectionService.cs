@@ -8,6 +8,7 @@ using InspectFlow.Modules.Notifications.Application;
 using InspectFlow.Modules.Properties.Domain;
 using InspectFlow.Shared.Auth;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 using InspectFlow.Shared.Security;
 using InspectFlow.Shared.Time;
 using Microsoft.EntityFrameworkCore;
@@ -50,10 +51,10 @@ public sealed class InspectionService(
         var userId = currentUser.RequireUserId();
 
         var property = await db.Properties.AsNoTracking().FirstOrDefaultAsync(p => p.Id == request.PropertyId && p.CompanyId == companyId, ct)
-                       ?? throw new NotFoundException("Property", request.PropertyId);
+                       ?? throw new NotFoundException(EntityNames.Property, request.PropertyId);
         if (request.TenancyId is not null &&
             !await db.Tenancies.AnyAsync(t => t.Id == request.TenancyId && t.PropertyId == property.Id && t.CompanyId == companyId, ct))
-            throw new ValidationException("TenancyId", "The tenancy does not belong to this property.");
+            throw new ValidationException("TenancyId", new($"Tenancy {request.TenancyId} does not belong to this property.", $"A locação {request.TenancyId} não pertence a este imóvel."));
 
         if (request.ComparisonInspectionId is not null)
             await ValidateComparisonAsync(request, companyId, ct);
@@ -133,7 +134,7 @@ public sealed class InspectionService(
     {
         var inspection = await access.GetForCompanyAsync(inspectionId, CompanyPermission.ManageInspections, ct);
         if (inspection.Visibility != InspectionVisibility.Private || inspection.Status != InspectionStatus.Open)
-            throw new DomainRuleException("invitation.not_applicable", "Invitations can only be regenerated for open private inspections.");
+            throw new DomainRuleException("invitation.not_applicable", new("Invitations can only be regenerated for open private inspections.", "Convites só podem ser gerados novamente para vistorias privadas abertas."));
         var now = clock.UtcNow;
         var previous = await db.InspectionInvitations.Where(x => x.InspectionId == inspectionId && x.RevokedAt == null).ToListAsync(ct);
         foreach (var inv in previous) inv.Revoke(now);
@@ -158,7 +159,7 @@ public sealed class InspectionService(
         var members = inspection.TenancyId is null ? [] :
             await db.TenancyMembers.AsNoTracking().Where(m => m.TenancyId == inspection.TenancyId).ToListAsync(ct);
         if (members.Count == 0)
-            throw new DomainRuleException("tenancy.no_tenants", "Add at least one tenant to the tenancy first.");
+            throw new DomainRuleException("tenancy.no_tenants", new("Add at least one tenant to the tenancy first.", "Adicione primeiro pelo menos um inquilino à locação."));
         inspection.SendToTenant(clock.UtcNow);
         TenantNotifications.NotifyReportReady(notifications, urls.Value, inspection, members);
         audit.Record(AuditActions.InspectionSentToTenant, nameof(Inspection), inspection.Id, new { tenants = members.Count });
@@ -181,16 +182,16 @@ public sealed class InspectionService(
     private async Task ValidateComparisonAsync(CreateInspectionRequest request, Guid companyId, CancellationToken ct)
     {
         var source = await db.Inspections.AsNoTracking().FirstOrDefaultAsync(i => i.Id == request.ComparisonInspectionId && i.CompanyId == companyId, ct)
-                     ?? throw new ValidationException("ComparisonInspectionId", "The comparison inspection was not found.");
+                     ?? throw new ValidationException("ComparisonInspectionId", new($"The comparison inspection {request.ComparisonInspectionId} was not found.", $"A vistoria de comparação {request.ComparisonInspectionId} não foi encontrada."));
         if (source.PropertyId != request.PropertyId)
-            throw new ValidationException("ComparisonInspectionId", "The comparison inspection must be for the same property.");
+            throw new ValidationException("ComparisonInspectionId", new("The comparison inspection must be for the same property.", "A vistoria de comparação deve ser do mesmo imóvel."));
         if (!source.IsFinalized)
-            throw new ValidationException("ComparisonInspectionId", "The comparison inspection must be finalized.");
+            throw new ValidationException("ComparisonInspectionId", new("The comparison inspection must be finalized.", "A vistoria de comparação precisa estar finalizada."));
         if (request.InspectionType == InspectionType.MoveOut && source.InspectionType != InspectionType.MoveIn)
-            throw new ValidationException("ComparisonInspectionId", "A Move Out inspection must be compared with a Move In inspection.");
+            throw new ValidationException("ComparisonInspectionId", new("A Move Out inspection must be compared with a Move In inspection.", "Uma vistoria de saída deve ser comparada com uma vistoria de entrada."));
         // A baseline from another tenancy would expose previous tenants' records to the current ones.
         if (source.TenancyId != request.TenancyId)
-            throw new ValidationException("ComparisonInspectionId", "The comparison inspection belongs to a different tenancy.");
+            throw new ValidationException("ComparisonInspectionId", new("The comparison inspection belongs to a different tenancy.", "A vistoria de comparação pertence a outra locação."));
     }
 
     private PrivateInvitationDto CreateInvitation(Inspection inspection, string? inviteEmail, DateTimeOffset now)
@@ -232,7 +233,7 @@ public sealed class InspectionService(
         }
         catch (DbUpdateConcurrencyException)
         {
-            throw new ConflictException("The inspection was changed by someone else. Refresh and try again.");
+            throw new ConflictException(InspectionMessages.ChangedConcurrently);
         }
     }
 

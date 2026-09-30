@@ -1,10 +1,11 @@
-// End-to-end UI flow (landing + subscription, Move In + Move Out) driven through the real web app with Playwright.
+// End-to-end UI flow (languages, landing + subscription, Move In + Move Out) driven through the real web app with Playwright.
 // Usage: BASE_URL=http://localhost:3000 node ui-flow.mjs   (screenshots in ./output)
 import { chromium, devices } from "playwright";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { abandonedCheckoutFlow, landingOnMobile, subscribeFromLanding } from "./subscription.mjs";
+import { languageFlows } from "./localization.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
@@ -105,6 +106,7 @@ try {
   const companyEmail = `company-${run}@e2e.local`;
   const tenantEmail = `tenant-${run}@e2e.local`;
   const ctxOpts = { base: BASE, snap, log };
+  await languageFlows(browser, ctxOpts);
   await landingOnMobile(browser, ctxOpts);
   const { page: company } = await subscribeFromLanding(browser, { name: "Clara Company", email: companyEmail, password: PASSWORD }, ctxOpts);
   await company.getByLabel("Company name").fill(`E2E Lettings ${run}`);

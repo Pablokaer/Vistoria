@@ -1,8 +1,10 @@
 // Mirrors the API contracts (InspectFlow.Modules.*.Application DTOs).
 
+import type { Locale } from "@/i18n/locales";
+
 export type Role = "Company" | "Agent" | "Tenant";
 
-export interface CompanyMembership { companyId: string; companyName: string; role: string }
+export interface CompanyMembership { companyId: string; companyName: string; role: string; reportLanguage: Locale }
 export type SubscriptionStatus = "None" | "Pending" | "Active" | "PastDue" | "Cancelled" | "Expired";
 /** `hasAccess` is true when the role needs no subscription; `status` is effective ("Expired" once the grace period is over). */
 export interface SubscriptionSummary {
@@ -128,6 +130,8 @@ export interface ReportRoom {
 }
 export interface ReportSnapshot {
   schemaVersion: number; reportId: string; reportNumber: string; versionNumber: number; generatedAt: string;
+  /** Report language frozen at finalization (the PDF uses it). v1 snapshots have none and are English. */
+  language?: Locale;
   company: { name: string; contactEmail: string | null; phone: string | null };
   property: { addressLine1: string; addressLine2: string | null; city: string; postcode: string; country: string; propertyType: string };
   inspection: { id: string; type: InspectionType; scheduledDate: string | null; startedAt: string | null; completedAt: string; tenancyReference: string | null;
