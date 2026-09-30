@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Api/">
+    <Project Path="src/Api/InspectFlow.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/Infrastructure/">
+    <Project Path="src/Infrastructure/InspectFlow.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/">
+    <Project Path="src/Modules/InspectFlow.Modules.csproj" />
+  </Folder>
+  <Folder Name="/src/Shared/">
+    <Project Path="src/Shared/InspectFlow.Shared.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/InspectFlow.Tests/InspectFlow.Tests.csproj" />
+  </Folder>
+</Solution>

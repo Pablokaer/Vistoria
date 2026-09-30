@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>InspectFlow.Infrastructure</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="EFCore.NamingConventions" />
+    <PackageReference Include="QuestPDF" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\InspectFlow.Shared.csproj" />
+    <ProjectReference Include="..\Modules\InspectFlow.Modules.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Seed\Assets\*.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="InspectFlow.Tests" />
+  </ItemGroup>
+</Project>

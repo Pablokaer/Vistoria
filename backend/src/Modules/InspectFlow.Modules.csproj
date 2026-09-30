@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>InspectFlow.Modules</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Application layer uses EF Core abstractions (DbSet/LINQ) via IAppDbContext. Domain folders must stay free of EF/HTTP/vendor types (enforced by ArchitectureTests). -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Stores" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\InspectFlow.Shared.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="InspectFlow.Tests" />
+  </ItemGroup>
+</Project>

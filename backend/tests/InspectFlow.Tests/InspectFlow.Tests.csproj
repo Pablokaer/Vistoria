@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <NoWarn>$(NoWarn);CA1707;CA2201;CA1001;CA1063;CA1816;CS8602</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Api\InspectFlow.Api.csproj" />
+    <ProjectReference Include="..\..\src\Infrastructure\InspectFlow.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\InspectFlow.Modules.csproj" />
+    <ProjectReference Include="..\..\src\Shared\InspectFlow.Shared.csproj" />
+  </ItemGroup>
+</Project>

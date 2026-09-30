@@ -1,0 +1,60 @@
+# Local development stack: `docker compose up --build`
+#   web  → http://localhost:3000   (Next.js, proxies /api to the API)
+#   api  → http://localhost:8080   (ASP.NET Core; OpenAPI at /openapi/v1.json in Development)
+#   db   → localhost:5432          (PostgreSQL 16)
+# Values come from .env (copy .env.example). Defaults below are for local development ONLY;
+# the API refuses "dev-only-*" secrets outside the Development environment.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-inspectflow}
+      POSTGRES_USER: ${POSTGRES_USER:-inspectflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-inspectflow}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-inspectflow} -d ${POSTGRES_DB:-inspectflow}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      DATABASE_CONNECTION_STRING: "Host=db;Port=5432;Database=${POSTGRES_DB:-inspectflow};Username=${POSTGRES_USER:-inspectflow};Password=${POSTGRES_PASSWORD:-inspectflow}"
+      JWT_SECRET: ${JWT_SECRET:-dev-only-insecure-jwt-secret-change-me-0123456789}
+      STORAGE_SIGNING_KEY: ${STORAGE_SIGNING_KEY:-dev-only-insecure-storage-key-change-me-012345}
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-Local}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      AI_PROVIDER: ${AI_PROVIDER:-Auto}
+      WEB_BASE_URL: ${WEB_BASE_URL:-http://localhost:3000}
+      MIGRATE_ON_STARTUP: ${MIGRATE_ON_STARTUP:-true}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+      TRUST_FORWARDED_HEADERS: ${TRUST_FORWARDED_HEADERS:-false}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    volumes:
+      - storage:/data/storage
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        API_INTERNAL_URL: http://api:8080
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+
+volumes:
+  pgdata:
+  storage:

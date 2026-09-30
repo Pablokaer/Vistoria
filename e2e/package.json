@@ -1,0 +1,11 @@
+{
+  "name": "inspectflow-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "ui": "node ui-flow.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.56.0"
+  }
+}
