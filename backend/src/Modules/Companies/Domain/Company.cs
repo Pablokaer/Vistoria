@@ -1,3 +1,5 @@
+using InspectFlow.Shared.Localization;
+
 namespace InspectFlow.Modules.Companies.Domain;
 
 /// <summary>A company workspace (property manager / letting agency).</summary>
@@ -7,6 +9,11 @@ public class Company
     public string Name { get; set; } = string.Empty;
     public string? ContactEmail { get; set; }
     public string? Phone { get; set; }
+    /// <summary>
+    /// Language of this company's reports and AI drafts (a <see cref="SupportedLanguages"/> tag). Company-wide on
+    /// purpose: a report is frozen at finalization, so it must not depend on who is looking at the screen.
+    /// </summary>
+    public string ReportLanguage { get; set; } = SupportedLanguages.English;
     public DateTimeOffset CreatedAt { get; set; }
     public Guid CreatedBy { get; set; }
     public ICollection<CompanyMember> Members { get; } = new List<CompanyMember>();

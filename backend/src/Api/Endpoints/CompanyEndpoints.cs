@@ -19,6 +19,7 @@ public static class CompanyEndpoints
 
         api.MapPost("/companies", (CreateCompanyRequest req, CompanyService s, CancellationToken ct) => s.CreateWorkspaceAsync(req, ct));
         api.MapGet("/companies/me", (CompanyService s, CancellationToken ct) => s.GetMineAsync(ct));
+        api.MapPut("/companies/me/report-language", (UpdateReportLanguageRequest req, CompanyService s, CancellationToken ct) => s.UpdateReportLanguageAsync(req, ct));
         api.MapGet("/company/dashboard", (CompanyService s, CancellationToken ct) => s.GetDashboardAsync(ct));
 
         // Properties & rooms

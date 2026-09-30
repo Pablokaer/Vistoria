@@ -66,6 +66,7 @@ internal static class ModelConfiguration
             e.Property(c => c.Name).HasMaxLength(200).IsRequired();
             e.Property(c => c.ContactEmail).HasMaxLength(256);
             e.Property(c => c.Phone).HasMaxLength(50);
+            e.Property(c => c.ReportLanguage).HasMaxLength(10).IsRequired().HasDefaultValue("en");
             e.HasMany(c => c.Members).WithOne().HasForeignKey(m => m.CompanyId).OnDelete(DeleteBehavior.Cascade);
         });
         b.Entity<CompanyMember>(e =>

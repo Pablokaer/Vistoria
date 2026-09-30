@@ -175,7 +175,7 @@ public sealed class AuthService(
                              join c in db.Companies.AsNoTracking() on m.CompanyId equals c.Id
                              where m.UserId == user.Id
                              orderby m.CreatedAt
-                             select new CompanyMembershipDto(c.Id, c.Name, m.Role.ToString()))
+                             select new CompanyMembershipDto(c.Id, c.Name, m.Role.ToString(), c.ReportLanguage))
             .FirstOrDefaultAsync(ct);
         var subscription = await subscriptions.GetSummaryAsync(user.Id, roles, ct);
         return new MeResponse(user.Id, user.Email!, user.FullName, roles, company, subscription);

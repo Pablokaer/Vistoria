@@ -19,6 +19,7 @@ public static class AuditActions
     public const string UserRegistered = nameof(UserRegistered);
     public const string UserLoggedIn = nameof(UserLoggedIn);
     public const string CompanyCreated = nameof(CompanyCreated);
+    public const string CompanyReportLanguageChanged = nameof(CompanyReportLanguageChanged);
     public const string PropertyCreated = nameof(PropertyCreated);
     public const string PropertyUpdated = nameof(PropertyUpdated);
     public const string TenancyCreated = nameof(TenancyCreated);

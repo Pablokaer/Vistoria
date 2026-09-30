@@ -9,7 +9,7 @@ public sealed record LoginRequest(string Email, string Password);
 
 public sealed record RefreshRequest(string? RefreshToken);
 
-public sealed record CompanyMembershipDto(Guid CompanyId, string CompanyName, string Role);
+public sealed record CompanyMembershipDto(Guid CompanyId, string CompanyName, string Role, string ReportLanguage);
 
 public sealed record MeResponse(
     Guid Id,

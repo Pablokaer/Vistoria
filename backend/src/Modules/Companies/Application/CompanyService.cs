@@ -5,14 +5,18 @@ using InspectFlow.Modules.Companies.Domain;
 using InspectFlow.Modules.Inspections.Domain;
 using InspectFlow.Shared.Auth;
 using InspectFlow.Shared.Errors;
+using InspectFlow.Shared.Localization;
 using InspectFlow.Shared.Time;
 using Microsoft.EntityFrameworkCore;
 
 namespace InspectFlow.Modules.Companies.Application;
 
-public sealed record CreateCompanyRequest(string Name, string? ContactEmail, string? Phone);
+/// <param name="ReportLanguage">Optional; defaults to English. The web app sends the language the owner is using.</param>
+public sealed record CreateCompanyRequest(string Name, string? ContactEmail, string? Phone, string? ReportLanguage = null);
 
-public sealed record CompanyDto(Guid Id, string Name, string? ContactEmail, string? Phone, string MyRole, DateTimeOffset CreatedAt);
+public sealed record UpdateReportLanguageRequest(string Language);
+
+public sealed record CompanyDto(Guid Id, string Name, string? ContactEmail, string? Phone, string ReportLanguage, string MyRole, DateTimeOffset CreatedAt);
 
 public sealed record RecentInspectionDto(Guid Id, string PropertyAddress, Guid PropertyId, string InspectionType,
     string Status, string? AgentName, DateTimeOffset UpdatedAt);
@@ -46,6 +50,7 @@ public sealed class CompanyService(
         if (await db.CompanyMembers.AnyAsync(m => m.UserId == userId, ct))
             throw new DomainRuleException("company.already_exists", "You already belong to a company workspace.");
 
+        var reportLanguage = RequireSupportedLanguage(request.ReportLanguage ?? SupportedLanguages.English);
         var now = clock.UtcNow;
         var company = new Company
         {
@@ -53,6 +58,7 @@ public sealed class CompanyService(
             Name = request.Name.Trim(),
             ContactEmail = string.IsNullOrWhiteSpace(request.ContactEmail) ? null : request.ContactEmail.Trim(),
             Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim(),
+            ReportLanguage = reportLanguage,
             CreatedAt = now,
             CreatedBy = userId,
         };
@@ -63,15 +69,34 @@ public sealed class CompanyService(
         db.Companies.Add(company);
         audit.Record(AuditActions.CompanyCreated, nameof(Company), company.Id, new { company.Name });
         await db.SaveChangesAsync(ct);
-        return new CompanyDto(company.Id, company.Name, company.ContactEmail, company.Phone, nameof(CompanyRole.Owner), now);
+        return new CompanyDto(company.Id, company.Name, company.ContactEmail, company.Phone, company.ReportLanguage, nameof(CompanyRole.Owner), now);
     }
 
     public async Task<CompanyDto> GetMineAsync(CancellationToken ct)
     {
         var membership = await access.GetMembershipAsync(ct);
         var company = await db.Companies.AsNoTracking().FirstAsync(c => c.Id == membership.CompanyId, ct);
-        return new CompanyDto(company.Id, company.Name, company.ContactEmail, company.Phone, membership.Role.ToString(), company.CreatedAt);
+        return new CompanyDto(company.Id, company.Name, company.ContactEmail, company.Phone, company.ReportLanguage, membership.Role.ToString(), company.CreatedAt);
     }
+
+    /// <summary>
+    /// Sets the language of future reports and AI drafts. Reports already finalized keep their language (immutable).
+    /// Example: <c>await service.UpdateReportLanguageAsync(new("pt-BR"), ct)</c>.
+    /// </summary>
+    public async Task<CompanyDto> UpdateReportLanguageAsync(UpdateReportLanguageRequest request, CancellationToken ct)
+    {
+        var companyId = await access.RequireAsync(CompanyPermission.ManageMembers, ct);
+        var company = await db.Companies.FirstAsync(c => c.Id == companyId, ct);
+        company.ReportLanguage = RequireSupportedLanguage(request.Language);
+        audit.Record(AuditActions.CompanyReportLanguageChanged, nameof(Company), company.Id, new { company.ReportLanguage });
+        await db.SaveChangesAsync(ct);
+        return await GetMineAsync(ct);
+    }
+
+    private static string RequireSupportedLanguage(string language) =>
+        SupportedLanguages.IsSupported(language)
+            ? SupportedLanguages.Canonical(language)
+            : throw new ValidationException("ReportLanguage", $"Report language '{language}' is not supported; expected one of: {string.Join(", ", SupportedLanguages.All)}.");
 
     public async Task<CompanyDashboardDto> GetDashboardAsync(CancellationToken ct)
     {
