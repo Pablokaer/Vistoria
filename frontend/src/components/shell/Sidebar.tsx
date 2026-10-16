@@ -4,13 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { DevAccountSwitcher } from "@/components/DevAccountSwitcher";
 import { Icon } from "@/components/icons";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useT } from "@/i18n/I18nProvider";
 import { shellMessages } from "@/i18n/messages/shell";
 import { useAuth } from "@/lib/auth";
 import { cx } from "@/lib/cx";
 import type { Role } from "@/lib/types";
 import { Brand } from "./Brand";
+import { LanguageToggle } from "./LanguageToggle";
 import { isActive, navigationFor, type NavItem } from "./navigation";
 import { NotificationsMenu } from "./NotificationsMenu";
 
@@ -48,9 +48,9 @@ function ProfileFooter({ role }: { role: Role }) {
           <p className="truncate text-caption text-sidebar-ink/80">{user?.company?.companyName ?? t(ROLE_LABEL[role])}</p>
         </div>
       </div>
-      <div className="mt-1 flex items-center justify-between gap-2 px-1">
-        <LanguageSwitcher tone="dark" />
-        <button onClick={() => void logout()} className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-label font-medium text-sidebar-ink hover:bg-white/5 hover:text-white">
+      <div className="mt-1 space-y-2">
+        <LanguageToggle />
+        <button onClick={() => void logout()} className="flex w-full items-center gap-1.5 rounded-md px-1 py-1 text-label font-medium text-sidebar-ink hover:bg-white/5 hover:text-white">
           <Icon name="logout" className="h-4 w-4" />{t("signOut")}
         </button>
       </div>
@@ -59,7 +59,7 @@ function ProfileFooter({ role }: { role: Role }) {
 }
 
 /**
- * Navigation rail: brand, grouped links for the role, account links, profile + language + sign out.
+ * Navigation rail: brand, grouped links for the role, account links, profile + PT | EN switch + sign out.
  * The dev account switcher sits apart at the bottom (Development only; renders nothing elsewhere).
  */
 export function SidebarContent({ role, onNavigate }: { role: Role; onNavigate?: () => void }) {

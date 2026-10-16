@@ -9,7 +9,7 @@ InspectFlow connects **companies** (letting agents / property managers), **inspe
 - Inspectors accept an inspection and work in two steps on their phone: first they photograph every room and its defects on a single page, then all AI-drafted descriptions (clearly labelled, always editable) are requested at once and reviewed on a second page; Move Outs are compared with the Move In baseline; then review and finalize.
 - Finalization freezes an immutable, versioned report (JSON snapshot + PDF, both hashed).
 - Tenants review the report, add observations (general or per room) and accept or dispute it.
-- **English and Brazilian Portuguese.** Every screen, API message and report exists in both. The UI follows the browser language until the user picks one in the header (EN / PT); reports and AI descriptions follow the company's **report language** (*Settings*).
+- **English and Brazilian Portuguese.** Every screen, API message and report exists in both. The UI follows the browser language until the user picks one: the **PT | EN switch** at the bottom of the sidebar (drawer on phones) inside the app, or the EN / PT selector on public pages; reports and AI descriptions follow the company's **report language** (*Settings*).
 - **Product UI.** A role-aware sidebar (drawer + bottom tabs on phones), dashboards organised around the next action (inspector: current inspection, marketplace preview, recently completed; company: pipeline, recent inspections and reports; tenant: reports awaiting review), a searchable/filterable marketplace, tabbed "My inspections", a phone-first inspection flow (room navigation, big camera button, AI drafts clearly marked and editable, progressive defects, Before/After comparison) and document-style reports with a separate action toolbar. Built on a small in-house design system (`frontend/src/app/globals.css` tokens + `components/ui`, see [ADR 0015](docs/architecture/0015-design-system.md)).
 
 The web app is the first client; the API is designed so iOS/Android apps can use it unchanged (JWT + refresh token in body for native clients).
@@ -181,7 +181,7 @@ The key is used only by the API process, only in the `Authorization` header of o
 
 ### Languages
 
-- **UI language:** `en` or `pt-BR`. The `locale` cookie set by the header switcher wins; otherwise the browser's `Accept-Language` decides (any `pt*` → `pt-BR`, anything else → English). Texts live in `frontend/src/i18n/messages/*.ts`; the Portuguese object must have every English key, so a missing translation fails `npx tsc --noEmit`.
+- **UI language:** `en` or `pt-BR`. The `locale` cookie set by the sidebar PT | EN switch (or the EN / PT selector on public pages) wins; otherwise the browser's `Accept-Language` decides (any `pt*` → `pt-BR`, anything else → English). Texts live in `frontend/src/i18n/messages/*.ts`; the Portuguese object must have every English key, so a missing translation fails `npx tsc --noEmit`.
 - **API messages** follow the `Accept-Language` header, which the web app sends with every call. Error `code` values do not change; `title`, `errors` and `details` are translated. Without the header the API answers in English.
 - **Report language** (company-wide, Owner/Admin, *Settings* page or `PUT /api/companies/me/report-language`): AI drafts are written in it and the PDF labels use it. It is frozen into each report at finalization, so changing it only affects future reports. New companies start in the language the owner is using.
 - **Plans:** optional `Billing:Plans[i]:Translations:pt-BR` with `Name`, `Description` and `Features`; missing fields fall back to English.
@@ -259,7 +259,7 @@ cd frontend && npm run lint && npm run build
 cd backend && PDF_PREVIEW_DIR=/tmp/pdf-preview dotnet test --filter "FullyQualifiedName~ReportPdf"
 
 # Full UI flow (Move In + Move Out, 3 roles) against a running stack; screenshots in e2e/output
-# (languages: Portuguese browser, switcher + cookie, Portuguese API error; landing + subscribe, abandoned checkout → sign in → resume,
+# (languages: Portuguese browser, switcher + cookie, Portuguese API error, sidebar PT | EN switch; landing + subscribe, abandoned checkout → sign in → resume,
 #  Move In + Move Out, team agent registration + Team inspection assigned directly; uses the Sandbox payment provider)
 cd e2e && npm install && BASE_URL=http://localhost:3000 node ui-flow.mjs
 ```

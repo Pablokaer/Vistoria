@@ -45,7 +45,14 @@ async function agentSeesAssignment(browser, agent, inspectionId, { base, snap, l
   await page.locator(`a[href="/agent/inspections/${inspectionId}"]`).first().click();
   await page.getByRole("button", { name: "Start inspection" }).waitFor();
   await snap(page, "team-agent-assigned-inspection");
-  log("team agent sees the assigned inspection");
+  // Sidebar PT | EN switch: one click changes the whole app.
+  const toggle = page.getByTestId("sidebar-language-toggle");
+  await toggle.getByRole("radio", { name: "PT" }).click();
+  await page.getByRole("button", { name: "Iniciar vistoria" }).waitFor();
+  await snap(page, "sidebar-language-pt");
+  await toggle.getByRole("radio", { name: "EN" }).click();
+  await page.getByRole("button", { name: "Start inspection" }).waitFor();
+  log("team agent sees the assigned inspection; sidebar PT | EN switch OK");
   await ctx.close();
 }
 

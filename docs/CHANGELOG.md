@@ -4,6 +4,8 @@ Every code change is recorded here (newest first), together with the docs it tou
 
 ## 2026-10-16
 
+- **Sidebar language switch.** The small EN/PT dropdown in the sidebar footer is replaced by a visible two-position **PT | EN** switch (`components/shell/LanguageToggle.tsx`) next to the "Language" label. It is also in the phone drawer. It uses the same `locale` cookie as before, so the choice still applies to the whole app and survives reloads. Public pages keep the compact selector. The UI flow (`e2e/team.mjs`) switches a signed-in agent to Portuguese and back through it. Docs: README.
+
 - **Company team agents and Team inspections.** See [ADR 0017](architecture/0017-company-team-agents.md).
   - **Team:**
     - A company registers its own agents on the new *Agents* page (`/company/agents`). A new email creates the agent account with an initial password; an email that already has an agent account is linked as is.
