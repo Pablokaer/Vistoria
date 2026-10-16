@@ -9,11 +9,11 @@ Every code change is recorded here (newest first), together with the docs it tou
   - **Sections:** hero with a specimen of a finalized Move Out report, a four-step workflow ledger, report guarantees with a Move In / Move Out comparison, the three dispatch routes (team, marketplace, private invitation), pricing from the API, a final call to action and a footer.
   - **Removed:** the old landing sections (audience, 7-step, highlights, 12-feature grid, product mockup) and their message catalog. `/pricing` uses the new sections.
   - **Routing:**
-    - The API now also sets the `if_session` hint cookie (HttpOnly, `Path=/`, Lax, no secret) whenever it issues tokens, and removes it on logout and on a failed refresh.
+    - The API now also sets the `if_session` hint cookie (HttpOnly, `Path=/`, Lax, no secret) whenever it issues tokens, and removes it on logout and on a failed refresh. It is kept when the failure is only a parallel tab's rotation (new 401 code `auth.refresh_superseded`).
     - The root layout reads the hint. Anonymous visitors get the landing page rendered on the server with no refresh call, so the 401 console error is gone.
     - Signed-in visitors of "/" go to their home without the landing page being rendered. A stale hint falls back to the landing page.
   - **Tests:**
-    - `SessionHintCookieTests` (3) cover the hint set on sign-in, renewed on refresh, removed on logout and on a failed refresh. The existing web-cookie test now selects `if_refresh`.
+    - `SessionHintCookieTests` (4) cover the hint set on sign-in, renewed on refresh, removed on logout and on a failed refresh, and kept on a parallel tab's rotation. The existing web-cookie test now selects `if_refresh`.
     - `e2e/landing.mjs` covers anonymous server rendering, entry points, protected route, viewports (375/768/1024/1440), axe WCAG 2.2 AA, the signed-in redirect, reload, logout and session expiry.
     - The e2e hero expectations are updated. `axe-core` 4.13.0 is a new e2e dependency.
   - **Docs:** README, ADR 0018, implementation report.

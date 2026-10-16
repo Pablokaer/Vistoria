@@ -62,6 +62,6 @@ public sealed class ConflictException(LocalizedText text, string code = "conflic
 /// <summary>Too many attempts (e.g. private invitation access code).</summary>
 public sealed class TooManyAttemptsException(LocalizedText text) : AppException("too_many_attempts", text);
 
-/// <summary>Authentication failed or is missing (HTTP 401).</summary>
-public sealed class UnauthorizedException(LocalizedText? text = null)
-    : AppException("unauthorized", text ?? new("Authentication failed.", "Falha na autenticação."));
+/// <summary>Authentication failed or is missing (HTTP 401). <paramref name="code"/> distinguishes cases callers react to.</summary>
+public sealed class UnauthorizedException(LocalizedText? text = null, string code = "unauthorized")
+    : AppException(code, text ?? new("Authentication failed.", "Falha na autenticação."));

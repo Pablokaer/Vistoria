@@ -66,6 +66,20 @@ public class SessionHintCookieTests(TestApp app)
     }
 
     [Fact]
+    public async Task Token_rotated_by_a_parallel_tab_keeps_the_hint_because_the_session_is_alive()
+    {
+        var (http, refreshCookie) = await SignInAsync();
+        using var first = await http.SendAsync(WebPost("/api/auth/refresh", new { }, refreshCookie));
+        first.EnsureSuccessStatusCode();
+
+        // A second tab still holding the old token, within the rotation grace window.
+        using var second = await http.SendAsync(WebPost("/api/auth/refresh", new { }, refreshCookie));
+        Assert.Equal(HttpStatusCode.Unauthorized, second.StatusCode);
+        Assert.Contains("auth.refresh_superseded", await second.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        Assert.Null(SetCookie(second, "if_session"));
+    }
+
+    [Fact]
     public async Task Failed_refresh_removes_the_hint_so_the_landing_page_is_shown_again()
     {
         using var failed = await RawClient().SendAsync(WebPost("/api/auth/refresh", new { }, "if_refresh=not-a-valid-token; if_session=1"));

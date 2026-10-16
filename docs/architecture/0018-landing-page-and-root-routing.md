@@ -7,7 +7,7 @@
 
 **Decision.**
 
-- **Session hint cookie.** Whenever the API issues tokens (sign-in, registration, refresh, dev switch), it also sets `if_session=1`. The cookie is HttpOnly, `Path=/`, `SameSite=Lax` (so links from emails still count) and expires with the refresh token. It carries no secret. Logout deletes it, and so does a failed refresh, through `Response.OnStarting`, because the error handler clears headers set before the exception.
+- **Session hint cookie.** Whenever the API issues tokens (sign-in, registration, refresh, dev switch), it also sets `if_session=1`. The cookie is HttpOnly, `Path=/`, `SameSite=Lax` (so links from emails still count) and expires with the refresh token. It carries no secret. Logout deletes it, and so does a failed refresh, through `Response.OnStarting`, because the error handler clears headers set before the exception. There is one exception: a token that a parallel tab rotated a moment ago gets the 401 code `auth.refresh_superseded` and keeps the hint, because that session is still alive.
 - **The server reads the hint** (`lib/session-hint.ts`) in the root layout and passes it to `AuthProvider`. Without the hint the visitor is anonymous at once: no refresh request and no loading state.
 - **"/" uses `SignedInRedirect`.**
   - No hint: the server renders the landing page directly. This is good for SEO and avoids any flash.
