@@ -36,8 +36,8 @@ export async function subscribeFromLanding(browser, account, { base, snap, log }
   const ctx = await browser.newContext(desktop);
   const page = await ctx.newPage();
   await page.goto(base);
-  await page.getByRole("heading", { level: 1, name: /Every room on record/ }).waitFor();
-  for (const id of ["workflow", "report", "agencies", "pricing"]) await page.locator(`section#${id}`).waitFor();
+  await page.getByRole("heading", { level: 1, name: /Professional property/ }).waitFor();
+  for (const id of ["features", "ai", "how-it-works", "agents", "pricing"]) await page.locator(`section#${id}`).waitFor();
   await page.locator("#pricing").getByTestId("plan-card").waitFor();
   await snap(page, "landing-desktop");
   await page.getByRole("banner").getByRole("link", { name: "Get started" }).click();
@@ -92,7 +92,7 @@ export async function abandonedCheckoutFlow(browser, account, { base, snap, log 
   await later.close();
 }
 
-/** Landing page on a phone: the navigation collapses into a menu with the CTAs. */
+/** Landing page on a phone: the navigation collapses into a menu with the CTAs; Escape closes it. */
 export async function landingOnMobile(browser, { base, snap }) {
   const ctx = await browser.newContext({ ...devices["Pixel 7"] });
   const page = await ctx.newPage();
@@ -100,6 +100,8 @@ export async function landingOnMobile(browser, { base, snap }) {
   await page.getByRole("button", { name: "Open menu" }).click();
   await page.locator("#mobile-menu").getByRole("link", { name: "Get started" }).waitFor();
   await snap(page, "landing-mobile-menu");
+  await page.keyboard.press("Escape");
+  await page.locator("#mobile-menu").waitFor({ state: "detached" });
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   if (overflow > 1) throw new Error(`Landing page scrolls horizontally on mobile (${overflow}px)`);
   await ctx.close();

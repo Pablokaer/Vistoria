@@ -1,5 +1,7 @@
 # 0018 — Landing page design and session-aware routing of "/"
 
+> **Status:** the routing decision stands. The "paper record" visual language and the landing content below are superseded by [ADR 0019](0019-landing-page-redesign.md) (2026-10-17).
+
 **Context.**
 
 - **Routing.** "/" is the public landing page. Signed-in users should go straight to their area, without a flash of the landing page, and anonymous visitors should not pay for an authentication round trip. The web app cannot tell on its own whether a session exists. The refresh token lives in an HttpOnly, SameSite=Strict cookie scoped to `/api/auth` (ADR 0009), so the Next.js server never sees it on page requests, and the access token lives only in memory. Before this change every page, the landing included, called `/api/auth/refresh` on load. Anonymous visitors therefore got a 401 in the console, and signed-in users saw the landing page with an "Open dashboard" button.

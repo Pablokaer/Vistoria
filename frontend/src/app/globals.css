@@ -87,12 +87,22 @@
   --shadow-raised: 0 1px 3px rgb(16 24 40 / 0.08), 0 1px 2px rgb(16 24 40 / 0.04);
   --shadow-overlay: 0 12px 32px -8px rgb(16 24 40 / 0.18), 0 4px 8px -4px rgb(16 24 40 / 0.08);
 
-  /* Public pages (landing, pricing): a "paper record" surface and ink rules. See ADR 0018. */
-  --color-paper: #f7f5f0;
-  --color-paper-2: #efebe2;
-  --color-rule: #dcd6c9;
-  --color-rule-strong: #c4bcab;
-  --color-paper-muted: #5b6779;   /* secondary text on paper: 5.3:1 (ink-3 is only 4.4:1 there) */
+  /*
+   * Public website (landing, pricing): white and cool-grey surfaces, architectural photography and one blue accent.
+   * See ADR 0019. The app itself keeps the tokens above.
+   */
+  --color-site-blue: #1769e0;        /* 5.1:1 on white, also as white-on-blue */
+  --color-site-blue-dark: #1257c0;   /* hover / pressed */
+  --color-site-blue-soft: #eaf2ff;
+  --color-site-ink: #101828;
+  --color-site-muted: #5b6b80;       /* 5.1:1 on site-mist; #64748b would only reach 4.47:1 there */
+  --color-site-mist: #f6f8fb;        /* secondary background */
+  --color-site-line: #e6eaf0;
+  --color-site-line-strong: #d3dae4;
+  --color-site-night: #0b1728;       /* the one dark band: the closing call to action */
+  --color-site-night-ink: #c3cedc;   /* body text on site-night: 11:1 */
+  --shadow-site-card: 0 14px 32px -18px rgb(11 23 40 / 0.24), 0 1px 2px rgb(11 23 40 / 0.04);
+  --shadow-site-float: 0 22px 48px -20px rgb(11 23 40 / 0.4), 0 2px 6px rgb(11 23 40 / 0.06);
 
   /* Layout. */
   --container-page: 76rem;   /* max content width */
@@ -113,23 +123,10 @@
     from { transform: translateX(-100%); }
     to { transform: none; }
   }
-  --animate-rise: rise 600ms var(--ease-out-soft) both;
-  @keyframes rise {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: none; }
-  }
   @keyframes shimmer {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.55; }
   }
-}
-
-/*
- * Editorial serif for public-page headlines (Newsreader via next/font, loaded only by components/landing/fonts.ts).
- * "inline" because --font-newsreader is defined on the landing wrapper, not on :root.
- */
-@theme inline {
-  --font-display: var(--font-newsreader), ui-serif, Georgia, "Times New Roman", serif;
 }
 
 html {
@@ -153,6 +150,20 @@ body {
 
 /* Figures line up in metrics and tables. */
 .tabular { font-variant-numeric: tabular-nums; }
+
+/*
+ * Public pages: blocks below the fold rise in once when scrolled into view (components/landing/Reveal.tsx sets
+ * data-reveal). Content is server-rendered visible; only script hides it, so nothing is lost without JavaScript.
+ */
+[data-reveal="hidden"] { opacity: 0; transform: translateY(14px); }
+[data-reveal="shown"] {
+  opacity: 1;
+  transform: none;
+  transition: opacity 700ms var(--ease-out-soft), transform 700ms var(--ease-out-soft);
+}
+
+/* Sections reached from the sticky header stop below it. */
+:where(section[id]) { scroll-margin-top: 4.5rem; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }

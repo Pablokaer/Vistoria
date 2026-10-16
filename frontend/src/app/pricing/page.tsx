@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { displayFont } from "@/components/landing/fonts";
-import { FinalCallToAction, LandingFooter } from "@/components/landing/LandingFooter";
+import { FinalCallToAction } from "@/components/landing/FinalCallToAction";
+import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingHeader } from "@/components/landing/LandingHeader";
 import { PricingSection } from "@/components/landing/PricingSection";
 import { getServerTranslator } from "@/i18n/server";
@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
 /** Plans on their own page; open to signed-in users too (the header then offers "Open dashboard"). */
 export default function PricingPage() {
   return (
-    <div className={`${displayFont.variable} min-h-screen bg-paper text-ink-2`}>
+    <div className="min-h-screen bg-white text-site-ink">
       <LandingHeader />
       <main id="main">
         <PricingSection />

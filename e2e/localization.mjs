@@ -2,8 +2,8 @@
 // survives a reload, and API errors come back in the chosen language. Used by ui-flow.mjs.
 
 const desktop = { viewport: { width: 1280, height: 900 } };
-const PT_HERO = /Cada cômodo registrado/;
-const EN_HERO = /Every room on record/;
+const PT_HERO = /Vistorias profissionais/;
+const EN_HERO = /Professional property/;
 
 async function expectLang(page, lang) {
   const actual = await page.locator("html").getAttribute("lang");

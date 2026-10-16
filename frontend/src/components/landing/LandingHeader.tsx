@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Brand } from "@/components/AppShell";
 import { Icon } from "@/components/icons";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -11,48 +11,77 @@ import { useAuth } from "@/lib/auth";
 import { GET_STARTED_HREF } from "@/lib/billing";
 import { cx } from "@/lib/cx";
 import { LANDING_CONTAINER } from "./landingStyles";
+import { useScrollFlag } from "./useScrollFlag";
 
 const NAV: { href: string; label: LandingKey }[] = [
-  { href: "/#workflow", label: "navWorkflow" },
-  { href: "/#report", label: "navReport" },
-  { href: "/#agencies", label: "navAgencies" },
+  { href: "/#features", label: "navFeatures" },
+  { href: "/#how-it-works", label: "navHowItWorks" },
+  { href: "/#agents", label: "navAgents" },
   { href: "/#pricing", label: "navPricing" },
 ];
 
-/** Public header: section links, language, Sign in and "Get started"; collapses into a menu on phones. */
+/** Escape closes the mobile menu, as keyboard users expect from a disclosure. */
+function useCloseOnEscape(open: boolean, close: () => void) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, close]);
+}
+
+/**
+ * Public header: section links, language, Sign in and "Get started". Sticky; gains a hairline and a soft shadow once
+ * the page scrolls. Collapses into an accessible menu below 1024px.
+ */
 export function LandingHeader() {
   const [open, setOpen] = useState(false);
   const t = useT(landingMessages);
-  const close = () => setOpen(false);
+  const headerRef = useScrollFlag<HTMLElement>();
+  const close = useCallback(() => setOpen(false), []);
+  useCloseOnEscape(open, close);
   return (
-    <header className="sticky top-0 z-30 border-b border-rule bg-paper">
-      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-40 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-ink">
+    <header ref={headerRef} className="group/header sticky top-0 z-40 border-b border-transparent bg-white transition-[border-color,box-shadow] duration-300 data-[scrolled=true]:border-site-line data-[scrolled=true]:shadow-[0_6px_20px_-12px_rgb(11_23_40/0.18)]">
+      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-site-ink">
         {t("skipToContent")}
       </a>
-      <div className={cx(LANDING_CONTAINER, "flex h-16 items-center justify-between gap-4")}>
+      <div className={cx(LANDING_CONTAINER, "flex h-[4.5rem] items-center justify-between gap-4 transition-[height] duration-300 group-data-[scrolled=true]/header:h-16")}>
         <Brand alwaysShowName />
         <nav aria-label={t("navMain")} className="hidden items-center gap-1 lg:flex">
           {NAV.map((l) => (
-            <Link key={l.href} href={l.href} className="rounded-md px-3 py-2 text-sm text-ink-2 transition hover:text-ink">{t(l.label)}</Link>
+            <Link key={l.href} href={l.href} className="rounded-md px-3 py-2 text-[0.875rem] font-medium text-site-muted transition hover:text-site-ink">{t(l.label)}</Link>
           ))}
         </nav>
         <div className="hidden items-center gap-2 lg:flex"><LanguageSwitcher /><AccountActions /></div>
-        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-controls="mobile-menu"
-          aria-label={open ? t("closeMenu") : t("openMenu")} className="grid h-11 w-11 place-items-center rounded-md text-ink hover:bg-paper-2 lg:hidden">
-          <Icon name={open ? "close" : "menu"} className="h-6 w-6" />
-        </button>
+        <MenuButton open={open} onToggle={() => setOpen((v) => !v)} />
       </div>
-      {open && (
-        <div id="mobile-menu" className="border-t border-rule bg-paper px-4 pb-5 pt-2 lg:hidden">
-          <nav aria-label={t("navMobile")} className="flex flex-col">
-            {NAV.map((l) => (
-              <Link key={l.href} href={l.href} onClick={close} className="border-b border-rule px-1 py-3.5 text-base text-ink">{t(l.label)}</Link>
-            ))}
-          </nav>
-          <div className="mt-4 grid gap-2"><LanguageSwitcher /><AccountActions stacked onNavigate={close} /></div>
-        </div>
-      )}
+      {open && <MobileMenu onNavigate={close} />}
     </header>
+  );
+}
+
+function MenuButton({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  const t = useT(landingMessages);
+  return (
+    <button type="button" onClick={onToggle} aria-expanded={open} aria-controls="mobile-menu" aria-label={open ? t("closeMenu") : t("openMenu")}
+      className="grid h-11 w-11 place-items-center rounded-lg text-site-ink transition hover:bg-site-mist lg:hidden">
+      <Icon name={open ? "close" : "menu"} className="h-6 w-6" />
+    </button>
+  );
+}
+
+/** Below 1024px: the same links as full-width rows (48px touch targets), then language and account actions. */
+function MobileMenu({ onNavigate }: { onNavigate: () => void }) {
+  const t = useT(landingMessages);
+  return (
+    <div id="mobile-menu" className="max-h-[calc(100svh-4rem)] overflow-y-auto border-t border-site-line bg-white px-4 pb-6 pt-2 shadow-site-card sm:px-6 lg:hidden">
+      <nav aria-label={t("navMobile")} className="flex flex-col">
+        {NAV.map((l) => (
+          <Link key={l.href} href={l.href} onClick={onNavigate} className="flex min-h-12 items-center border-b border-site-line text-base font-medium text-site-ink">{t(l.label)}</Link>
+        ))}
+      </nav>
+      <div className="mt-5 grid gap-2"><LanguageSwitcher className="mb-2 self-start" /><AccountActions stacked onNavigate={onNavigate} /></div>
+    </div>
   );
 }
 
@@ -60,9 +89,9 @@ export function LandingHeader() {
 function AccountActions({ stacked, onNavigate }: { stacked?: boolean; onNavigate?: () => void }) {
   const { user, loading } = useAuth();
   const t = useT(landingMessages);
-  const size = stacked ? "min-h-12 grid place-items-center" : "py-2";
-  const secondary = cx("rounded-md px-4 text-sm font-medium text-ink transition hover:bg-paper-2", stacked && "border border-rule-strong", size);
-  const primary = cx("rounded-md bg-sidebar px-4 text-sm font-semibold text-white transition hover:bg-sidebar-2", size);
+  const size = stacked ? "grid min-h-12 place-items-center" : "py-2";
+  const secondary = cx("rounded-lg px-4 text-[0.875rem] font-semibold text-site-ink transition hover:bg-site-mist", stacked && "border border-site-line-strong", size);
+  const primary = cx("rounded-lg bg-site-blue px-4 text-[0.875rem] font-semibold text-white transition hover:bg-site-blue-dark", size);
   if (!loading && user) return <Link href="/app" onClick={onNavigate} className={primary}>{t("openDashboard")}</Link>;
   return (
     <>
