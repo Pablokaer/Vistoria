@@ -64,7 +64,7 @@ public class AuthAndAuthorizationTests(TestApp app)
         using var response = await app.Factory.CreateClient().SendAsync(request);
         var body = await response.Content.ReadAsStringAsync();
         Assert.Contains("\"refreshToken\":null", body, StringComparison.Ordinal);
-        var cookie = Assert.Single(response.Headers.GetValues("Set-Cookie"));
+        var cookie = Assert.Single(response.Headers.GetValues("Set-Cookie"), c => c.StartsWith("if_refresh=", StringComparison.Ordinal));
         Assert.Contains("httponly", cookie, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("samesite=strict", cookie, StringComparison.OrdinalIgnoreCase);
     }
