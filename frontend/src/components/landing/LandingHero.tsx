@@ -40,10 +40,12 @@ async function HeroCopy() {
   return (
     <>
       <h1 id="hero-title" className="text-[clamp(2.375rem,6vw,3.375rem)] font-semibold leading-[1.06] tracking-[-0.035em] text-site-ink">
-        {/* Deliberate breaks: the promise always lands on its own line, never split ("made / easy."). */}
-        <span className="block">{t("heroTitleLine1")}</span>
-        <span className="block">{t("heroTitleLine2")}</span>
-        <span className="block whitespace-nowrap text-site-blue">{t("heroTitleAccent")}</span>
+        {/* Deliberate breaks: the promise always lands on its own line, never split ("made / easy."). The {" "}
+            keep the words apart in the text itself (search snippets, copy-paste), which the block spans do not. */}
+        <span className="block">{t("heroTitleLine1")}</span>{" "}
+        <span className="block">{t("heroTitleLine2")}</span>{" "}
+        {/* Below 360px the unbreakable "sem complicação." is wider than the column at 38px; step the size down. */}
+        <span className="block whitespace-nowrap text-site-blue max-[359px]:text-[2rem]">{t("heroTitleAccent")}</span>
       </h1>
       <p className="mt-6 max-w-[33rem] text-[1.0625rem] leading-relaxed text-site-muted sm:text-[1.125rem]">{t("heroIntro")}</p>
       <div className="mt-9 flex flex-col gap-3 sm:flex-row">
