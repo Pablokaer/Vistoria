@@ -2,6 +2,33 @@
 
 Every code change is recorded here (newest first), together with the docs it touched.
 
+## 2026-10-17
+
+- **Landing page redesign.** See [ADR 0019](architecture/0019-landing-page-redesign.md).
+  - **Design:**
+    - White and cool-grey surfaces with one brand blue (`#1769E0`), defined as new `site-*` tokens in `globals.css`.
+    - Inter only; the Newsreader serif is removed.
+    - Architectural photography: four Unsplash photos kept as local, optimized copies in `frontend/src/assets/landing`, with credits in `CREDITS.md`, served through `next/image` (blur placeholder, responsive sizes, hero preload).
+    - Secondary text is `#5B6B80` so it passes AA on both backgrounds.
+  - **Sections:**
+    - Sticky header: gains a hairline and a shadow on scroll. The mobile menu closes with Escape.
+    - Hero: the photo fades into the text column, with a room status card that uses the app's success badge.
+    - Four feature cards: each ends with the concrete mechanism behind its claim.
+    - AI section: a phone mockup of the inspector's *Descriptions* step, drawn with the app's real labels, in front of a photo of the same room.
+    - "How it works": four connected stages, across on desktop and down the left edge on phones.
+    - "For agents": a *Join as an agent* link to `/register?role=Agent`.
+    - Pricing: still from the API.
+    - Final call to action: on a dusk photo, with *Sign in* as the second action.
+    - Footer: product and account links.
+  - **Not included:** no Contact link, because the product has no contact address or page, and no legal links, because there are no legal pages.
+  - **Removed:** the report specimen, workflow ledger, report guarantees, dispatch routes, room sketches and the serif font.
+  - **Motion:** `Reveal` raises below-the-fold blocks once, after hydration. It is skipped with `prefers-reduced-motion`.
+  - **Tests:**
+    - `e2e/landing.mjs` now checks every call to action, layouts at 375/430/768/1024/1440/1920 px, and axe WCAG 2.2 AA on the fully revealed page.
+    - `e2e/subscription.mjs` checks that Escape closes the mobile menu.
+    - The hero expectations in `localization.mjs` and `subscription.mjs` are updated.
+  - **Docs:** README, ADR 0019 (ADR 0018 marked as superseded for its visual part), implementation report.
+
 ## 2026-10-16
 
 - **New public landing page and session-aware "/".** See [ADR 0018](architecture/0018-landing-page-and-root-routing.md).

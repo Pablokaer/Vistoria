@@ -27,8 +27,8 @@ export function SignedInRedirect({ sessionHint, children }: { sessionHint: boole
 function OpeningDashboard() {
   const t = useT(landingMessages);
   return (
-    <div className="grid min-h-screen place-items-center bg-paper px-4" data-testid="opening-dashboard">
-      <div className="flex items-center gap-3 text-sm text-paper-muted"><BrandMark /><Spinner small /><span>{t("resolvingSession")}</span></div>
+    <div className="grid min-h-screen place-items-center bg-white px-4" data-testid="opening-dashboard">
+      <div className="flex items-center gap-3 text-sm text-site-muted"><BrandMark /><Spinner small /><span>{t("resolvingSession")}</span></div>
     </div>
   );
 }

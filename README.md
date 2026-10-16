@@ -2,7 +2,7 @@
 
 InspectFlow connects **companies** (letting agents / property managers), **inspectors** (agents) and **tenants**:
 
-- A public **landing page** (`/`) explains the product; signed-in users who open `/` go straight to their dashboard ([ADR 0018](docs/architecture/0018-landing-page-and-root-routing.md)). There is **no free plan**: *Get started* → create a company account → choose the plan → pay → the subscription is activated by the payment provider's confirmation → dashboard. A company that abandons checkout can sign in later and continue from *Subscription required*, without registering again. Inspectors and tenants join for free.
+- A public **landing page** (`/`) presents the product with architectural photography, a phone mockup of the real inspection screen, the four-step process, a section for inspectors (*Join as an agent*) and the plans from the API ([ADR 0019](docs/architecture/0019-landing-page-redesign.md)); signed-in users who open `/` go straight to their dashboard ([ADR 0018](docs/architecture/0018-landing-page-and-root-routing.md)). There is **no free plan**: *Get started* → create a company account → choose the plan → pay → the subscription is activated by the payment provider's confirmation → dashboard. A company that abandons checkout can sign in later and continue from *Subscription required*, without registering again. Inspectors and tenants join for free.
 
 - Companies register properties with any number of rooms, manage tenancies and publish inspections (Move In, Move Out, Periodic, Other) — publicly in a marketplace, privately via link + 6-digit code, or to **their own team of agents**. A property and its first inspection can be created together from one form.
 - **Team agents.** A company registers the inspectors who work for it (*Agents* page). A **Team** inspection is listed only to those agents, so whoever is free accepts it, or the company assigns it directly to one of them, who gets it without an accept step. Until the agent starts, the company can switch the agent or release the inspection back to the team ([ADR 0017](docs/architecture/0017-company-team-agents.md)).
@@ -221,7 +221,7 @@ Demo credentials are never created outside Development.
 
 **Languages.** Open http://localhost:3000 in a browser set to Portuguese (or pick **PT** in the header): the landing page, sign-in, checkout and every area switch to Portuguese, and the choice survives a reload. A wrong sign-in shows "E-mail ou senha inválidos." As the company, open *Settings* (*Configurações*) and set **Report language** to Português (Brasil): the next finalized report, its PDF and the AI descriptions (use `AI_PROVIDER=Mock` to avoid OpenAI costs) are in Portuguese, while earlier reports keep their language.
 
-**Landing page and routing.** Open http://localhost:3000 in a private window: the landing page renders immediately (no sign-in request). Sign in (any demo user), then open http://localhost:3000 again: you land on your dashboard without seeing the landing page, also after a reload. *Sign out* and open `/` once more: the landing page is back.
+**Landing page and routing.** Open http://localhost:3000 in a private window: the landing page renders immediately (no sign-in request). Sign in (any demo user), then open http://localhost:3000 again: you land on your dashboard without seeing the landing page, also after a reload. *Sign out* and open `/` once more: the landing page is back. On the landing page itself, every call to action leads somewhere real: *Get started* → company sign-up, *See how it works* → the process section, *Join as an agent* → `/register?role=Agent`, *Get started today* → company sign-up, *Sign in* → `/login`. Narrow the window below 1024px for the menu (Escape closes it).
 
 **Landing and subscription.** Open http://localhost:3000 and click *Get started*. Register the company (`/register?plan=professional`), then *Continue to payment* on `/checkout`. On the sandbox page, pay with `4242 4242 4242 4242`. `/subscription/success` confirms once the webhook has been processed and takes you to the workspace onboarding.
 *Abandoned checkout:* register, leave the payment page, then sign in again later. You land on **Subscription required** → *Continue to payment* resumes the same checkout → pay → dashboard. `/pricing` shows the plans on their own page, and `/app` sends a signed-in user to their home.
@@ -262,7 +262,7 @@ cd backend && PDF_PREVIEW_DIR=/tmp/pdf-preview dotnet test --filter "FullyQualif
 
 # Full UI flow (Move In + Move Out, 3 roles) against a running stack; screenshots in e2e/output
 # (languages: Portuguese browser, switcher + cookie, Portuguese API error, sidebar PT | EN switch; landing + subscribe, abandoned checkout → sign in → resume,
-#  landing page: server render, entry points, viewports, axe WCAG 2.2 AA, signed-in redirect / reload / logout / expired session;
+#  landing page: server render, every call to action, viewports 375-1920, axe WCAG 2.2 AA, signed-in redirect / reload / logout / expired session;
 #  Move In + Move Out, team agent registration + Team inspection assigned directly; uses the Sandbox payment provider)
 cd e2e && npm install && BASE_URL=http://localhost:3000 node ui-flow.mjs
 ```

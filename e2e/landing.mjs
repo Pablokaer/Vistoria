@@ -5,9 +5,11 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const AXE_PATH = require.resolve("axe-core/axe.min.js");
-const HERO = /Every room on record/;
+const HERO = /Professional property/;
 const PASSWORD = "Passw0rd!E2e";
-const VIEWPORTS = [["phone", 375, 812], ["tablet", 768, 1024], ["laptop", 1024, 768], ["desktop", 1440, 900]];
+const VIEWPORTS = [
+  ["phone", 375, 812], ["phone-large", 430, 932], ["tablet", 768, 1024], ["laptop", 1024, 768], ["desktop", 1440, 900], ["wide", 1920, 1080],
+];
 
 const hero = (page) => page.getByRole("heading", { level: 1, name: HERO });
 
@@ -31,15 +33,45 @@ async function anonymousVisitor(browser, { base, snap, log }) {
   if (errors.length > 0) fail(`console errors: ${errors.join(" | ")}`);
   await snap(page, "landing-desktop");
 
+  await entryPoints(page, base);
+  await page.goto(`${base}/company`); // protected route: still sends visitors to sign in
+  await page.waitForURL(/\/login/);
+  await ctx.close();
+  log("landing: anonymous visitor OK (server-rendered, no refresh call, no console errors, entry points work)");
+}
+
+/** Every call to action leads somewhere real: sign in, company sign-up, agent sign-up and the in-page sections. */
+async function entryPoints(page, base) {
   await page.getByRole("banner").getByRole("link", { name: "Sign in" }).click();
   await page.waitForURL("**/login");
   await page.goto(base);
   await page.getByRole("banner").getByRole("link", { name: "Get started" }).click();
   await page.waitForURL("**/register?plan=professional");
-  await page.goto(`${base}/company`); // protected route: still sends visitors to sign in
-  await page.waitForURL(/\/login/);
-  await ctx.close();
-  log("landing: anonymous visitor OK (server-rendered, no refresh call, no console errors, entry points work)");
+  await page.goto(base);
+  await page.getByRole("link", { name: "See how it works" }).click();
+  await page.waitForURL("**/#how-it-works");
+  await page.locator("#agents").getByRole("link", { name: "Join as an agent" }).click();
+  await page.waitForURL("**/register?role=Agent");
+  await page.goto(base);
+  await page.getByRole("link", { name: "Get started today" }).click();
+  await page.waitForURL("**/register?plan=professional");
+}
+
+/**
+ * Scrolls to the bottom and back so every scroll-revealed block has risen in, then waits for the transitions.
+ * Waits for hydration first: Reveal hides below-the-fold blocks when it mounts, so scrolling earlier would pass
+ * them before they are watched and leave them hidden.
+ */
+async function revealWholePage(page) {
+  await page.waitForLoadState("networkidle");
+  const height = await page.evaluate(() => document.documentElement.scrollHeight);
+  for (let y = 0; y < height; y += 400) {
+    await page.evaluate((top) => window.scrollTo({ top, behavior: "instant" }), y);
+    await page.waitForTimeout(50);
+  }
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+  await page.waitForFunction(() => document.querySelectorAll('[data-reveal="hidden"]').length === 0);
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState === "finished"));
 }
 
 /** No horizontal scroll and a visible hero on common viewport sizes. */
@@ -54,7 +86,7 @@ async function responsiveLayouts(browser, { base, snap, log }) {
     await snap(page, `landing-${name}`);
     await ctx.close();
   }
-  log("landing: layouts OK at 375 / 768 / 1024 / 1440 px");
+  log("landing: layouts OK at 375 / 430 / 768 / 1024 / 1440 / 1920 px");
 }
 
 /** axe-core WCAG 2.0–2.2 A/AA rules; serious and critical violations fail the flow. */
@@ -63,8 +95,8 @@ async function accessibility(browser, { base, log }) {
   const page = await ctx.newPage();
   await page.goto(base);
   await hero(page).waitFor();
-  // The specimen fades in; contrast must be measured on the settled page, not mid-animation.
-  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState === "finished"));
+  // Blocks below the fold rise in on scroll; contrast must be measured on the settled, fully revealed page.
+  await revealWholePage(page);
   await page.addScriptTag({ path: AXE_PATH });
   const violations = await page.evaluate(async () => {
     const result = await window.axe.run(document, { runOnly: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"] });

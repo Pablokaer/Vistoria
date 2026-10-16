@@ -1,22 +1,28 @@
 import type { Metadata } from "next";
-import { DispatchRoutes } from "@/components/landing/DispatchRoutes";
-import { displayFont } from "@/components/landing/fonts";
-import { LandingHero } from "@/components/landing/LandingHero";
-import { FinalCallToAction, LandingFooter } from "@/components/landing/LandingFooter";
+import { AiInspectionSection } from "@/components/landing/AiInspectionSection";
+import { FeatureGrid } from "@/components/landing/FeatureGrid";
+import { FinalCallToAction } from "@/components/landing/FinalCallToAction";
+import { ForAgentsSection } from "@/components/landing/ForAgentsSection";
+import { HowItWorks } from "@/components/landing/HowItWorks";
+import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingHeader } from "@/components/landing/LandingHeader";
+import { LandingHero } from "@/components/landing/LandingHero";
 import { PricingSection } from "@/components/landing/PricingSection";
-import { ReportGuarantees } from "@/components/landing/ReportGuarantees";
 import { SignedInRedirect } from "@/components/landing/SignedInRedirect";
-import { WorkflowLedger } from "@/components/landing/WorkflowLedger";
-import { getServerTranslator } from "@/i18n/server";
+import { getServerLocale, getServerTranslator } from "@/i18n/server";
 import { landingMessages } from "@/i18n/messages/landing";
 import { hasSessionHint } from "@/lib/session-hint";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getServerTranslator(landingMessages);
+  const [t, locale] = await Promise.all([getServerTranslator(landingMessages), getServerLocale()]);
   const title = t("metaTitle");
   const description = t("metaDescription");
-  return { title: { absolute: title }, description, openGraph: { title, description, type: "website", siteName: "InspectFlow" } };
+  return {
+    title: { absolute: title },
+    description,
+    openGraph: { title, description, type: "website", siteName: "InspectFlow", locale: locale === "pt-BR" ? "pt_BR" : "en_GB" },
+    twitter: { card: "summary", title, description },
+  };
 }
 
 /**
@@ -27,13 +33,14 @@ export default async function LandingPage() {
   const sessionHint = await hasSessionHint();
   return (
     <SignedInRedirect sessionHint={sessionHint}>
-      <div className={`${displayFont.variable} min-h-screen bg-paper text-ink-2`}>
+      <div className="min-h-screen bg-white text-site-ink">
         <LandingHeader />
         <main id="main">
           <LandingHero />
-          <WorkflowLedger />
-          <ReportGuarantees />
-          <DispatchRoutes />
+          <FeatureGrid />
+          <AiInspectionSection />
+          <HowItWorks />
+          <ForAgentsSection />
           <PricingSection />
           <FinalCallToAction />
         </main>
