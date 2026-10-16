@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { InspectionDetailsPanel, InspectionTenancyPanel, InvitationStatusPanel, NewInvitationPanel } from "@/components/company/inspection/InspectionInfoPanels";
 import { InspectionTimeline } from "@/components/company/inspection/InspectionTimeline";
+import { TeamAssignmentPanel } from "@/components/company/inspection/TeamAssignmentPanel";
 import { ReportPanel, RoomsProgressPanel } from "@/components/company/inspection/InspectionWorkPanels";
 import { Button, ErrorBanner, InspectionTypeTag, LinkButton, Notice, PageHeader, PageSkeleton, StatusBadge, useConfirm, useToast, VisibilityTag } from "@/components/ui";
 import { errorMessage, post } from "@/lib/api";
@@ -82,6 +83,7 @@ export default function CompanyInspectionPage() {
         </div>
         <div className="space-y-6">
           <InspectionDetailsPanel inspection={i} />
+          {i.allowedActions.includes("assign") && <TeamAssignmentPanel key={`${i.status}-${i.agent?.id ?? ""}`} inspection={i} onChange={setData} />}
           {i.tenancy && <InspectionTenancyPanel tenancy={i.tenancy} />}
           {i.invitation && <InvitationStatusPanel invitation={i.invitation} onRegenerate={regenerate} busy={busy === "regen"} />}
         </div>

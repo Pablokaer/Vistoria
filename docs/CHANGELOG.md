@@ -2,6 +2,32 @@
 
 Every code change is recorded here (newest first), together with the docs it touched.
 
+## 2026-10-16
+
+- **Company team agents and Team inspections.** See [ADR 0017](architecture/0017-company-team-agents.md).
+  - **Team:**
+    - A company registers its own agents on the new *Agents* page (`/company/agents`). A new email creates the agent account with an initial password; an email that already has an agent account is linked as is.
+    - API: `GET`, `POST /api/companies/me/agents` and `DELETE /api/companies/me/agents/{agentId}`.
+    - Only Owner/Admin can register or remove agents; any company member can list them.
+  - **New visibility `Team`:**
+    - Listed in *Available* only to the company's team agents; other agents get 404.
+    - Option 1: open to the whole team, and the first agent to accept takes it.
+    - Option 2: assigned directly to one agent (`assignedAgentId` on create), so the inspection is Assigned on publish with no accept step.
+  - **Assignment panel:** on the inspection page the company can assign, switch the agent or *release to the team* until the agent starts. API: `PUT /api/inspections/{id}/assignment`. The state machine gains Assigned → Open.
+  - **Notifications:** the agent is notified when added to a team, every team agent when a Team inspection is published, and the chosen agent when one is assigned to them.
+  - **Backend:**
+    - New `CompanyAgent` entity and migration `AddCompanyAgents` (`companies.company_agents`).
+    - `CompanyAgentService` and `TeamAssignmentService`.
+    - `UserAccountFactory` is now shared by self-registration and team registration (extracted from `AuthService`).
+    - Agent visibility rules are centralised in `InspectionAccess` (`OpenForAgent`, `CanAgentSeeAsync`).
+  - **Seed:** `agent@demo.local` is registered in the demo company's team, including on databases seeded earlier.
+  - **Tests:**
+    - `TeamAssignmentDomainTests` (6) cover designation, reassignment, release and the visibility guard.
+    - `TeamAgentTests` (8, HTTP + PostgreSQL) cover account creation and linking, duplicates, visibility to outsiders, assignment at creation, hidden designated drafts, reassignment and release, and removal.
+    - Two new state-machine cases.
+    - The UI flow gains a team scenario (`e2e/team.mjs`).
+  - **Docs:** README, ADR 0017, implementation report.
+
 ## 2026-09-30
 
 - **PDF report redesign.** See [ADR 0016](architecture/0016-pdf-report-layout.md).

@@ -37,13 +37,10 @@ public sealed class AgentInspectionService(
 
     public async Task<IReadOnlyList<AvailableInspectionDto>> ListAvailableAsync(CancellationToken ct)
     {
-        access.RequireAgent();
-        var now = clock.UtcNow;
-        var rows = await (from i in db.Inspections.AsNoTracking()
+        var agentId = access.RequireAgent();
+        var rows = await (from i in access.OpenForAgent(agentId).AsNoTracking()
                           join p in db.Properties.AsNoTracking() on i.PropertyId equals p.Id
                           join c in db.Companies.AsNoTracking() on i.CompanyId equals c.Id
-                          where i.Status == InspectionStatus.Open && i.Visibility == InspectionVisibility.Public &&
-                                i.AgentId == null && (i.AcceptBy == null || i.AcceptBy > now)
                           orderby i.PublishedAt descending
                           select new { i, p.City, p.Postcode, p.PropertyType, CompanyName = c.Name, Rooms = i.Rooms.OrderBy(r => r.Sequence).Select(r => r.Name).ToList() })
             .Take(200).ToListAsync(ct);
@@ -59,7 +56,7 @@ public sealed class AgentInspectionService(
                          where i.Id == inspectionId && i.Status == InspectionStatus.Open
                          select new { i, p.City, p.Postcode, p.PropertyType, CompanyName = c.Name, Rooms = i.Rooms.OrderBy(r => r.Sequence).Select(r => r.Name).ToList() })
             .FirstOrDefaultAsync(ct) ?? throw new NotFoundException(EntityNames.Inspection, inspectionId);
-        if (row.i.Visibility == InspectionVisibility.Private && !await HasVerifiedInvitationAsync(row.i.Id, agentId, ct))
+        if (!await access.CanAgentSeeAsync(row.i, agentId, ct))
             throw new NotFoundException(EntityNames.Inspection, inspectionId);
         return ToAvailable(row.i, row.CompanyName, row.City, row.Postcode, row.PropertyType.ToString(), row.Rooms);
     }
@@ -75,19 +72,12 @@ public sealed class AgentInspectionService(
                              .FirstOrDefaultAsync(i => i.Id == inspectionId, ct)
                          ?? throw new NotFoundException(EntityNames.Inspection, inspectionId);
 
-        if (inspection.Visibility == InspectionVisibility.Private)
-        {
-            if (!await HasVerifiedInvitationAsync(inspection.Id, agentId, ct))
-                throw new NotFoundException(EntityNames.Inspection, inspectionId);
-        }
-        else if (inspection.Status is InspectionStatus.Draft)
-        {
-            throw new NotFoundException(EntityNames.Inspection, inspectionId); // never published: agents must not learn it exists
-        }
-        else if (inspection.Status != InspectionStatus.Open && inspection.AgentId != agentId)
-        {
+        // Never published, a Team inspection of another company, or a private one without a verified code:
+        // the agent must not learn it exists.
+        if (inspection.Status is InspectionStatus.Draft || !await access.CanAgentSeeAsync(inspection, agentId, ct))
+            throw new NotFoundException(EntityNames.Inspection, inspectionId);
+        if (inspection.Status != InspectionStatus.Open && inspection.AgentId != agentId)
             throw new DomainRuleException("inspection.not_available", InspectionMessages.NotAvailable);
-        }
 
         inspection.Accept(agentId, clock.UtcNow);
         audit.Record(AuditActions.InspectionAccepted, nameof(Inspection), inspection.Id);
@@ -112,9 +102,7 @@ public sealed class AgentInspectionService(
     public async Task<AgentDashboardDto> DashboardAsync(CancellationToken ct)
     {
         var agentId = access.RequireAgent();
-        var now = clock.UtcNow;
-        var available = await db.Inspections.CountAsync(i => i.Status == InspectionStatus.Open && i.Visibility == InspectionVisibility.Public &&
-                                                             i.AgentId == null && (i.AcceptBy == null || i.AcceptBy > now), ct);
+        var available = await access.OpenForAgent(agentId).CountAsync(ct);
         var mine = await db.Inspections.Where(i => i.AgentId == agentId).GroupBy(i => i.Status)
             .Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct);
         int C(params InspectionStatus[] s) => mine.Where(x => s.Contains(x.Key)).Sum(x => x.Count);
@@ -410,13 +398,6 @@ public sealed class AgentInspectionService(
         var json = await db.AiAnalyses.AsNoTracking().Where(a => a.Id == analysisId && a.Status == AiAnalysisStatus.Completed)
             .Select(a => a.ResultJson).FirstOrDefaultAsync(ct);
         return json is null ? null : JsonSerializer.Deserialize<RoomAnalysisResult>(json, AiAnalysisProcessor.Json);
-    }
-
-    private Task<bool> HasVerifiedInvitationAsync(Guid inspectionId, Guid agentId, CancellationToken ct)
-    {
-        var now = clock.UtcNow;
-        return db.InspectionInvitations.AnyAsync(x => x.InspectionId == inspectionId && x.UsedByUserId == agentId &&
-                                                      x.RevokedAt == null && x.ExpiresAt > now, ct);
     }
 
     private static AvailableInspectionDto ToAvailable(Inspection i, string companyName, string city, string postcode, string propertyType,

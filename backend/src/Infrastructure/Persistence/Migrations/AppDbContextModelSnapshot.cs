@@ -421,6 +421,41 @@ namespace InspectFlow.Infrastructure.Persistence.Migrations
                     b.ToTable("companies", "companies");
                 });
 
+            modelBuilder.Entity("InspectFlow.Modules.Companies.Domain.CompanyAgent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgentUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agent_user_id");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_company_agents");
+
+                    b.HasIndex("AgentUserId")
+                        .HasDatabaseName("ix_company_agents_agent_user_id");
+
+                    b.HasIndex("CompanyId", "AgentUserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_company_agents_company_id_agent_user_id");
+
+                    b.ToTable("company_agents", "companies");
+                });
+
             modelBuilder.Entity("InspectFlow.Modules.Companies.Domain.CompanyMember", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1949,6 +1984,23 @@ namespace InspectFlow.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_subscriptions_users_user_id");
+                });
+
+            modelBuilder.Entity("InspectFlow.Modules.Companies.Domain.CompanyAgent", b =>
+                {
+                    b.HasOne("InspectFlow.Modules.Identity.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("AgentUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_company_agents_users_agent_user_id");
+
+                    b.HasOne("InspectFlow.Modules.Companies.Domain.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_company_agents_companies_company_id");
                 });
 
             modelBuilder.Entity("InspectFlow.Modules.Companies.Domain.CompanyMember", b =>

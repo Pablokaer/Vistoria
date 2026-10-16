@@ -8,15 +8,15 @@ The repository was empty (no existing stack, code, tests or conventions), so the
 
 A working, persistent, tested MVP covering the three roles end to end:
 
-- **Company**: sign-up → workspace → properties with configurable rooms (optionally creating the tenancy and first inspection in the same form) → tenancies + tenant invitations → Move In / Move Out / Periodic / Other inspections, public (marketplace) or private (link + hashed 6-digit code) → progress tracking → finalized reports, share links, send-to-tenant.
-- **Agent**: marketplace with privacy-preserving previews → race-safe accept → mobile-first two-step execution — a single photos page for every room and defect (camera upload with progress/retry, client-side resize), then a descriptions page where all AI texts, requested at once, arrive via background processing and polling (autosave, defects with classification/confirmation) → Move In baseline view and comparison decision for Move Out → review page (exact report preview, editable text) → finalize.
+- **Company**: sign-up → workspace → properties with configurable rooms (optionally creating the tenancy and first inspection in the same form) → tenancies + tenant invitations → team of its own agents (register new agent accounts or link existing ones) → Move In / Move Out / Periodic / Other inspections, public (marketplace), private (link + hashed 6-digit code) or Team (only the company's agents; open to the team or assigned directly, reassignable until started) → progress tracking → finalized reports, share links, send-to-tenant.
+- **Agent**: marketplace with privacy-preserving previews (public inspections plus the Team inspections of the companies that registered them; directly assigned ones go straight to *My inspections*) → race-safe accept → mobile-first two-step execution — a single photos page for every room and defect (camera upload with progress/retry, client-side resize), then a descriptions page where all AI texts, requested at once, arrive via background processing and polling (autosave, defects with classification/confirmation) → Move In baseline view and comparison decision for Move Out → review page (exact report preview, editable text) → finalize.
 - **Tenant**: invitation acceptance → dashboard (awaiting / accepted / disputed) → report review, room-level and general observations → accept or dispute.
 - **Public entry & billing**: landing page (hero product mockup, audiences, how it works, features, pricing) → company registration → plan → checkout at the payment provider (Stripe, or the Sandbox in development) → activation only from signed, idempotent webhooks → dashboard. Company API access requires an active subscription, enforced by an authorization requirement (402 `subscription.required`), and abandoned checkouts are resumed after signing in again (ADR 0012).
 - **Reports**: immutable versioned JSON snapshot + QuestPDF PDF (SHA-256 of both), web report page, expiring share links, Move Out comparison summary.
 - **Languages**: English and Brazilian Portuguese everywhere. The UI language is per user (browser language or header switcher, remembered in a cookie). API messages follow `Accept-Language`, plans are translated in config, and reports, PDFs and AI drafts follow the company's report language, which is frozen into each report (ADR 0014).
 - **UI**: in-house design system (tokens in `globals.css`, Inter, primitives in `components/ui`, inline icons), sidebar app shell with mobile drawer and bottom tabs, role-specific dashboards, marketplace search/filters/sort (client-side), tabbed My inspections, phone-first two-step execution with room navigation, document-style reports; skeleton loading, toasts and in-app confirmations (ADR 0015).
 
-Validation performed: backend and frontend build without warnings; ESLint clean; 187 backend tests pass (unit + HTTP/PostgreSQL integration); migrations applied to empty databases (tests and compose); `docker compose up` stack verified; the Playwright UI script checks the Portuguese and English UI (browser language, switcher, Portuguese API error) and runs the full Move In + Move Out scenario across three browser sessions (desktop company/tenant, mobile agent) against the Docker stack, including PDF download.
+Validation performed: backend and frontend build without warnings; ESLint clean; 204 backend tests pass (unit + HTTP/PostgreSQL integration); migrations applied to empty databases (tests and compose); `docker compose up` stack verified; the Playwright UI script checks the Portuguese and English UI (browser language, switcher, Portuguese API error) and runs the full Move In + Move Out scenario plus a team-agent scenario (register agent → Team inspection assigned → agent sees it) across several browser sessions (desktop company/tenant, mobile agent) against the Docker stack, including PDF download.
 
 ## 3. Architecture
 
@@ -29,7 +29,7 @@ Abstractions keeping the domain vendor-free: `IImageAnalysisService` (OpenAI / m
 | Area | Files |
 |---|---|
 | Domain | `backend/src/Modules/*/Domain/*.cs` — notably `Inspections/Domain/{Inspection,InspectionRoom,InspectionDefect,InspectionComparison,InspectionInvitation,InspectionStateMachine,InspectionReadiness}.cs`, `Properties/Domain/Property.cs`, `Tenancies/Domain/Tenancy.cs`, `Reports/Domain/InspectionReport.cs` |
-| Use cases | `Modules/Identity/Application/AuthService.cs`, `Companies/Application/{CompanyAccess,CompanyService}.cs`, `Properties/Application/PropertyService.cs`, `Tenancies/Application/TenancyService.cs`, `Inspections/Application/{InspectionService,AgentInspectionService,InvitationService,InspectionAccess,InspectionWriteScope,RoomContextLoader,InspectionDetailsBuilder,BasicComparisonBuilder}.cs`, `Media/Application/MediaService.cs`, `AI/Application/{AiAnalysisService,AiAnalysisProcessor,AiPrompts,IImageAnalysisService}.cs`, `Reports/Application/{FinalizationService,ReportService,ReportSnapshotBuilder,ReportSnapshot,ReportSnapshotStore}.cs`, `Tenants/Application/TenantService.cs` |
+| Use cases | `Modules/Identity/Application/AuthService.cs`, `Identity/Application/UserAccountFactory.cs`, `Companies/Application/{CompanyAccess,CompanyService,CompanyAgentService}.cs`, `Properties/Application/PropertyService.cs`, `Tenancies/Application/TenancyService.cs`, `Inspections/Application/{InspectionService,TeamAssignmentService,AgentInspectionService,InvitationService,InspectionAccess,InspectionWriteScope,RoomContextLoader,InspectionDetailsBuilder,BasicComparisonBuilder}.cs`, `Media/Application/MediaService.cs`, `AI/Application/{AiAnalysisService,AiAnalysisProcessor,AiPrompts,IImageAnalysisService}.cs`, `Reports/Application/{FinalizationService,ReportService,ReportSnapshotBuilder,ReportSnapshot,ReportSnapshotStore}.cs`, `Tenants/Application/TenantService.cs` |
 | Infrastructure | `Infrastructure/Persistence/{AppDbContext,ModelConfiguration,PostgresInspectionLock}.cs`, `Migrations/*`, `AI/{OpenAiImageAnalysisService,MockImageAnalysisService,AnalysisSchemas,AiQueue}.cs`, `Storage/{LocalFileStorageService,UrlSigner}.cs`, `Pdf/QuestPdfReportService.cs`, `Identity/*`, `Seed/DatabaseInitializer.cs`, `DependencyInjection.cs` |
 | API | `backend/src/Api/Program.cs`, `Endpoints/{Auth,Company,Agent,Tenant,Shared}Endpoints.cs`, `Infrastructure/{ErrorHandling,RateLimits,EnvironmentAliases}.cs` |
 | Frontend | `frontend/src/app/globals.css` (design tokens), `components/{ui,shell,inspection,agent,company,report,tenant}/*`, `frontend/src/i18n/{locales,translate,formatting,server,I18nProvider}.ts*` + `messages/*.ts` (texts per language), `frontend/src/lib/{api,auth,hooks,autosave,image,types}.ts*`, `components/*`, `app/**/page.tsx` |
@@ -41,16 +41,18 @@ Abstractions keeping the domain vendor-free: `IImageAnalysisService` (OpenAI / m
 - `InitialCreate` — all tables, schemas (`identity, companies, properties, tenancies, inspections, media, ai, reports, tenants, notifications, audit`), indexes, FKs, xmin concurrency tokens.
 - `AddBilling` — schema `billing`: `subscriptions` (filtered unique index: one open subscription per user), `checkout_sessions` (one Open session per subscription), `billing_events` (unique provider event id).
 - `AddCompanyReportLanguage` — `companies.companies.report_language` (`en` | `pt-BR`, default `en`).
+- `AddCompanyAgents` — `companies.company_agents` (company ↔ agent user, unique pair; cascade on company delete, restrict on user).
 - `AppendOnlyTriggers` — PostgreSQL triggers rejecting UPDATE/DELETE on report versions, audit logs, tenant responses and observations.
 
 ## 6. Pages
 
-Public: Landing, Pricing, Checkout, Sandbox payment, Subscription success, Subscription required, `/app` entry. Login, Register (with a company plan step), Company: Onboarding, Dashboard, Properties, Create Property, Property Details (rooms, tenancies, invitations, inspections), Create Inspection, Inspection Details. Agent: Dashboard, Available Inspections, Available Inspection details/accept, Private invitation (code entry), My Inspections, Completed Inspections, Inspection Execution, Room Inspection, Inspection Review. Tenant: Dashboard, Report Review, Invitation. Reports: authenticated Report Page, shared (token) Report Page.
+Public: Landing, Pricing, Checkout, Sandbox payment, Subscription success, Subscription required, `/app` entry. Login, Register (with a company plan step), Company: Onboarding, Dashboard, Agents (team), Properties, Create Property, Property Details (rooms, tenancies, invitations, inspections), Create Inspection, Inspection Details. Agent: Dashboard, Available Inspections, Available Inspection details/accept, Private invitation (code entry), My Inspections, Completed Inspections, Inspection Execution, Room Inspection, Inspection Review. Tenant: Dashboard, Report Review, Invitation. Reports: authenticated Report Page, shared (token) Report Page.
 
 ## 7. Decisions taken during implementation
 
 - Modules as folders inside one `Modules` assembly (plus architecture tests) instead of one project per module — avoids circular project references between Inspections/Media/AI/Reports while keeping boundaries explicit; can be split later.
 - Minimal APIs; application services throw typed exceptions mapped to ProblemDetails with stable codes.
+- Team agents are a separate `CompanyAgent` link, not `CompanyMember`: they get no company permissions and keep their agent area; agents outside the team get 404 for Team inspections (ADR 0017).
 - Company scope is resolved from `CompanyMember` server-side; the MVP gives each company user one workspace (Owner) with role permissions prepared.
 - Tenants join tenancies by single-use invitation links and must sign in with the invited email.
 - Private invitation: token (SHA-256) + code (PBKDF2), 7-day expiry, 5 attempts, single agent; the code is not sent with the link.
@@ -79,6 +81,10 @@ Caveats to be transparent about:
 ### AI writing guide (2026-09-30)
 
 AI drafts follow a team-maintained, versioned writing guide (`backend/src/Modules/AI/Guidelines/inspection-writing-guide.md`) appended to every analysis after the safety rules. They are written in the company's report language (`en` / `pt-BR`), and `prompt_version` records code, guide and language (ADR 0013).
+
+### Company team agents (2026-10-16)
+
+Companies register their own agents and publish **Team** inspections, either open to the team (first to accept takes it) or assigned directly to one agent. The company can reassign or release until the agent starts (ADR 0017).
 
 ### PDF report layout (2026-09-30)
 

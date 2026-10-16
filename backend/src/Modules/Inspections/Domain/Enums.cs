@@ -15,6 +15,12 @@ public enum InspectionVisibility
 
     /// <summary>Only reachable through an invitation link plus a 6-digit access code.</summary>
     Private,
+
+    /// <summary>
+    /// Listed only to the agents the company registered in its team (<c>CompanyAgent</c>); the first to accept
+    /// takes it. The company may instead assign it directly to one of them.
+    /// </summary>
+    Team,
 }
 
 public enum InspectionStatus

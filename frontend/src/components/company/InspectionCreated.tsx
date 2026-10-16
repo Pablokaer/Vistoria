@@ -4,7 +4,10 @@ import { Icon } from "@/components/icons";
 import { Card, CopyField, InspectionTypeTag, LinkButton, Notice, StatusBadge } from "@/components/ui";
 import { useFormatters, useT } from "@/i18n/I18nProvider";
 import { companyFormMessages } from "@/i18n/messages/company-forms";
+import type { Translate } from "@/i18n/translate";
 import type { PublishResult } from "@/lib/types";
+
+type CompanyFormKey = keyof (typeof companyFormMessages)["en"];
 
 function InvitationDetails({ invitation }: { invitation: NonNullable<PublishResult["invitation"]> }) {
   const t = useT(companyFormMessages);
@@ -20,6 +23,13 @@ function InvitationDetails({ invitation }: { invitation: NonNullable<PublishResu
       </div>
     </div>
   );
+}
+
+/** What happened on publish, by visibility: marketplace, open to the team, or assigned to one agent. */
+function publishedMessage(i: PublishResult["inspection"], t: Translate<CompanyFormKey>): string {
+  if (i.status === "Draft") return t("publishFromInspectionPage");
+  if (i.status === "Assigned" && i.agent) return t("assignedToAgent", { agent: i.agent.fullName, rooms: i.rooms.length });
+  return t(i.visibility === "Team" ? "openToTeam" : "openInMarketplace", { rooms: i.rooms.length });
 }
 
 /** Shown once after creating an inspection (a private invitation's code can never be displayed again). */
@@ -40,7 +50,7 @@ export function InspectionCreated({ result, extra }: { result: PublishResult; ex
       </div>
       <Card title={t("nextSteps")}>
         {result.invitation ? <InvitationDetails invitation={result.invitation} /> : (
-          <p className="text-body text-ink-2">{i.status === "Open" ? t("openInMarketplace", { rooms: i.rooms.length }) : t("publishFromInspectionPage")}</p>
+          <p className="text-body text-ink-2">{publishedMessage(i, t)}</p>
         )}
         {result.invitation && <p className="mt-4 text-label text-ink-3">{t("privateNextStep")}</p>}
         <div className="mt-5 flex flex-wrap gap-2 border-t border-line pt-4">

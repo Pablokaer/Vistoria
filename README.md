@@ -4,7 +4,8 @@ InspectFlow connects **companies** (letting agents / property managers), **inspe
 
 - A public **landing page** (`/`) explains the product. There is **no free plan**: *Get started* → create a company account → choose the plan → pay → the subscription is activated by the payment provider's confirmation → dashboard. A company that abandons checkout can sign in later and continue from *Subscription required*, without registering again. Inspectors and tenants join for free.
 
-- Companies register properties with any number of rooms, manage tenancies and publish inspections (Move In, Move Out, Periodic, Other) — publicly in a marketplace or privately via link + 6-digit code. A property and its first inspection can be created together from one form.
+- Companies register properties with any number of rooms, manage tenancies and publish inspections (Move In, Move Out, Periodic, Other) — publicly in a marketplace, privately via link + 6-digit code, or to **their own team of agents**. A property and its first inspection can be created together from one form.
+- **Team agents.** A company registers the inspectors who work for it (*Agents* page). A **Team** inspection is listed only to those agents, so whoever is free accepts it, or the company assigns it directly to one of them, who gets it without an accept step. Until the agent starts, the company can switch the agent or release the inspection back to the team ([ADR 0017](docs/architecture/0017-company-team-agents.md)).
 - Inspectors accept an inspection and work in two steps on their phone: first they photograph every room and its defects on a single page, then all AI-drafted descriptions (clearly labelled, always editable) are requested at once and reviewed on a second page; Move Outs are compared with the Move In baseline; then review and finalize.
 - Finalization freezes an immutable, versioned report (JSON snapshot + PDF, both hashed).
 - Tenants review the report, add observations (general or per room) and accept or dispute it.
@@ -65,7 +66,7 @@ Draft/Open/Assigned/InProgress → Cancelled        Open → Expired (acceptance
 | Module | Entities |
 |---|---|
 | Identity | `User`, `Role`, `UserRole`, `RefreshToken`, `AgentProfile` |
-| Companies | `Company`, `CompanyMember` (roles Owner/Admin/PropertyManager/Employee/Viewer, permissions prepared) |
+| Companies | `Company`, `CompanyMember` (roles Owner/Admin/PropertyManager/Employee/Viewer, permissions prepared), `CompanyAgent` (the company's team of agents) |
 | Properties | `Property`, `PropertyRoom` |
 | Tenancies | `Tenancy`, `TenancyMember` |
 | Inspections | `Inspection`, `InspectionRoom` (snapshot), `InspectionDefect`, `InspectionComparison`, `InspectionInvitation` |
@@ -128,7 +129,7 @@ npm run dev                          # proxies /api to API_INTERNAL_URL (default
 
 ### Database migrations
 
-Migrations live in `backend/src/Infrastructure/Persistence/Migrations` (`InitialCreate`, `AppendOnlyTriggers`, `AddBilling`). They run automatically when `MIGRATE_ON_STARTUP=true` (default in Development/compose). Manually:
+Migrations live in `backend/src/Infrastructure/Persistence/Migrations` (`InitialCreate`, `AppendOnlyTriggers`, `AddBilling`, `AddCompanyReportLanguage`, `AddCompanyAgents`). They run automatically when `MIGRATE_ON_STARTUP=true` (default in Development/compose). Manually:
 
 ```bash
 dotnet tool install -g dotnet-ef
@@ -209,7 +210,7 @@ Seeded automatically when the environment is `Development` and the database is e
 | Role | Email | Seeded data |
 |---|---|---|
 | Company | `company@demo.local` | Active subscription (seeded, 1 year); "Demo Property Management"; **12 Main Street** (6 rooms, tenancy, **open public Move In**); **48 Oak Avenue** (6 rooms, tenancy, **finalized & accepted Move In** with photos, a defect, report + PDF — ready for a Move Out) |
-| Agent | `agent@demo.local` | "Demo Inspector" (did the 48 Oak Avenue Move In) |
+| Agent | `agent@demo.local` | "Demo Inspector" (did the 48 Oak Avenue Move In); registered in the demo company's **team** (also added on databases seeded earlier) |
 | Tenant | `tenant@demo.local` | "Demo Tenant", member of both tenancies |
 
 Demo credentials are never created outside Development.
@@ -235,6 +236,11 @@ Private inspection: open the invitation link while signed in as an agent and ent
 
 **Tenant** — open the invitation link from the company (register with the invited email, *Accept invitation*), or sign in as `tenant@demo.local`. *My inspections* → open a report awaiting review → *Add observation about this room* / *I want to add observations* → *Everything is correct* or *I disagree* (reason required).
 
+**Team agents** — as the company, open *Agents* (`/company/agents`) and register an agent: name, email and an initial password create the account. Entering the email of an existing agent, such as `agent@demo.local`, adds that account to the team. Then *New inspection* → visibility **Team**:
+- *Who does it* → **Any agent in my team**: the inspection appears under *Available* (tag "Team") only for your agents, and the first to accept takes it. Other agents do not see it.
+- *Who does it* → **one agent**: after publishing it is already **Assigned**. The agent finds it under *My inspections* (and in notifications) and only has to *Start inspection*.
+- On the inspection page, the **Team assignment** panel switches the agent or *Releases to the team* until the agent starts. Removing an agent from the team hides future Team inspections from them; inspections already assigned stay with them.
+
 **Move In** — as above on 12 Main Street (seeded open inspection) or any new property with a tenancy.
 
 **Move Out** — as the company: *New inspection* for **48 Oak Avenue** → type *Move Out* → the finalized Move In is pre-selected under *Compare with* → publish. As an agent: accept/start; on the photos page every room can expand its read-only **Move In record** (text, photos, defects). Add photos and defects; on the descriptions page the AI visual comparison has already been requested — use *Compare recorded data* if useful and pick your decision (Unchanged, Normal wear, New damage, …) and save it — a room can't be completed without it. Finalize: the report and PDF contain the comparison summary. The tenant then reviews it.
@@ -254,11 +260,11 @@ cd backend && PDF_PREVIEW_DIR=/tmp/pdf-preview dotnet test --filter "FullyQualif
 
 # Full UI flow (Move In + Move Out, 3 roles) against a running stack; screenshots in e2e/output
 # (languages: Portuguese browser, switcher + cookie, Portuguese API error; landing + subscribe, abandoned checkout → sign in → resume,
-#  Move In + Move Out; uses the Sandbox payment provider)
+#  Move In + Move Out, team agent registration + Team inspection assigned directly; uses the Sandbox payment provider)
 cd e2e && npm install && BASE_URL=http://localhost:3000 node ui-flow.mjs
 ```
 
-187 backend tests cover: the PDF report (7 layout scenarios render, missing photos become placeholders, Move In photos loaded for Move Out reports), languages (Accept-Language resolution incl. q-values and pt-PT, translated ProblemDetails titles/errors/details, Identity and AI errors, 402 in Portuguese, plans per language, report language frozen in the snapshot, PDF labels and dates in both languages, v1 snapshots read as English), the AI writing guide (parsing, prompt order safety → language → guide, output language in the OpenAI system message, prompt version), company report language and localization, subscriptions (no access without an active subscription, 402 on the Company API, the full sandbox payment, resuming an abandoned checkout, success-page parameters and forged or unsigned webhooks never activating, replayed webhooks applied once, past due → grace → cancellation, lapsed → subscribe again, parallel checkout starts, access policy and state machine, Stripe request/signature/event mapping), authorization across companies/roles/tenants, property & rooms, room snapshot, publish rules, public accept (+ 8 parallel agents → exactly one wins), private link + code (hashing, attempt lock, single use, regeneration), state transitions, upload validation (content sniffing, size, ownership, after-finalization), room completion and blocked finalization, finalization + PDF, report immutability (hash, EF guard, DB trigger), share links, tenant access/observations/accept/dispute (+ concurrent decisions), completed rooms reopening when an edit breaks a rule, same-tenancy baselines, the full Move In and Move Out flows through HTTP, the OpenAI adapter contract (strict schema, safety prompt, no key leakage) and architecture boundaries.
+204 backend tests cover: company team agents (account creation and linking, Team visibility hidden from other agents, direct assignment, hidden designated drafts, reassignment/release until start, removal), the PDF report (7 layout scenarios render, missing photos become placeholders, Move In photos loaded for Move Out reports), languages (Accept-Language resolution incl. q-values and pt-PT, translated ProblemDetails titles/errors/details, Identity and AI errors, 402 in Portuguese, plans per language, report language frozen in the snapshot, PDF labels and dates in both languages, v1 snapshots read as English), the AI writing guide (parsing, prompt order safety → language → guide, output language in the OpenAI system message, prompt version), company report language and localization, subscriptions (no access without an active subscription, 402 on the Company API, the full sandbox payment, resuming an abandoned checkout, success-page parameters and forged or unsigned webhooks never activating, replayed webhooks applied once, past due → grace → cancellation, lapsed → subscribe again, parallel checkout starts, access policy and state machine, Stripe request/signature/event mapping), authorization across companies/roles/tenants, property & rooms, room snapshot, publish rules, public accept (+ 8 parallel agents → exactly one wins), private link + code (hashing, attempt lock, single use, regeneration), state transitions, upload validation (content sniffing, size, ownership, after-finalization), room completion and blocked finalization, finalization + PDF, report immutability (hash, EF guard, DB trigger), share links, tenant access/observations/accept/dispute (+ concurrent decisions), completed rooms reopening when an edit breaks a rule, same-tenancy baselines, the full Move In and Move Out flows through HTTP, the OpenAI adapter contract (strict schema, safety prompt, no key leakage) and architecture boundaries.
 
 ## API overview
 
@@ -266,7 +272,7 @@ cd e2e && npm install && BASE_URL=http://localhost:3000 node ui-flow.mjs
 |---|---|
 | Auth | `POST auth/register`, `auth/login`, `auth/refresh`, `auth/logout`, `GET auth/me` (includes `subscription`) |
 | Billing | `GET billing/plans` (public), `GET billing/subscription`, `POST billing/checkout`, `GET billing/checkout/{id}`, `POST billing/webhooks/{provider}` (signed), `GET billing/sandbox/sessions/{id}`, `POST billing/sandbox/sessions/{id}/pay` (Sandbox only) |
-| Company | `POST companies` (optional `reportLanguage`: `en` or `pt-BR`), `GET companies/me`, `PUT companies/me/report-language`, `GET company/dashboard`, `GET/POST properties`, `GET/PUT properties/{id}`, `POST/PUT/DELETE properties/{id}/rooms[/{roomId}]`, `PUT properties/{id}/rooms/order`, `GET properties/{id}/tenancies`, `POST tenancies`, `POST tenancies/{id}/tenants`, `GET/POST inspections`, `GET/PUT inspections/{id}`, `POST inspections/{id}/publish|cancel|invitation|send-to-tenant`, `POST reports/{id}/share-links` |
+| Company | `POST companies` (optional `reportLanguage`: `en` or `pt-BR`), `GET companies/me`, `PUT companies/me/report-language`, `GET/POST companies/me/agents`, `DELETE companies/me/agents/{agentId}`, `GET company/dashboard`, `GET/POST properties`, `GET/PUT properties/{id}`, `POST/PUT/DELETE properties/{id}/rooms[/{roomId}]`, `PUT properties/{id}/rooms/order`, `GET properties/{id}/tenancies`, `POST tenancies`, `POST tenancies/{id}/tenants`, `GET/POST inspections`, `GET/PUT inspections/{id}` (create accepts `visibility: Team` + optional `assignedAgentId`), `PUT inspections/{id}/assignment` (`{ agentId }` or `null` to release), `POST inspections/{id}/publish|cancel|invitation|send-to-tenant`, `POST reports/{id}/share-links` |
 | Agent | `GET agent/dashboard`, `GET agent/available[/{id}]`, `GET/POST agent/invitations/{token}[/verify]`, `POST agent/inspections/{id}/accept|start|submit-review|return-to-progress|finalize`, `GET agent/inspections/{id}/review`, `GET/PUT agent/inspections/{id}/rooms/{roomId}`, `POST .../photos|analysis|complete|reopen|defects|comparison/basic|comparison/analysis`, `PUT .../comparison/decision`, `PUT/DELETE .../defects/{defectId}` |
 | Tenant | `GET tenant/dashboard`, `GET tenant/invitations/{token}`, `POST tenant/invitations/{token}/accept`, `GET tenant/inspections/{id}/report`, `POST tenant/inspections/{id}/observations|accept|dispute` |
 | Shared | `GET inspections/{id}/report`, `GET reports/{id}`, `GET shared/reports/{token}`, `GET files/{key}?exp&sig`, `GET ai/status`, `GET notifications`, `GET /health` |
@@ -289,7 +295,7 @@ Errors are RFC 7807 problem details with a stable `code` (e.g. `inspection.inval
 - **Local storage only**; S3/Azure Blob implementations and direct-to-bucket uploads are prepared but not written. Photos are not resized server-side (the web client downsizes before upload; the PDF uses 144 DPI rasterization).
 - **Notifications** are stored in-app and logged; no email/push delivery yet (invitation links are shown to the company to share).
 - **Billing:** there is no customer self-service yet (Stripe billing portal, card update, cancellation). A lapsed subscription is evaluated when it is read, with no background expiry job. The Stripe adapter has not been exercised against a live Stripe account (contract tests only). Report pages (`/reports/...`) stay readable for their authorized viewers regardless of subscription.
-- No email verification, password reset, MFA, or company staff management UI (roles/permissions exist in the model).
+- No email verification, password reset, MFA, or company staff management UI (roles/permissions exist in the model). A company creating a team agent account chooses its initial password and shares it with the agent itself.
 - Multiple tenants: the first decision (accept/dispute) closes the review. No dispute-resolution workflow or report re-issuing yet (versioning supports it).
 - Rooms cannot be excluded per inspection (all active rooms are snapshotted; `IsRequired` prepared).
 - PDF: there is no "assessment limited" marker yet, because the snapshot has no reliable flag for it. Short reports leave some empty space at the bottom of the cover.

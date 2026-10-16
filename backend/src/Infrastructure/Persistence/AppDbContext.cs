@@ -29,6 +29,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<AgentProfile> AgentProfiles => Set<AgentProfile>();
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<CompanyMember> CompanyMembers => Set<CompanyMember>();
+    public DbSet<CompanyAgent> CompanyAgents => Set<CompanyAgent>();
     public DbSet<Property> Properties => Set<Property>();
     public DbSet<PropertyRoom> PropertyRooms => Set<PropertyRoom>();
     public DbSet<Tenancy> Tenancies => Set<Tenancy>();

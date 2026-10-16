@@ -22,6 +22,15 @@ public static class CompanyEndpoints
         api.MapPut("/companies/me/report-language", (UpdateReportLanguageRequest req, CompanyService s, CancellationToken ct) => s.UpdateReportLanguageAsync(req, ct));
         api.MapGet("/company/dashboard", (CompanyService s, CancellationToken ct) => s.GetDashboardAsync(ct));
 
+        // Team agents (the company's own inspectors)
+        api.MapGet("/companies/me/agents", (CompanyAgentService s, CancellationToken ct) => s.ListAsync(ct));
+        api.MapPost("/companies/me/agents", (RegisterTeamAgentRequest req, CompanyAgentService s, CancellationToken ct) => s.RegisterAsync(req, ct));
+        api.MapDelete("/companies/me/agents/{agentId:guid}", async (Guid agentId, CompanyAgentService s, CancellationToken ct) =>
+        {
+            await s.RemoveAsync(agentId, ct);
+            return Results.NoContent();
+        });
+
         // Properties & rooms
         api.MapGet("/properties", (string? search, PropertyService s, CancellationToken ct) => s.ListAsync(search, ct));
         api.MapPost("/properties", (CreatePropertyRequest req, PropertyService s, CancellationToken ct) => s.CreateAsync(req, ct));
@@ -47,6 +56,7 @@ public static class CompanyEndpoints
         api.MapPut("/inspections/{id:guid}", (Guid id, UpdateDraftRequest req, InspectionService s, CancellationToken ct) => s.UpdateDraftAsync(id, req, ct));
         api.MapPost("/inspections/{id:guid}/publish", (Guid id, PublishRequest? req, InspectionService s, CancellationToken ct) => s.PublishAsync(id, req?.InviteEmail, ct));
         api.MapPost("/inspections/{id:guid}/invitation", (Guid id, RegenerateInvitationRequest? req, InspectionService s, CancellationToken ct) => s.RegenerateInvitationAsync(id, req?.InviteEmail, ct));
+        api.MapPut("/inspections/{id:guid}/assignment", (Guid id, AssignInspectionRequest req, TeamAssignmentService s, CancellationToken ct) => s.SetAssignmentAsync(id, req, ct));
         api.MapPost("/inspections/{id:guid}/cancel", (Guid id, InspectionService s, CancellationToken ct) => s.CancelAsync(id, ct));
         api.MapPost("/inspections/{id:guid}/send-to-tenant", (Guid id, InspectionService s, CancellationToken ct) => s.SendToTenantAsync(id, ct));
 

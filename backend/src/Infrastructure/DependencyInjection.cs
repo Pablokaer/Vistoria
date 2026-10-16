@@ -138,14 +138,17 @@ public static class DependencyInjection
 
         // ---- Module application services ----
         services.AddScoped<AuthService>();
+        services.AddScoped<UserAccountFactory>();
         services.AddScoped<CompanyAccess>();
         services.AddScoped<CompanyService>();
+        services.AddScoped<CompanyAgentService>();
         services.AddScoped<PropertyService>();
         services.AddScoped<TenancyService>();
         services.AddScoped<InspectionAccess>();
         services.AddScoped<InspectionWriteScope>();
         services.AddScoped<RoomContextLoader>();
         services.AddScoped<InspectionDetailsBuilder>();
+        services.AddScoped<TeamAssignmentService>();
         services.AddScoped<InspectionService>();
         services.AddScoped<AgentInspectionService>();
         services.AddScoped<InvitationService>();

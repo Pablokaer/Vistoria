@@ -20,6 +20,10 @@ public static class AuditActions
     public const string UserLoggedIn = nameof(UserLoggedIn);
     public const string CompanyCreated = nameof(CompanyCreated);
     public const string CompanyReportLanguageChanged = nameof(CompanyReportLanguageChanged);
+    public const string TeamAgentRegistered = nameof(TeamAgentRegistered);
+    public const string TeamAgentRemoved = nameof(TeamAgentRemoved);
+    public const string InspectionAssignedToAgent = nameof(InspectionAssignedToAgent);
+    public const string InspectionReleasedToTeam = nameof(InspectionReleasedToTeam);
     public const string PropertyCreated = nameof(PropertyCreated);
     public const string PropertyUpdated = nameof(PropertyUpdated);
     public const string TenancyCreated = nameof(TenancyCreated);

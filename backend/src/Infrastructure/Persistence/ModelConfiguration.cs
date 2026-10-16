@@ -76,6 +76,14 @@ internal static class ModelConfiguration
             e.HasIndex(m => m.UserId);
             e.HasOne<User>().WithMany().HasForeignKey(m => m.UserId).OnDelete(DeleteBehavior.Restrict);
         });
+        b.Entity<CompanyAgent>(e =>
+        {
+            e.ToTable("company_agents", "companies");
+            e.HasIndex(a => new { a.CompanyId, a.AgentUserId }).IsUnique();
+            e.HasIndex(a => a.AgentUserId);
+            e.HasOne<Company>().WithMany().HasForeignKey(a => a.CompanyId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<User>().WithMany().HasForeignKey(a => a.AgentUserId).OnDelete(DeleteBehavior.Restrict);
+        });
 
         // ---------------- Properties ----------------
         b.Entity<Property>(e =>

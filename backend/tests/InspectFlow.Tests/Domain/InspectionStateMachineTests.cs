@@ -32,6 +32,8 @@ public class InspectionStateMachineTests
     [InlineData(InspectionStatus.Completed, InspectionStatus.Cancelled, false)]
     [InlineData(InspectionStatus.Accepted, InspectionStatus.Disputed, false)]
     [InlineData(InspectionStatus.Cancelled, InspectionStatus.Open, false)]
+    [InlineData(InspectionStatus.Assigned, InspectionStatus.Open, true)]
+    [InlineData(InspectionStatus.InProgress, InspectionStatus.Open, false)]
     public void Only_declared_transitions_are_allowed(InspectionStatus from, InspectionStatus to, bool allowed) =>
         Assert.Equal(allowed, InspectionStateMachine.CanTransition(from, to));
 

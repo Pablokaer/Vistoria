@@ -6,6 +6,7 @@ using InspectFlow.Modules.Tenancies.Application;
 
 namespace InspectFlow.Modules.Inspections.Application;
 
+/// <param name="AssignedAgentId">Optional, Team visibility only: a team agent who gets the inspection directly (Assigned on publish).</param>
 public sealed record CreateInspectionRequest(
     Guid PropertyId,
     Guid? TenancyId,
@@ -16,7 +17,8 @@ public sealed record CreateInspectionRequest(
     DateOnly? ScheduledDate,
     DateTimeOffset? AcceptBy,
     bool PublishNow,
-    string? InviteEmail);
+    string? InviteEmail,
+    Guid? AssignedAgentId = null);
 
 public sealed record UpdateDraftRequest(InspectionVisibility Visibility, string? Instructions, DateOnly? ScheduledDate, DateTimeOffset? AcceptBy);
 

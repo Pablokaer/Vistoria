@@ -101,7 +101,7 @@ export function VisibilityTag({ visibility }: { visibility: Visibility }) {
   const { humanize } = useFormatters();
   return (
     <span className="inline-flex items-center gap-1 text-caption font-medium text-ink-3">
-      <Icon name={visibility === "Private" ? "lock" : "globe"} className="h-3.5 w-3.5" />
+      <Icon name={visibility === "Private" ? "lock" : visibility === "Team" ? "users" : "globe"} className="h-3.5 w-3.5" />
       {humanize(visibility)}
     </span>
   );

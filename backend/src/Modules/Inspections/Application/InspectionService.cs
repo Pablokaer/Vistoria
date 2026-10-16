@@ -16,12 +16,13 @@ using Microsoft.Extensions.Options;
 
 namespace InspectFlow.Modules.Inspections.Application;
 
-/// <summary>Company-side inspection use cases: create, publish (room snapshot), invitations, cancel, send to tenant.</summary>
+/// <summary>Company-side inspection use cases: create, publish (room snapshot), invitations, cancel, send to tenant. Team assignment: <see cref="TeamAssignmentService"/>.</summary>
 public sealed class InspectionService(
     IAppDbContext db,
     CompanyAccess companyAccess,
     InspectionAccess access,
     InspectionDetailsBuilder details,
+    TeamAssignmentService team,
     IAccessCodeHasher codeHasher,
     INotificationService notifications,
     IAuditLogger audit,
@@ -62,6 +63,7 @@ public sealed class InspectionService(
         var now = clock.UtcNow;
         var inspection = Inspection.CreateDraft(companyId, property.Id, request.TenancyId, request.InspectionType,
             request.Visibility, request.ComparisonInspectionId, request.Instructions, request.ScheduledDate, request.AcceptBy, userId, now);
+        if (request.AssignedAgentId is { } agentId) await team.AssignAsync(inspection, agentId, ct);
         db.Inspections.Add(inspection);
         audit.Record(AuditActions.InspectionCreated, nameof(Inspection), inspection.Id,
             new { type = inspection.InspectionType.ToString(), visibility = inspection.Visibility.ToString(), propertyId = property.Id, comparisonInspectionId = request.ComparisonInspectionId });
@@ -126,6 +128,7 @@ public sealed class InspectionService(
 
         audit.Record(AuditActions.InspectionPublished, nameof(Inspection), inspection.Id,
             new { rooms = inspection.Rooms.Count, visibility = inspection.Visibility.ToString() });
+        await team.NotifyPublishedAsync(inspection, ct);
         await SaveAsync(ct);
         return new PublishResultDto(await details.BuildAsync(inspection, InspectionViewerKind.Company, ct), invitation);
     }

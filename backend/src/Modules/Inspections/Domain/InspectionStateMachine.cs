@@ -13,7 +13,8 @@ public static class InspectionStateMachine
     {
         [InspectionStatus.Draft] = [InspectionStatus.Open, InspectionStatus.Cancelled],
         [InspectionStatus.Open] = [InspectionStatus.Assigned, InspectionStatus.Cancelled, InspectionStatus.Expired],
-        [InspectionStatus.Assigned] = [InspectionStatus.InProgress, InspectionStatus.Cancelled],
+        // Assigned → Open: the company releases a Team inspection back to its team before the agent starts.
+        [InspectionStatus.Assigned] = [InspectionStatus.InProgress, InspectionStatus.Open, InspectionStatus.Cancelled],
         [InspectionStatus.InProgress] = [InspectionStatus.Review, InspectionStatus.Cancelled],
         [InspectionStatus.Review] = [InspectionStatus.InProgress, InspectionStatus.Completed],
         [InspectionStatus.Completed] = [InspectionStatus.AwaitingTenant],

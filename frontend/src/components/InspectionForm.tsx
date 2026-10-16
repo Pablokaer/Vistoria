@@ -5,20 +5,23 @@ import { useFormatters, useT } from "@/i18n/I18nProvider";
 import { companyFormMessages } from "@/i18n/messages/company-forms";
 import { cx } from "@/lib/cx";
 import type { InspectionType, Visibility } from "@/lib/types";
+import { TeamAgentPicker } from "./company/team/TeamAgentPicker";
 import { Field, Input, Switch, Textarea } from "./ui";
 
 export { InspectionCreated } from "./company/InspectionCreated";
 
 /** Inspection fields that do not depend on the property (shared by "New inspection" and "Add property"). */
+/** `assignedAgentId` ("" = the whole team) only applies to Team visibility. */
 export interface InspectionSettings {
-  visibility: Visibility; inviteEmail: string; scheduledDate: string; acceptBy: string; instructions: string; publishNow: boolean;
+  visibility: Visibility; inviteEmail: string; assignedAgentId: string; scheduledDate: string; acceptBy: string; instructions: string; publishNow: boolean;
 }
 
-export const DEFAULT_SETTINGS: InspectionSettings = { visibility: "Public", inviteEmail: "", scheduledDate: "", acceptBy: "", instructions: "", publishNow: true };
+export const DEFAULT_SETTINGS: InspectionSettings = { visibility: "Public", inviteEmail: "", assignedAgentId: "", scheduledDate: "", acceptBy: "", instructions: "", publishNow: true };
 
 export const settingsPayload = (s: InspectionSettings) => ({
   visibility: s.visibility, instructions: s.instructions || null, scheduledDate: s.scheduledDate || null,
   acceptBy: s.acceptBy ? new Date(s.acceptBy).toISOString() : null, publishNow: s.publishNow, inviteEmail: s.inviteEmail || null,
+  assignedAgentId: s.visibility === "Team" && s.assignedAgentId ? s.assignedAgentId : null,
 });
 
 // Same identity as InspectionTypeTag: teal door-in, orange door-out, indigo calendar.
@@ -49,32 +52,39 @@ export function InspectionTypePicker({ types, value, onChange }: { types: Inspec
   );
 }
 
+const VISIBILITY_STYLE: Record<Visibility, { icon: IconName; hint: "visibilityPublicHint" | "visibilityTeamHint" | "visibilityPrivateHint" }> = {
+  Public: { icon: "globe", hint: "visibilityPublicHint" },
+  Team: { icon: "users", hint: "visibilityTeamHint" },
+  Private: { icon: "lock", hint: "visibilityPrivateHint" },
+};
+
 function VisibilityOption({ v, selected, onSelect }: { v: Visibility; selected: boolean; onSelect: () => void }) {
   const t = useT(companyFormMessages);
   const { humanize } = useFormatters();
   return (
     <label className={cx("flex cursor-pointer gap-3 rounded-md border p-3 transition", selected ? "border-brand bg-brand-50/60 ring-1 ring-brand/20" : "border-line-strong hover:border-ink-4")}>
       <input type="radio" name="visibility" className="mt-1 accent-brand" checked={selected} onChange={onSelect} />
-      <Icon name={v === "Public" ? "globe" : "lock"} className={cx("mt-0.5 h-5 w-5 shrink-0", selected ? "text-brand" : "text-ink-3")} />
+      <Icon name={VISIBILITY_STYLE[v].icon} className={cx("mt-0.5 h-5 w-5 shrink-0", selected ? "text-brand" : "text-ink-3")} />
       <span className="text-body"><span className="block font-medium text-ink">{humanize(v)}</span>
-        <span className="text-label text-ink-3">{v === "Public" ? t("visibilityPublicHint") : t("visibilityPrivateHint")}</span></span>
+        <span className="text-label text-ink-3">{t(VISIBILITY_STYLE[v].hint)}</span></span>
     </label>
   );
 }
 
-/** Marketplace vs private invitation (+ optional inspector email). */
+/** Marketplace, the company's own team (whole team or one agent) or private invitation (+ optional inspector email). */
 export function InspectionAssignmentFields({ value, onChange }: { value: InspectionSettings; onChange: (s: InspectionSettings) => void }) {
   const t = useT(companyFormMessages);
   return (
     <div className="space-y-4">
       <fieldset>
         <legend className="mb-1.5 text-label font-medium text-ink-2">{t("visibility")}</legend>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {(["Public", "Private"] as Visibility[]).map((v) => (
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {(["Public", "Team", "Private"] as Visibility[]).map((v) => (
             <VisibilityOption key={v} v={v} selected={value.visibility === v} onSelect={() => onChange({ ...value, visibility: v })} />
           ))}
         </div>
       </fieldset>
+      {value.visibility === "Team" && <TeamAgentPicker value={value.assignedAgentId} onChange={(id) => onChange({ ...value, assignedAgentId: id })} />}
       {value.visibility === "Private" && (
         <Field label={t("agentEmail")} hint={t("agentEmailHint")}>
           <Input type="email" value={value.inviteEmail} onChange={(e) => onChange({ ...value, inviteEmail: e.target.value })} />

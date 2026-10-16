@@ -3,7 +3,6 @@ using InspectFlow.Modules.Audit.Domain;
 using InspectFlow.Modules.Billing.Application;
 using InspectFlow.Modules.Common;
 using InspectFlow.Modules.Identity.Domain;
-using InspectFlow.Modules.Tenants.Domain;
 using InspectFlow.Shared.Auth;
 using InspectFlow.Shared.Errors;
 using InspectFlow.Shared.Localization;
@@ -18,6 +17,7 @@ namespace InspectFlow.Modules.Identity.Application;
 public sealed class AuthService(
     IAppDbContext db,
     UserManager<User> userManager,
+    UserAccountFactory accounts,
     ITokenService tokens,
     IAuditLogger audit,
     ICurrentUser currentUser,
@@ -37,28 +37,8 @@ public sealed class AuthService(
             errors["Role"] = [new($"Role must be Company, Agent or Tenant (got '{request.Role}').", $"O perfil deve ser Company, Agent ou Tenant (recebido: '{request.Role}').")];
         if (errors.Count > 0) throw new ValidationException(RegistrationInvalid, errors);
 
-        var now = clock.UtcNow;
-        var email = request.Email.Trim();
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            UserName = email,
-            Email = email,
-            FullName = request.FullName.Trim(),
-            CreatedAt = now,
-        };
-
         await using var tx = await db.Database.BeginTransactionAsync(ct);
-        var result = await userManager.CreateAsync(user, request.Password);
-        if (!result.Succeeded) throw ToValidation(result);
-
-        var roleResult = await userManager.AddToRoleAsync(user, request.Role);
-        if (!roleResult.Succeeded) throw ToValidation(roleResult);
-
-        if (request.Role == AppRoles.Agent)
-            db.AgentProfiles.Add(new AgentProfile { UserId = user.Id, DisplayName = user.FullName, CreatedAt = now });
-        if (request.Role == AppRoles.Tenant)
-            db.TenantProfiles.Add(new TenantProfile { UserId = user.Id, CreatedAt = now });
+        var user = await accounts.CreateAsync(new NewUserAccount(request.Email, request.Password, request.FullName, request.Role));
 
         audit.Record(AuditActions.UserRegistered, nameof(User), user.Id, new { role = request.Role }, user.Id);
         var auth = await IssueTokensAsync(user, familyId: null, ct);
@@ -184,16 +164,7 @@ public sealed class AuthService(
         return new MeResponse(user.Id, user.Email!, user.FullName, roles, company, subscription);
     }
 
-    private static ValidationException ToValidation(IdentityResult result)
-    {
-        var errors = result.Errors
-            .GroupBy(e => e.Code.Contains("Password", StringComparison.Ordinal) ? "Password"
-                : e.Code.Contains("Email", StringComparison.Ordinal) || e.Code.Contains("UserName", StringComparison.Ordinal) ? "Email" : "General")
-            .ToDictionary(g => g.Key, g => g.Select(IdentityErrorTexts.Of).Distinct().ToArray());
-        return new ValidationException(RegistrationInvalid, errors);
-    }
-
-    private static readonly LocalizedText RegistrationInvalid = new("Registration is invalid.", "O cadastro é inválido.");
+    private static readonly LocalizedText RegistrationInvalid = UserAccountFactory.RegistrationInvalid;
     private static readonly LocalizedText InvalidRefreshToken = new("Invalid refresh token.", "Token de renovação inválido.");
     private static readonly LocalizedText RefreshTokenNoLongerValid = new("Refresh token is no longer valid.", "O token de renovação não é mais válido.");
 }

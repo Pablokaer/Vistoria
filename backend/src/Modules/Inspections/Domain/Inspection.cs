@@ -112,6 +112,52 @@ public class Inspection
         Status = InspectionStatus.Open;
         PublishedAt = now;
         UpdatedAt = now;
+        if (AgentId is not null) MarkAssigned(now); // designated team agent while still a draft
+    }
+
+    /// <summary>
+    /// The company hands a Team inspection to one of its agents. On a draft the agent is only designated (assigned
+    /// on publish); an Open or not-yet-started Assigned inspection is (re)assigned at once.
+    /// Example: <c>inspection.AssignToTeamAgent(agentUserId, clock.UtcNow)</c>.
+    /// </summary>
+    public void AssignToTeamAgent(Guid agentId, DateTimeOffset now)
+    {
+        if (Visibility != InspectionVisibility.Team)
+            throw new DomainRuleException("inspection.not_team", new(
+                $"Only Team inspections can be assigned to an agent (this one is {Visibility}).",
+                $"Apenas vistorias da equipe podem ser atribuídas a um vistoriador (esta é {InspectionTerms.Of(Visibility).PtBr})."));
+        if (Status is not (InspectionStatus.Draft or InspectionStatus.Open or InspectionStatus.Assigned))
+            throw new DomainRuleException("inspection.not_assignable", new(
+                $"The inspection can no longer be assigned while {Status}; expected Draft, Open or Assigned.",
+                $"A vistoria não pode mais ser atribuída enquanto estiver {InspectionTerms.Of(Status).PtBr}."));
+        AgentId = agentId;
+        UpdatedAt = now;
+        if (Status == InspectionStatus.Draft) return;
+        if (Status == InspectionStatus.Assigned) { AcceptedAt = now; return; }
+        MarkAssigned(now);
+    }
+
+    /// <summary>Assigned (not started) → Open: the inspection goes back to the team list. Example: <c>inspection.ReleaseToTeam(now)</c>.</summary>
+    public void ReleaseToTeam(DateTimeOffset now)
+    {
+        if (Visibility != InspectionVisibility.Team)
+            throw new DomainRuleException("inspection.not_team", new(
+                $"Only Team inspections can be released to the team (this one is {Visibility}).",
+                $"Apenas vistorias da equipe podem voltar para a equipe (esta é {InspectionTerms.Of(Visibility).PtBr})."));
+        if (Status == InspectionStatus.Draft) { AgentId = null; UpdatedAt = now; return; }
+        InspectionStateMachine.EnsureCanTransition(Status, InspectionStatus.Open);
+        AgentId = null;
+        AcceptedAt = null;
+        Status = InspectionStatus.Open;
+        UpdatedAt = now;
+    }
+
+    private void MarkAssigned(DateTimeOffset now)
+    {
+        InspectionStateMachine.EnsureCanTransition(Status, InspectionStatus.Assigned);
+        AcceptedAt = now;
+        Status = InspectionStatus.Assigned;
+        UpdatedAt = now;
     }
 
     public void Accept(Guid agentId, DateTimeOffset now)
@@ -120,11 +166,8 @@ public class Inspection
             throw new DomainRuleException("inspection.expired", new("This inspection is no longer available.", "Esta vistoria não está mais disponível."));
         if (AgentId is not null || Status != InspectionStatus.Open)
             throw new DomainRuleException("inspection.not_available", InspectionMessages.NotAvailable);
-        InspectionStateMachine.EnsureCanTransition(Status, InspectionStatus.Assigned);
         AgentId = agentId;
-        AcceptedAt = now;
-        Status = InspectionStatus.Assigned;
-        UpdatedAt = now;
+        MarkAssigned(now);
     }
 
     public void Start(Guid agentId, DateTimeOffset now)
@@ -211,6 +254,7 @@ public class Inspection
         if (Status != InspectionStatus.Draft)
             throw new DomainRuleException("inspection.not_draft", new("Only draft inspections can be edited.", "Apenas vistorias em rascunho podem ser editadas."));
         Visibility = visibility;
+        if (visibility != InspectionVisibility.Team) AgentId = null; // only Team drafts carry a designated agent
         Instructions = Normalize(instructions, 2000);
         ScheduledDate = scheduledDate;
         AcceptBy = acceptBy;

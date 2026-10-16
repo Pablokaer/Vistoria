@@ -61,7 +61,7 @@ public static class TestData
     }
 
     public static async Task<JsonNode> CreateInspectionAsync(ApiClient company, Guid propertyId, Guid? tenancyId, string type = "MoveIn",
-        string visibility = "Public", Guid? comparisonInspectionId = null, bool publish = true)
+        string visibility = "Public", Guid? comparisonInspectionId = null, bool publish = true, Guid? assignedAgentId = null)
     {
         var res = await company.PostAsync("/api/inspections", new
         {
@@ -71,8 +71,17 @@ public static class TestData
             visibility,
             comparisonInspectionId,
             publishNow = publish,
+            assignedAgentId,
         });
         return res.EnsureOk().Body!;
+    }
+
+    /// <summary>Registers a self-signed-up agent and adds them to the company's team (linked by email). Returns the agent's client.</summary>
+    public static async Task<ApiClient> TeamAgentAsync(TestApp app, ApiClient company)
+    {
+        var agent = await app.CreateClient().RegisterAsync("Agent");
+        (await company.PostAsync("/api/companies/me/agents", new { email = agent.Email, fullName = "Ignored For Existing" })).EnsureOk();
+        return agent;
     }
 
     public static Guid InspectionId(JsonNode created) => Guid.Parse(created["inspection"]!["id"]!.GetValue<string>());

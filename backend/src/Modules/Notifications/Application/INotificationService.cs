@@ -28,4 +28,7 @@ public static class NotificationTypes
     public const string InspectionFinalized = "inspection.finalized";
     public const string ReportAwaitingTenant = "report.awaiting_tenant";
     public const string TenantResponded = "report.tenant_responded";
+    public const string TeamAgentAdded = "team.agent_added";
+    public const string TeamInspectionAvailable = "team.inspection_available";
+    public const string TeamInspectionAssigned = "team.inspection_assigned";
 }

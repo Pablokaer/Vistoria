@@ -1,4 +1,4 @@
-// End-to-end UI flow (languages, landing + subscription, Move In + Move Out) driven through the real web app with Playwright.
+// End-to-end UI flow (languages, landing + subscription, Move In + Move Out, team agents) driven through the real web app with Playwright.
 // Usage: BASE_URL=http://localhost:3000 node ui-flow.mjs   (screenshots in ./output)
 import { chromium, devices } from "playwright";
 import { mkdirSync } from "node:fs";
@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { abandonedCheckoutFlow, landingOnMobile, subscribeFromLanding } from "./subscription.mjs";
 import { languageFlows } from "./localization.mjs";
+import { teamFlow } from "./team.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
@@ -234,8 +235,9 @@ try {
   await company.goto(`${BASE}/company`);
   await company.getByText("disputed by tenants").waitFor();
   await snap(company, "company-dashboard-final");
+  await teamFlow(browser, company, propertyUrl.split("/").pop(), { name: "Tara Team", email: `team-${run}@e2e.local`, password: PASSWORD }, ctxOpts);
   await abandonedCheckoutFlow(browser, { name: "Rita Returning", email: `returning-${run}@e2e.local`, password: PASSWORD }, ctxOpts);
-  log("✅ UI flow completed: subscription (direct + resumed), Move In accepted, Move Out disputed");
+  log("✅ UI flow completed: subscription (direct + resumed), Move In accepted, Move Out disputed, team inspection assigned");
 } catch (e) {
   for (const [i, ctx] of browser.contexts().entries())
     for (const [j, p] of ctx.pages().entries()) await p.screenshot({ path: path.join(OUT, `FAILED-${i}-${j}.png`), fullPage: true }).catch(() => {});

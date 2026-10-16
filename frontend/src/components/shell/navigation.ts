@@ -12,6 +12,7 @@ const NAV: Record<Role, NavGroup[]> = {
       { href: "/company", label: "navDashboard", icon: "home" },
       { href: "/company/properties", label: "navProperties", icon: "building" },
       { href: "/company/inspections/new", label: "navNewInspection", icon: "plus" },
+      { href: "/company/agents", label: "navTeam", icon: "users" },
     ] },
   ],
   Agent: [

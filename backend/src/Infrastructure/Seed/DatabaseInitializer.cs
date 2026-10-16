@@ -5,6 +5,7 @@ using InspectFlow.Modules.Billing.Domain;
 using InspectFlow.Modules.Identity.Application;
 using InspectFlow.Modules.Identity.Domain;
 using InspectFlow.Modules.Companies.Application;
+using InspectFlow.Modules.Companies.Domain;
 using InspectFlow.Modules.Inspections.Application;
 using InspectFlow.Modules.Inspections.Domain;
 using InspectFlow.Modules.Media.Application;
@@ -69,7 +70,27 @@ public static class DatabaseInitializer
         }
         // Also runs for databases seeded before billing existed, so the demo company keeps working.
         await EnsureDemoSubscriptionAsync(sp, ct);
+        // Same idea for databases seeded before team agents existed.
+        await EnsureDemoTeamAgentAsync(db, ct);
     }
+
+    /// <summary>
+    /// Registers the demo agent in the demo company's team, so Team inspections can be tried right away.
+    /// Example: <c>await EnsureDemoTeamAgentAsync(db, ct);</c>
+    /// </summary>
+    private static async Task EnsureDemoTeamAgentAsync(AppDbContext db, CancellationToken ct)
+    {
+        var owner = await UserIdAsync(db, CompanyEmail, ct);
+        var agent = await UserIdAsync(db, AgentEmail, ct);
+        var companyId = await db.CompanyMembers.Where(m => m.UserId == owner).Select(m => m.CompanyId).FirstOrDefaultAsync(ct);
+        if (companyId == Guid.Empty || agent == Guid.Empty) return;
+        if (await db.CompanyAgents.AnyAsync(a => a.CompanyId == companyId && a.AgentUserId == agent, ct)) return;
+        db.CompanyAgents.Add(new CompanyAgent { Id = Guid.NewGuid(), CompanyId = companyId, AgentUserId = agent, CreatedAt = DateTimeOffset.UtcNow, CreatedBy = owner });
+        await db.SaveChangesAsync(ct);
+    }
+
+    private static Task<Guid> UserIdAsync(AppDbContext db, string email, CancellationToken ct) =>
+        db.Users.Where(u => u.NormalizedEmail == email.ToUpperInvariant()).Select(u => u.Id).FirstOrDefaultAsync(ct);
 
     /// <summary>
     /// Gives the demo company a one-year Active subscription (provider "Seed") when it has none.

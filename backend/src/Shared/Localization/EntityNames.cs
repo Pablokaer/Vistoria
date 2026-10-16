@@ -19,4 +19,5 @@ public static class EntityNames
     public static readonly LocalizedText Room = new("Room", "Cômodo");
     public static readonly LocalizedText ShareLink = new("Share link", "Link de compartilhamento");
     public static readonly LocalizedText Tenancy = new("Tenancy", "Locação");
+    public static readonly LocalizedText TeamAgent = new("Team agent", "Vistoriador da equipe");
 }

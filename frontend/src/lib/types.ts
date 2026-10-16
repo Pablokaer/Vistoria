@@ -23,7 +23,8 @@ export interface SandboxPaymentResult { approved: boolean; message: string; redi
 export interface AuthResponse { accessToken: string; accessTokenExpiresAt: string; refreshToken: string | null; user: Me }
 
 export type InspectionType = "MoveIn" | "MoveOut" | "Periodic" | "Other";
-export type Visibility = "Public" | "Private";
+/** Team: open only to the company's registered agents, or assigned to one of them. */
+export type Visibility = "Public" | "Private" | "Team";
 export type InspectionStatus =
   | "Draft" | "Open" | "Assigned" | "InProgress" | "Review" | "Completed"
   | "AwaitingTenant" | "Accepted" | "Disputed" | "Cancelled" | "Expired";
@@ -76,6 +77,8 @@ export interface InspectionDetails {
   rooms: RoomProgress[]; roomsCompleted: number; report: { reportId: string; reportNumber: string; latestVersion: number; generatedAt: string } | null;
   invitation: InvitationStatus | null; allowedActions: string[];
 }
+/** An agent the company registered in its team (GET /api/companies/me/agents). */
+export interface TeamAgent { agentId: string; fullName: string; email: string; phone: string | null; activeInspections: number; addedAt: string }
 export interface PrivateInvitation { link: string; accessCode: string; expiresAt: string; maxAttempts: number }
 export interface PublishResult { inspection: InspectionDetails; invitation: PrivateInvitation | null }
 

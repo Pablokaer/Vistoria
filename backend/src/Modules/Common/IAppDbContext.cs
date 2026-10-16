@@ -29,6 +29,7 @@ public interface IAppDbContext
 
     DbSet<Company> Companies { get; }
     DbSet<CompanyMember> CompanyMembers { get; }
+    DbSet<CompanyAgent> CompanyAgents { get; }
 
     DbSet<Property> Properties { get; }
     DbSet<PropertyRoom> PropertyRooms { get; }
