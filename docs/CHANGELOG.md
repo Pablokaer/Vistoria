@@ -4,6 +4,11 @@ Every code change is recorded here (newest first), together with the docs it tou
 
 ## 2026-10-17
 
+- **Landing page image performance.** Measured on a cold cache, after scrolling the whole page: images went from 295 KB to 138 KB on mobile (390px, DPR 3) and from 256 KB to 100 KB on desktop (1440px). LCP and CLS are unchanged, with CLS 0 on both.
+  - `next.config.ts` serves AVIF first, with WebP as the fallback. It also declares the `qualities` allowlist `[50, 75]`, which Next 16 requires before any quality other than the default can be used.
+  - The AI section's blurred backdrop now uses the same `sizes` as the phone photo (`PHONE_PHOTO_SIZES`), so the bedroom photo is downloaded once instead of twice.
+  - The closing call to action's dusk photo, the page's heaviest, is served at quality 50. It sits under an 80–95% veil, so the difference does not show.
+  - Docs: ADR 0019, implementation report.
 - **Landing page review fixes.**
   - Escape now closes the mobile menu and moves focus back to the menu button. Before, focus was left on `<body>`.
   - The mobile menu's height cap matches the 4.5rem header, so the menu no longer runs past the viewport.

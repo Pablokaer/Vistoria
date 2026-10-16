@@ -84,7 +84,7 @@ AI drafts follow a team-maintained, versioned writing guide (`backend/src/Module
 
 ### Landing page redesign (2026-10-17)
 
-The public page now uses white and cool-grey surfaces, one brand blue and Inter only, with four locally hosted architectural photos (Unsplash License, credits in `frontend/src/assets/landing/CREDITS.md`). Every claim maps to an existing feature, prices still come from the API, and there is no Contact link because the product has none. `e2e/landing.mjs` checks every call to action, layouts from 375 to 1920 px and axe WCAG 2.2 AA (ADR 0019).
+The public page now uses white and cool-grey surfaces, one brand blue and Inter only, with four locally hosted architectural photos (Unsplash License, credits in `frontend/src/assets/landing/CREDITS.md`). Every claim maps to an existing feature, prices still come from the API, and there is no Contact link because the product has none. `e2e/landing.mjs` checks every call to action, layouts from 375 to 1920 px and axe WCAG 2.2 AA (ADR 0019). Images are served as AVIF (WebP fallback); a full scroll of the page loads 138 KB of images on mobile and 100 KB on desktop, with CLS 0.
 
 ### Landing page and routing of "/" (2026-10-16)
 

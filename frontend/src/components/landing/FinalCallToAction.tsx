@@ -16,7 +16,8 @@ export async function FinalCallToAction() {
   const t = await getServerTranslator(landingMessages);
   return (
     <section aria-labelledby="cta-title" className="relative isolate overflow-hidden bg-site-night">
-      <Image src={homeAtDusk} alt="" fill sizes="100vw" placeholder="blur" className="-z-20 object-cover object-[70%_55%]" />
+      {/* Quality 50: under an 80-95% veil the compression is invisible, and this is the page's heaviest photo. */}
+      <Image src={homeAtDusk} alt="" fill sizes="100vw" quality={50} placeholder="blur" className="-z-20 object-cover object-[70%_55%]" />
       <div className="absolute inset-0 -z-10 bg-site-night/80 lg:bg-transparent lg:bg-[linear-gradient(90deg,rgb(11_23_40/0.95)_0%,rgb(11_23_40/0.86)_42%,rgb(11_23_40/0.35)_100%)]" />
       <div className={cx(LANDING_CONTAINER, "py-24 sm:py-28 lg:py-36")}>
         <div className="max-w-[34rem]">

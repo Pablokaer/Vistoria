@@ -11,6 +11,12 @@ import { bedroomBed, bedroomMain, bedroomPlant, bedroomWindow } from "./landingP
 const THUMBS: StaticImageData[] = [bedroomPlant, bedroomWindow, bedroomBed];
 
 /**
+ * `sizes` of the room photo inside the phone. AiInspectionSection's blurred backdrop uses the same value on purpose:
+ * identical srcset → the browser picks the same URL and downloads the photo once instead of twice.
+ */
+export const PHONE_PHOTO_SIZES = "280px";
+
+/**
  * The inspector's "Descriptions" step on a phone, drawn with the app's own labels (step names, "Take photo", the
  * "AI draft · review and edit" chip and its violet tint) so it shows what the product really does. Decorative for
  * assistive technology; the caption describes it. Example: `<InspectionPhone />`
@@ -70,7 +76,7 @@ async function PhoneRoomCard() {
         <span className="text-[0.875rem] font-semibold text-ink">{t("phoneRoom")}</span>
         <span className="text-[0.625rem] text-ink-3">{t("phoneRoomCount")}</span>
       </div>
-      <Image src={bedroomMain} alt="" sizes="280px" className="mt-2.5 aspect-[4/3] w-full rounded-md object-cover" />
+      <Image src={bedroomMain} alt="" sizes={PHONE_PHOTO_SIZES} className="mt-2.5 aspect-[4/3] w-full rounded-md object-cover" />
       <PhoneThumbs />
       <PhoneDescription />
     </div>

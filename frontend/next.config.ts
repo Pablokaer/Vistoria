@@ -15,6 +15,12 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
+  images: {
+    // AVIF first (typically 20-30% smaller than WebP), WebP for browsers without it.
+    formats: ["image/avif", "image/webp"],
+    // Next 16 only serves listed qualities: 75 is the default; 50 is for photos under a heavy veil (FinalCallToAction).
+    qualities: [50, 75],
+  },
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${apiUrl}/api/:path*` }];
   },
