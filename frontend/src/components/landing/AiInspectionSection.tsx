@@ -3,7 +3,7 @@ import { Icon, type IconName } from "@/components/icons";
 import { getServerTranslator } from "@/i18n/server";
 import { landingSectionMessages, type LandingSectionKey } from "@/i18n/messages/landing-sections";
 import { cx } from "@/lib/cx";
-import { InspectionPhone } from "./InspectionPhone";
+import { InspectionPhone, PHONE_PHOTO_SIZES } from "./InspectionPhone";
 import { bedroomMain } from "./landingPhotos";
 import { LANDING_CONTAINER, SECTION_SPACING } from "./landingStyles";
 import { Reveal } from "./Reveal";
@@ -39,11 +39,14 @@ export async function AiInspectionSection() {
   );
 }
 
-/** The bedroom photo as the backdrop, softened, with the phone standing in front of it. */
+/**
+ * The bedroom photo as the backdrop, softened, with the phone standing in front of it. The backdrop requests the
+ * phone photo's size: blurred, the lower resolution is invisible, and the photo is downloaded once, not twice.
+ */
 function PhoneStage() {
   return (
     <div className="relative isolate overflow-hidden rounded-2xl px-4 py-10 sm:py-14">
-      <Image src={bedroomMain} alt="" fill sizes="(min-width: 1024px) 50vw, 100vw" className="-z-10 scale-110 object-cover object-[60%_50%] blur-[2px]" />
+      <Image src={bedroomMain} alt="" fill sizes={PHONE_PHOTO_SIZES} className="-z-10 scale-110 object-cover object-[60%_50%] blur-[3px]" />
       <div className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgb(11_23_40/0.08),rgb(11_23_40/0.38))]" />
       <InspectionPhone />
     </div>
