@@ -5,6 +5,7 @@ import { I18nProvider } from "@/i18n/I18nProvider";
 import { defineMessages } from "@/i18n/translate";
 import { getServerLocale, getServerTranslator } from "@/i18n/server";
 import { AuthProvider } from "@/lib/auth";
+import { hasSessionHint } from "@/lib/session-hint";
 import "./globals.css";
 
 // Self-hosted at build time by next/font (no request to Google from the browser).
@@ -27,13 +28,13 @@ export async function generateMetadata(): Promise<Metadata> {
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#1d4ed8" };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const locale = await getServerLocale();
+  const [locale, sessionHint] = await Promise.all([getServerLocale(), hasSessionHint()]);
   return (
     <html lang={locale} className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full">
         <I18nProvider initialLocale={locale}>
           <ToastProvider>
-            <AuthProvider>{children}</AuthProvider>
+            <AuthProvider sessionHint={sessionHint}>{children}</AuthProvider>
           </ToastProvider>
         </I18nProvider>
       </body>

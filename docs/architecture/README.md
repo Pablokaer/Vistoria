@@ -21,3 +21,4 @@ Short records of *why* things are the way they are. Format: context → decision
 | [0015](0015-design-system.md) | In-house design system (tokens + primitives, no UI library) and a role-aware sidebar app shell |
 | [0016](0016-pdf-report-layout.md) | PDF report built from themed components with explicit keep-together rules, reviewed through rendered page previews |
 | [0017](0017-company-team-agents.md) | Companies register their own agents; `Team` inspections are open only to that team or assigned directly to one agent |
+| [0018](0018-landing-page-and-root-routing.md) | "/" routes on a no-secret session hint cookie (landing page for visitors, dashboard for signed-in users); "paper record" visual language for public pages |

@@ -46,9 +46,13 @@ export function homeFor(user: Me | null): string {
   return "/login";
 }
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+/**
+ * `sessionHint` comes from the server (the API's if_session cookie). Without it the visitor is anonymous at once: no
+ * refresh request, no 401 in the console, no loading state. Sessions are still restored whenever the hint exists.
+ */
+export function AuthProvider({ children, sessionHint }: { children: React.ReactNode; sessionHint: boolean }) {
   const [user, setUser] = useState<Me | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(sessionHint);
   const router = useRouter();
 
   useEffect(() => {
@@ -57,8 +61,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       void api<Me>("/api/auth/me").then(setUser).catch(() => undefined);
       router.replace(SUBSCRIPTION_REQUIRED_PATH);
     });
+    if (!sessionHint) return;
     refreshSession().then((res) => setUser(res?.user ?? null)).finally(() => setLoading(false));
-  }, [router]);
+  }, [router, sessionHint]);
 
   const accept = useCallback((res: AuthResponse) => { setAccessToken(res.accessToken); setUser(res.user); return res.user; }, []);
 

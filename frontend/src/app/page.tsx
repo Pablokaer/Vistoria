@@ -1,35 +1,44 @@
 import type { Metadata } from "next";
-import { getServerTranslator } from "@/i18n/server";
-import { landingMessages } from "@/i18n/messages/landing";
-import { AudienceSection } from "@/components/landing/AudienceSection";
-import { FeaturesSection } from "@/components/landing/FeaturesSection";
-import { HeroSection } from "@/components/landing/HeroSection";
-import { HighlightsSection } from "@/components/landing/HighlightsSection";
-import { HowItWorksSection } from "@/components/landing/HowItWorksSection";
+import { DispatchRoutes } from "@/components/landing/DispatchRoutes";
+import { displayFont } from "@/components/landing/fonts";
+import { LandingHero } from "@/components/landing/LandingHero";
 import { FinalCallToAction, LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingHeader } from "@/components/landing/LandingHeader";
 import { PricingSection } from "@/components/landing/PricingSection";
+import { ReportGuarantees } from "@/components/landing/ReportGuarantees";
+import { SignedInRedirect } from "@/components/landing/SignedInRedirect";
+import { WorkflowLedger } from "@/components/landing/WorkflowLedger";
+import { getServerTranslator } from "@/i18n/server";
+import { landingMessages } from "@/i18n/messages/landing";
+import { hasSessionHint } from "@/lib/session-hint";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerTranslator(landingMessages);
-  return { title: { absolute: t("metaTitle") } };
+  const title = t("metaTitle");
+  const description = t("metaDescription");
+  return { title: { absolute: title }, description, openGraph: { title, description, type: "website", siteName: "InspectFlow" } };
 }
 
-/** Public landing page. Signed-in users reach their area through "Open dashboard" (→ /app). */
-export default function LandingPage() {
+/**
+ * "/": the public landing page for visitors; signed-in users are sent to their home instead (see SignedInRedirect).
+ * Only public content is rendered here, so nothing protected can leak through this route.
+ */
+export default async function LandingPage() {
+  const sessionHint = await hasSessionHint();
   return (
-    <div className="min-h-screen bg-white">
-      <LandingHeader />
-      <main>
-        <HeroSection />
-        <AudienceSection />
-        <HowItWorksSection />
-        <HighlightsSection />
-        <FeaturesSection />
-        <PricingSection />
-        <FinalCallToAction />
-      </main>
-      <LandingFooter />
-    </div>
+    <SignedInRedirect sessionHint={sessionHint}>
+      <div className={`${displayFont.variable} min-h-screen bg-paper text-ink-2`}>
+        <LandingHeader />
+        <main id="main">
+          <LandingHero />
+          <WorkflowLedger />
+          <ReportGuarantees />
+          <DispatchRoutes />
+          <PricingSection />
+          <FinalCallToAction />
+        </main>
+        <LandingFooter />
+      </div>
+    </SignedInRedirect>
   );
 }
