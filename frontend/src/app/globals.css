@@ -87,6 +87,13 @@
   --shadow-raised: 0 1px 3px rgb(16 24 40 / 0.08), 0 1px 2px rgb(16 24 40 / 0.04);
   --shadow-overlay: 0 12px 32px -8px rgb(16 24 40 / 0.18), 0 4px 8px -4px rgb(16 24 40 / 0.08);
 
+  /* Public pages (landing, pricing): a "paper record" surface and ink rules. See ADR 0018. */
+  --color-paper: #f7f5f0;
+  --color-paper-2: #efebe2;
+  --color-rule: #dcd6c9;
+  --color-rule-strong: #c4bcab;
+  --color-paper-muted: #5b6779;   /* secondary text on paper: 5.3:1 (ink-3 is only 4.4:1 there) */
+
   /* Layout. */
   --container-page: 76rem;   /* max content width */
   --container-narrow: 48rem; /* forms, documents */
@@ -106,10 +113,23 @@
     from { transform: translateX(-100%); }
     to { transform: none; }
   }
+  --animate-rise: rise 600ms var(--ease-out-soft) both;
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
   @keyframes shimmer {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.55; }
   }
+}
+
+/*
+ * Editorial serif for public-page headlines (Newsreader via next/font, loaded only by components/landing/fonts.ts).
+ * "inline" because --font-newsreader is defined on the landing wrapper, not on :root.
+ */
+@theme inline {
+  --font-display: var(--font-newsreader), ui-serif, Georgia, "Times New Roman", serif;
 }
 
 html {

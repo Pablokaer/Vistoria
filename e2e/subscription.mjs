@@ -36,8 +36,8 @@ export async function subscribeFromLanding(browser, account, { base, snap, log }
   const ctx = await browser.newContext(desktop);
   const page = await ctx.newPage();
   await page.goto(base);
-  await page.getByRole("heading", { level: 1, name: /Property inspections that are faster/ }).waitFor();
-  for (const id of ["how-it-works", "features", "pricing"]) await page.locator(`section#${id}`).waitFor();
+  await page.getByRole("heading", { level: 1, name: /Every room on record/ }).waitFor();
+  for (const id of ["workflow", "report", "agencies", "pricing"]) await page.locator(`section#${id}`).waitFor();
   await page.locator("#pricing").getByTestId("plan-card").waitFor();
   await snap(page, "landing-desktop");
   await page.getByRole("banner").getByRole("link", { name: "Get started" }).click();

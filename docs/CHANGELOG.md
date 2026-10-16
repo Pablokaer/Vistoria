@@ -4,6 +4,19 @@ Every code change is recorded here (newest first), together with the docs it tou
 
 ## 2026-10-16
 
+- **New public landing page and session-aware "/".** See [ADR 0018](architecture/0018-landing-page-and-root-routing.md).
+  - **Design:** a "paper record" visual language for public pages (paper surface, ink rules, navy actions, Newsreader serif headlines through `next/font`, Move In teal and Move Out orange as the only accents).
+  - **Sections:** hero with a specimen of a finalized Move Out report, a four-step workflow ledger, report guarantees with a Move In / Move Out comparison, the three dispatch routes (team, marketplace, private invitation), pricing from the API, a final call to action and a footer.
+  - **Removed:** the old landing sections (audience, 7-step, highlights, 12-feature grid, product mockup) and their message catalog. `/pricing` uses the new sections.
+  - **Routing:**
+    - The API now also sets the `if_session` hint cookie (HttpOnly, `Path=/`, Lax, no secret) whenever it issues tokens, and removes it on logout and on a failed refresh.
+    - The root layout reads the hint. Anonymous visitors get the landing page rendered on the server with no refresh call, so the 401 console error is gone.
+    - Signed-in visitors of "/" go to their home without the landing page being rendered. A stale hint falls back to the landing page.
+  - **Tests:**
+    - `SessionHintCookieTests` (3) cover the hint set on sign-in, renewed on refresh, removed on logout and on a failed refresh. The existing web-cookie test now selects `if_refresh`.
+    - `e2e/landing.mjs` covers anonymous server rendering, entry points, protected route, viewports (375/768/1024/1440), axe WCAG 2.2 AA, the signed-in redirect, reload, logout and session expiry.
+    - The e2e hero expectations are updated. `axe-core` 4.13.0 is a new e2e dependency.
+  - **Docs:** README, ADR 0018, implementation report.
 - **Sidebar language switch.** The small EN/PT dropdown in the sidebar footer is replaced by a visible two-position **PT | EN** switch (`components/shell/LanguageToggle.tsx`) next to the "Language" label. It is also in the phone drawer. It uses the same `locale` cookie as before, so the choice still applies to the whole app and survives reloads. Public pages keep the compact selector. The UI flow (`e2e/team.mjs`) switches a signed-in agent to Portuguese and back through it. Docs: README.
 
 - **Company team agents and Team inspections.** See [ADR 0017](architecture/0017-company-team-agents.md).
