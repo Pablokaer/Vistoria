@@ -27,6 +27,12 @@ public sealed class AuthService(
 {
     private readonly AuthOptions _options = options.Value;
 
+    /// <summary>
+    /// 401 code for a refresh token that another request (usually a parallel tab) rotated a moment ago. The session is
+    /// still alive, so callers must not treat it as signed out (e.g. the web session hint stays; see ADR 0018).
+    /// </summary>
+    public const string RefreshSupersededCode = "auth.refresh_superseded";
+
     public async Task<AuthResult> RegisterAsync(RegisterRequest request, CancellationToken ct)
     {
         var errors = new Dictionary<string, LocalizedText[]>();
@@ -85,7 +91,7 @@ public sealed class AuthService(
                 await db.RefreshTokens.Where(t => t.FamilyId == existing.FamilyId && t.RevokedAt == null)
                     .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, now), ct);
             }
-            throw new UnauthorizedException(RefreshTokenNoLongerValid);
+            throw new UnauthorizedException(RefreshTokenNoLongerValid, justRotated ? RefreshSupersededCode : "unauthorized");
         }
         if (existing.ExpiresAt <= now) throw new UnauthorizedException(new("Refresh token expired.", "O token de renovação expirou."));
 
@@ -93,7 +99,7 @@ public sealed class AuthService(
         var claimed = await db.RefreshTokens
             .Where(t => t.Id == existing.Id && t.RevokedAt == null)
             .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, now), ct);
-        if (claimed == 0) throw new UnauthorizedException(RefreshTokenNoLongerValid);
+        if (claimed == 0) throw new UnauthorizedException(RefreshTokenNoLongerValid, RefreshSupersededCode); // a concurrent refresh won
 
         var user = await userManager.FindByIdAsync(existing.UserId.ToString())
                    ?? throw new UnauthorizedException(InvalidRefreshToken);

@@ -40,10 +40,11 @@ public static class AuthEndpoints
             {
                 return Respond(http, await auth.RefreshAsync(token, ct));
             }
-            catch (UnauthorizedException)
+            catch (UnauthorizedException ex) when (ex.Code != AuthService.RefreshSupersededCode)
             {
-                // Expired or revoked session: the next page load must not wait for a dashboard. Registered for when the
-                // 401 is written, because the error handler clears the headers set so far.
+                // Expired or revoked session: the next page load must not wait for a dashboard. A token another tab
+                // rotated a moment ago is excluded: that session is alive. Registered for when the 401 is written,
+                // because the error handler clears the headers set so far.
                 http.Response.OnStarting(() =>
                 {
                     ClearSessionHint(http);
