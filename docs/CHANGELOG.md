@@ -4,6 +4,14 @@ Every code change is recorded here (newest first), together with the docs it tou
 
 ## 2026-10-17
 
+- **Landing page review fixes.**
+  - Escape now closes the mobile menu and moves focus back to the menu button. Before, focus was left on `<body>`.
+  - The mobile menu's height cap matches the 4.5rem header, so the menu no longer runs past the viewport.
+  - The language switcher in the mobile menu keeps its own width (`justify-self-start`).
+  - The hero headline's text keeps spaces between its lines, which matters for search snippets and copy-paste. Below 360px the pt-BR "sem complicação." line steps down to 2rem so it is not clipped.
+  - Blocks that were never revealed print visibly.
+  - `useScrollFlag` writes the DOM only when the flag changes.
+  - The "For agents" photo card gets its strings from its parent instead of resolving the translator again.
 - **Landing page redesign.** See [ADR 0019](architecture/0019-landing-page-redesign.md).
   - **Design:**
     - White and cool-grey surfaces with one brand blue (`#1769E0`), defined as new `site-*` tokens in `globals.css`.

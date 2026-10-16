@@ -10,8 +10,10 @@ import { useEffect, useRef, type RefObject } from "react";
 export function useScrollFlag<T extends HTMLElement>(threshold = 8): RefObject<T | null> {
   const ref = useRef<T>(null);
   useEffect(() => {
+    // Scroll fires many times per frame; only touch the DOM when the flag actually flips.
     const update = () => {
-      if (ref.current) ref.current.dataset.scrolled = String(window.scrollY > threshold);
+      const scrolled = String(window.scrollY > threshold);
+      if (ref.current && ref.current.dataset.scrolled !== scrolled) ref.current.dataset.scrolled = scrolled;
     };
     update();
     window.addEventListener("scroll", update, { passive: true });

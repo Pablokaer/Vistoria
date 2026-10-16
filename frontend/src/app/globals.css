@@ -162,6 +162,11 @@ body {
   transition: opacity 700ms var(--ease-out-soft), transform 700ms var(--ease-out-soft);
 }
 
+/* A printed page shows every block, including those the visitor never scrolled to. */
+@media print {
+  [data-reveal] { opacity: 1; transform: none; }
+}
+
 /* Sections reached from the sticky header stop below it. */
 :where(section[id]) { scroll-margin-top: 4.5rem; }
 
