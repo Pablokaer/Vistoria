@@ -4,6 +4,25 @@ Every code change is recorded here (newest first), together with the docs it tou
 
 ## 2026-10-17
 
+- **AI drafts in the inspector's report voice.** See [ADR 0013, update](architecture/0013-ai-writing-guide-and-language.md).
+  - **Prompt `2026-10-v3`** (`AiPrompts`):
+    - The safety rules ask for the inspector's own report entry: no references to AI or to "the image"; photos are mentioned only in `limitations`. The example phrase is now "No visible damage noted."
+    - Room analysis: an opening sentence about the room as a whole; walls and floor are always covered, or stated as not visible; defect close-ups among the room photos are recorded as defects.
+    - Defect analysis: what it is, the surface it is on, where, approximate size and appearance, starting from the inspector's label, without inventing a position.
+  - **Writing guide `2026-10-17.1`:**
+    - Report voice and a room overview.
+    - A fixed paragraph order (room → ceiling → walls → floor → windows/doors → fittings → furniture → defects → cleanliness → not assessed).
+    - A defect sentence pattern.
+    - A list of phrases that give away a machine-written text.
+    - New examples, including partly visible areas and Brazilian Portuguese.
+    - A Brazilian Portuguese vistoria terminology section.
+    - The model section is 2,182 words, within the 2,500 budget.
+  - **Development mock:** room and defect drafts follow the same voice and order (`MockRoomDescription`, `MockDefectDescription`).
+  - **Tests:**
+    - New `ReportVoiceTests` (6): what reaches the model for rooms and defects, the inspector voice and pt-BR terminology in the system message, the guide's word budget, and the mock drafts.
+    - `MoveInFlowTests` expects the new mock wording.
+    - 215 backend tests in total.
+  - **Docs:** README, ADR 0013 update, implementation report.
 - **Product name: Olhai.** See [ADR 0020](architecture/0020-product-name-olhai.md).
   - **Web:** a single `PRODUCT_NAME` constant (`frontend/src/lib/brand.ts`) feeds the logo (`Brand`: sidebar, phone drawer, sign-in and register pages, public header and footer), the page title template (`… · Olhai`), the share preview name and the copyright lines. The interface texts that named the product (auth, billing, landing metadata) say Olhai in English and Portuguese.
   - **PDF report:** the logo, the footer of every page and the document metadata (`Creator`) use `PdfTheme.ProductName`.
