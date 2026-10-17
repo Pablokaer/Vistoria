@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { cx } from "@/lib/cx";
+import { PRODUCT_NAME } from "@/lib/brand";
 
-/** The InspectFlow mark: a roofline over a check — a property that has been inspected. */
+/** The Olhai mark: a roofline over a check — a property that has been inspected. */
 export function BrandMark({ className }: { className?: string }) {
   return (
     <span aria-hidden="true" className={cx("grid h-8 w-8 shrink-0 place-items-center rounded-md bg-brand text-white shadow-card", className)}>
@@ -22,7 +23,7 @@ export function Brand({ href = "/", alwaysShowName, tone = "light" }: { href?: s
   return (
     <Link href={href} className={cx("flex items-center gap-2.5 font-semibold tracking-tight", tone === "dark" ? "text-white" : "text-ink")}>
       <BrandMark />
-      <span className={cx("text-[1.0625rem]", alwaysShowName ? "inline" : "hidden sm:inline")}>InspectFlow</span>
+      <span className={cx("text-[1.0625rem]", alwaysShowName ? "inline" : "hidden sm:inline")}>{PRODUCT_NAME}</span>
     </Link>
   );
 }

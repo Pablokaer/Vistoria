@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Starts the InspectFlow stack (db + api + web) with Docker Compose.
+# Starts the Olhai stack (db + api + web) with Docker Compose.
 #
 # Usage:
 #   ./run-project.sh          build and start everything, wait until it is ready
@@ -63,7 +63,7 @@ fi
 
 cat <<EOF
 
-InspectFlow is running:
+Olhai is running:
   Web app : http://localhost:${WEB_PORT}
   API     : http://localhost:${API_PORT}  (health: /health)
 

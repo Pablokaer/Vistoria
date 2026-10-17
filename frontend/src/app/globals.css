@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * InspectFlow design tokens (2026-09-30 redesign). Every page uses these names instead of raw palette values so the
+ * Olhai design tokens (2026-09-30 redesign). Every page uses these names instead of raw palette values so the
  * product keeps one visual language: a restrained blue identity, neutral "paper" surfaces, and semantic tones that
  * always pair with a label or icon (never colour alone).
  */

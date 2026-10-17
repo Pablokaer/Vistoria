@@ -1,4 +1,4 @@
-# Implementation report — InspectFlow MVP
+# Implementation report — Olhai MVP (code name InspectFlow)
 
 ## 1. Starting point
 
@@ -16,7 +16,7 @@ A working, persistent, tested MVP covering the three roles end to end:
 - **Languages**: English and Brazilian Portuguese everywhere. The UI language is per user (browser language or header switcher, remembered in a cookie). API messages follow `Accept-Language`, plans are translated in config, and reports, PDFs and AI drafts follow the company's report language, which is frozen into each report (ADR 0014).
 - **UI**: in-house design system (tokens in `globals.css`, Inter, primitives in `components/ui`, inline icons), sidebar app shell with mobile drawer and bottom tabs, role-specific dashboards, marketplace search/filters/sort (client-side), tabbed My inspections, phone-first two-step execution with room navigation, document-style reports; skeleton loading, toasts and in-app confirmations (ADR 0015).
 
-Validation performed: backend and frontend build without warnings; ESLint clean; 208 backend tests pass (unit + HTTP/PostgreSQL integration); migrations applied to empty databases (tests and compose); `docker compose up` stack verified; the Playwright UI script checks the Portuguese and English UI (browser language, switcher, Portuguese API error) and runs the full Move In + Move Out scenario plus a team-agent scenario (register agent → Team inspection assigned → agent sees it) across several browser sessions (desktop company/tenant, mobile agent) against the Docker stack, including PDF download.
+Validation performed: backend and frontend build without warnings; ESLint clean; 209 backend tests pass (unit + HTTP/PostgreSQL integration); migrations applied to empty databases (tests and compose); `docker compose up` stack verified; the Playwright UI script checks the Portuguese and English UI (browser language, switcher, Portuguese API error) and runs the full Move In + Move Out scenario plus a team-agent scenario (register agent → Team inspection assigned → agent sees it) across several browser sessions (desktop company/tenant, mobile agent) against the Docker stack, including PDF download.
 
 ## 3. Architecture
 
@@ -81,6 +81,10 @@ Caveats to be transparent about:
 ### AI writing guide (2026-09-30)
 
 AI drafts follow a team-maintained, versioned writing guide (`backend/src/Modules/AI/Guidelines/inspection-writing-guide.md`) appended to every analysis after the safety rules. They are written in the company's report language (`en` / `pt-BR`), and `prompt_version` records code, guide and language (ADR 0013).
+
+### Product name: Olhai (2026-10-17)
+
+The product is now called **Olhai** wherever people see it: the logo (sidebar, auth pages, public header and footer), page titles, interface texts in both languages, the sandbox checkout, and the PDF report (logo, page footer, document metadata). The code keeps the internal name InspectFlow (ADR 0020).
 
 ### Landing page redesign (2026-10-17)
 

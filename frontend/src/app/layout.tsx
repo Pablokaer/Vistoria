@@ -5,6 +5,7 @@ import { I18nProvider } from "@/i18n/I18nProvider";
 import { defineMessages } from "@/i18n/translate";
 import { getServerLocale, getServerTranslator } from "@/i18n/server";
 import { AuthProvider } from "@/lib/auth";
+import { PRODUCT_NAME } from "@/lib/brand";
 import { hasSessionHint } from "@/lib/session-hint";
 import "./globals.css";
 
@@ -19,7 +20,7 @@ const layoutMessages = defineMessages(
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerTranslator(layoutMessages);
   return {
-    title: { default: "InspectFlow", template: "%s · InspectFlow" },
+    title: { default: PRODUCT_NAME, template: `%s · ${PRODUCT_NAME}` },
     description: t("description"),
     referrer: "no-referrer",
   };

@@ -31,6 +31,10 @@ async function anonymousVisitor(browser, { base, snap, log }) {
   await page.waitForLoadState("networkidle").catch(() => undefined);
   if (refreshCalls.length > 0) fail(`anonymous visitor triggered ${refreshCalls.length} refresh call(s)`);
   if (errors.length > 0) fail(`console errors: ${errors.join(" | ")}`);
+  // Product name (ADR 0020): the logo and the tab title say Olhai, never the internal code name.
+  await page.getByRole("banner").getByRole("link", { name: "Olhai", exact: true }).waitFor();
+  const title = await page.title();
+  if (!title.includes("Olhai") || title.includes("InspectFlow")) fail(`unexpected page title: "${title}"`);
   await snap(page, "landing-desktop");
 
   await entryPoints(page, base);

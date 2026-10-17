@@ -9,6 +9,7 @@ import { billingMessages } from "@/i18n/messages/billing";
 import { errorMessage } from "@/lib/api";
 import { useSignedInForBilling } from "@/components/billing/useSignedInForBilling";
 import { formatPrice, intervalLabel, paySandboxSession } from "@/lib/billing";
+import { PRODUCT_NAME } from "@/lib/brand";
 import { useApi } from "@/lib/hooks";
 import type { SandboxSession } from "@/lib/types";
 
@@ -62,7 +63,7 @@ export default function SandboxPaymentPage() {
       {session?.status === "Open" && (
         <form onSubmit={pay} className="space-y-5 rounded-lg border border-line bg-surface p-6 shadow-card">
           <div className="flex items-baseline justify-between border-b border-line pb-4">
-            <span className="text-sm text-ink-3">InspectFlow {session.planName}</span>
+            <span className="text-sm text-ink-3">{PRODUCT_NAME} {session.planName}</span>
             <span className="text-lg font-semibold text-ink">{formatPrice(session.priceCents, session.currency, locale)} <span className="text-sm font-normal text-ink-3">/ {intervalLabel(session.interval, locale)}</span></span>
           </div>
           <Field label={t("email")}><Input value={session.customerEmail} readOnly /></Field>

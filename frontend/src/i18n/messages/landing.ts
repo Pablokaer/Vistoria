@@ -5,7 +5,7 @@ import { defineMessages } from "../translate";
 // Only real product capabilities are described here: no invented figures, customers, testimonials or contact details.
 export const landingMessages = defineMessages(
   {
-    metaTitle: "InspectFlow — professional property inspections, made easy",
+    metaTitle: "Olhai — professional property inspections, made easy",
     metaDescription: "Request, carry out and report property inspections in one place. Inspectors photograph every room on their phone, AI drafts the descriptions they review, and the finished report is ready to share.",
     metaPricingTitle: "Pricing",
     navFeatures: "Features",
@@ -53,7 +53,7 @@ export const landingMessages = defineMessages(
     footerLanguages: "Available in English and Brazilian Portuguese.",
   },
   {
-    metaTitle: "InspectFlow — vistorias de imóveis profissionais, sem complicação",
+    metaTitle: "Olhai — vistorias de imóveis profissionais, sem complicação",
     metaDescription: "Solicite, realize e entregue vistorias de imóveis em um só lugar. O vistoriador fotografa cada cômodo pelo celular, a IA redige as descrições que ele revisa e o laudo final fica pronto para compartilhar.",
     metaPricingTitle: "Preços",
     navFeatures: "Recursos",
