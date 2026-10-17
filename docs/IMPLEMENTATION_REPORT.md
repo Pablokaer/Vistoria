@@ -16,7 +16,7 @@ A working, persistent, tested MVP covering the three roles end to end:
 - **Languages**: English and Brazilian Portuguese everywhere. The UI language is per user (browser language or header switcher, remembered in a cookie). API messages follow `Accept-Language`, plans are translated in config, and reports, PDFs and AI drafts follow the company's report language, which is frozen into each report (ADR 0014).
 - **UI**: in-house design system (tokens in `globals.css`, Inter, primitives in `components/ui`, inline icons), sidebar app shell with mobile drawer and bottom tabs, role-specific dashboards, marketplace search/filters/sort (client-side), tabbed My inspections, phone-first two-step execution with room navigation, document-style reports; skeleton loading, toasts and in-app confirmations (ADR 0015).
 
-Validation performed: backend and frontend build without warnings; ESLint clean; 209 backend tests pass (unit + HTTP/PostgreSQL integration); migrations applied to empty databases (tests and compose); `docker compose up` stack verified; the Playwright UI script checks the Portuguese and English UI (browser language, switcher, Portuguese API error) and runs the full Move In + Move Out scenario plus a team-agent scenario (register agent → Team inspection assigned → agent sees it) across several browser sessions (desktop company/tenant, mobile agent) against the Docker stack, including PDF download.
+Validation performed: backend and frontend build without warnings; ESLint clean; 215 backend tests pass (unit + HTTP/PostgreSQL integration); migrations applied to empty databases (tests and compose); `docker compose up` stack verified; the Playwright UI script checks the Portuguese and English UI (browser language, switcher, Portuguese API error) and runs the full Move In + Move Out scenario plus a team-agent scenario (register agent → Team inspection assigned → agent sees it) across several browser sessions (desktop company/tenant, mobile agent) against the Docker stack, including PDF download.
 
 ## 3. Architecture
 
@@ -77,6 +77,10 @@ All items are met: backend and frontend compile; database is created from scratc
 Caveats to be transparent about:
 - The **real OpenAI call was not exercised** (no API key available here). The adapter is covered by contract tests with a fake HTTP handler (request shape, strict schema, safety prompt, error mapping, key never in body/errors). Validate once with a real key; the default model name (`gpt-4.1-mini`) is configurable via `OPENAI_MODEL`.
 - Docker images were built here with an extra CA secret because this sandbox intercepts TLS; on a normal machine `docker compose up --build` needs nothing extra.
+
+### AI report voice (2026-10-17)
+
+AI drafts are written as the inspector's own report entry: an opening sentence about the room, walls and floor always covered, a fixed paragraph order, defects described on the surface they are on (close-ups among the room photos included), no references to "the image", and Brazilian Portuguese vistoria terminology. Prompt `2026-10-v3`, guide `2026-10-17.1`; the development mock writes in the same voice (ADR 0013, update).
 
 ### AI writing guide (2026-09-30)
 

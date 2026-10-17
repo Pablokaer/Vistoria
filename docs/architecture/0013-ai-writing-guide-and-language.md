@@ -39,3 +39,29 @@ always in British English, but the reports belong to companies that may work in 
 - The development mock cannot translate: its label names the language a real provider would use.
 - The language is read when the analysis runs. A draft requested seconds before the company changes its language may
   come out in the previous language; `prompt_version` records the language that was actually used.
+
+## Update 2026-10-17 — report voice (prompt 2026-10-v3, guide 2026-10-17.1)
+
+**Context.** Drafts read like descriptions of pictures ("No visible damage is apparent in the provided images", "The
+photo shows…"), walls or floor were sometimes skipped, and a close-up of a defect among the room photos was not
+treated as a defect. Brazilian Portuguese drafts had no vistoria terminology to follow.
+
+**Decision.**
+- The free text is written **as the inspector's own report entry**: impersonal, present tense, never referring to AI or
+  to "the image". Photos are mentioned only in `limitations`. This rule lives in the code-owned `SafetyRules`, whose
+  example phrase changed to inventory wording ("No visible damage noted.").
+- `RoomInstruction`: an opening sentence about the room as a whole (type, windows and light, furnished or not); walls
+  and floor are always covered (or stated as not visible); a defect close-up among the room photos goes into
+  `observedDefects` and is mentioned in the paragraph.
+- `DefectInstruction`: what it is, the surface it is on, where, approximate size, how it looks. It starts from the
+  inspector's label, describes only what the photos show, and never invents a position a close-up does not show.
+- The guide fixes the paragraph order (room → ceiling → walls → floor → windows/doors → fittings → furniture →
+  defects → cleanliness → not assessed), lists phrases that give away a machine-written text, and adds Brazilian
+  Portuguese terminology and examples.
+- The development mock writes in the same voice and order.
+
+**Consequences.**
+- `ReportVoiceTests` pin what reaches the model (room and defect rules, inspector voice, pt-BR terminology), the
+  guide's 2,500-word budget and the mock's voice.
+- Not measured against the real provider here: no OpenAI key was available. Compare drafts by `prompt_version`
+  (`2026-10-v3+g2026-10-17.1+…` against `2026-09-v2+g2026-09-30.1+…`) once real inspections run.

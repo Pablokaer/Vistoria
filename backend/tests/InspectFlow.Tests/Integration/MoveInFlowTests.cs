@@ -43,7 +43,7 @@ public class MoveInFlowTests(TestApp app)
         var room = (await agent.GetAsync(roomUrl)).EnsureOk();
         var aiText = room["aiDescription"].GetValue<string>();
         Assert.Contains("mock", aiText, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("No visible damage is apparent", aiText, StringComparison.Ordinal);
+        Assert.Contains("No visible damage noted.", aiText, StringComparison.Ordinal); // report voice (prompt v3)
         Assert.Equal(aiText, room["finalDescription"].GetValue<string>());
         Assert.Equal("Ai", room["finalDescriptionSource"].GetValue<string>());
 

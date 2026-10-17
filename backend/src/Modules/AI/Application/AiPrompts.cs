@@ -8,7 +8,9 @@ namespace InspectFlow.Modules.AI.Application;
 public static class AiPrompts
 {
     // v2: output language comes from the company (was fixed British English) and the writing guide is appended.
-    public const string Version = "2026-09-v2";
+    // v3: report voice (written as the inspector's report, no references to "the image"), walls and floor always
+    //     covered, room overview first, defect close-ups among room photos recorded as defects.
+    public const string Version = "2026-10-v3";
 
     /// <summary>
     /// Stored on every analysis (prompt_version): code prompt version + writing guide version + output language,
@@ -22,23 +24,37 @@ public static class AiPrompts
         - Do NOT assume the condition of areas, surfaces or items that are not shown; mark them as "not_visible".
         - Do NOT determine responsibility, fault or blame for any damage.
         - Do NOT make legal, financial or liability conclusions, and do not estimate repair costs.
-        - Use cautious, factual language, e.g. "No visible damage is apparent in the provided images."
-          instead of "There is no damage."
+        - Use cautious, factual inventory language, e.g. "No visible damage noted." or "in good visible condition"
+          instead of "There is no damage." or "perfect condition".
         - If image quality prevents an assessment, say so in "limitations".
         - Write in a neutral, formal register suitable for a property inventory report.
         - Your output is a draft that a human inspector will review and may change.
+        - Write the free text as the inspector's own report entry: never refer to yourself, to AI, or to "the
+          image" / "the photo" ("This photo shows…", "In the image…"). Mention photos only in "limitations",
+          when explaining why something could not be assessed.
         """;
 
     public const string RoomInstruction = """
-        Analyse the photos of a single room and return the structured JSON requested.
-        Record walls, ceiling and floor (colour, material/type, condition), visible fixtures, fittings and furniture,
-        any visible marks, damage or wear (location + neutral description), cleanliness, and a concise
-        professional paragraph ("description") summarising the visible condition of the room.
+        Analyse the photos of a single room and return the structured JSON requested, as the inspector who visited
+        the room would record it.
+        - Walls, ceiling and floor: always fill "walls", "ceiling" and "floor" (colour, material/type, condition).
+          The walls and the floor must always be covered in "description"; if one is not shown clearly, use
+          "not_visible" and say so in one short clause.
+        - Record visible windows, doors, fixtures, fittings, appliances and furniture with their condition,
+          and the cleanliness of the room.
+        - Every visible mark, damage or wear goes into "observedDefects" (location + neutral description).
+          If a photo is a close-up of a defect, record that defect in full there and mention it in "description".
+        - "description" is the report paragraph for this room: start with one sentence describing the room as a
+          whole (type of room, windows/natural light, furnished or unfurnished), then follow the writing guide's
+          order and structure.
         """;
 
     public const string DefectInstruction = """
-        The photos show a specific defect recorded by the inspector. Describe what is visible
-        (type of mark/damage, approximate size relative to surroundings, location in the frame) in neutral terms.
+        The photos show a specific defect recorded by the inspector. Describe it as the inspector would in the
+        report: what it is, the surface or item it is on (colour and material), where it is, its approximate size
+        or count, and how it looks (colour, shape, depth, extent). Use the inspector's short label as the starting
+        point, but describe only what the photos show; if they disagree, describe what is visible and note it.
+        If the photos are too close to place the defect in the room, give only the location that is visible.
         Provide a confidence between 0 and 1 reflecting how clearly the defect is visible.
         """;
 
