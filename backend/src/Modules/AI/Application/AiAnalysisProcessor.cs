@@ -46,10 +46,8 @@ public sealed class AiAnalysisProcessor(
         {
             var room = await db.InspectionRooms.AsNoTracking().FirstAsync(r => r.Id == analysis.InspectionRoomId, ct);
             var images = await LoadImagesAsync(analysis.MediaIds, ct);
-            // Read at processing time: the queue delay is seconds, and the company setting is the source of truth.
-            var companyLanguage = await db.Inspections.Where(i => i.Id == analysis.InspectionId)
-                .Join(db.Companies, i => i.CompanyId, c => c.Id, (i, c) => c.ReportLanguage).FirstOrDefaultAsync(ct);
-            var language = AiOutputLanguage.For(companyLanguage);
+            // Captured with the request: the background worker has no request, so it cannot see the requester's switch.
+            var language = AiOutputLanguage.For(analysis.OutputLanguage);
             string description;
             object result;
             decimal? confidence = null;

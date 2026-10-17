@@ -4,6 +4,15 @@ Every code change is recorded here (newest first), together with the docs it tou
 
 ## 2026-10-17
 
+- **AI drafts and room names follow the PT | EN switch.** See [ADR 0026](architecture/0026-ai-language-follows-the-switch.md).
+  - **API:** an AI request stores the requester's language (`Accept-Language` from the switch) in the new `ai.ai_analyses.output_language` column. The background processor writes in that language, not the company report language. Migration `CaptureAiOutputLanguage` backfills earlier analyses with their company's language.
+  - **Web:** `localizeRoomName` / `useFormatters().roomName` show default room names ("Living Room", "Bedroom 1") in the UI language ("Sala de estar", "Quarto 1"). Custom names stay as typed. It is used on the capture and descriptions pages, inspection overviews, company property and progress panels, and the web report.
+  - **Tests:**
+    - New `AiLanguageTests` (3): a PT inspector gets PT drafts from an English company, an EN inspector gets English from a Portuguese company, and drafts are English without a choice.
+    - 262 backend tests in total.
+    - `e2e/team.mjs` checks "Quarto 1" / "Bedroom 1" when the sidebar switch changes.
+  - **Docs:** README (languages, AI output language, how to test), ADR 0026 (+ note in ADR 0013), implementation report.
+
 - **Production deployment behind Caddy; the API trusts `X-Forwarded-For` only from listed proxies.** Development defaults could reach a server (Development environment, demo users, sandbox payments, Postgres on 5432 with the default password). Every per-IP limit also saw the web container's IP, and the Next.js rewrite passes a client-supplied `X-Forwarded-For` through unchanged, which an echo-server test confirmed. See [ADR 0024](architecture/0024-production-deployment-and-trusted-proxies.md).
   - **API:** with `TRUST_FORWARDED_HEADERS=true` the new `TRUSTED_PROXIES` (`ForwardedHeaders:KnownProxies`, IPs or CIDR ranges) is required. Only those senders are believed, and loopback is no longer trusted by default. An empty or invalid list stops the start-up with the offending value (`TrustedProxyList`).
   - **Production:** standalone `docker-compose.prod.yml` (project `olhai`, `ASPNETCORE_ENVIRONMENT=Production`, no seed, every secret required via `${VAR:?}`) with `deploy/Caddyfile`:

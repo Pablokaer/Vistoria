@@ -13,6 +13,7 @@ const PANEL_TITLE = "mb-3 text-caption font-semibold uppercase tracking-wide tex
 /** Room index with defect markers; jumps to the room inside the document. Hidden on phones (the page scrolls). */
 export function ReportContents({ snapshot }: { snapshot: ReportSnapshot }) {
   const t = useT(reportMessages);
+  const { roomName } = useFormatters();
   return (
     <nav aria-label={t("contents")} className={`${PANEL} hidden xl:block`}>
       <p className={PANEL_TITLE}>{t("contents")}</p>
@@ -21,7 +22,7 @@ export function ReportContents({ snapshot }: { snapshot: ReportSnapshot }) {
           <li key={r.id}>
             <a href={`#${reportRoomAnchor(r.id)}`} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-label text-ink-2 hover:bg-surface-2 hover:text-ink">
               <span className="tabular w-5 text-ink-4">{r.sequence}</span>
-              <span className="min-w-0 flex-1 truncate">{r.name}</span>
+              <span className="min-w-0 flex-1 truncate">{roomName(r.name)}</span>
               {r.defects.length > 0 && <Icon name="alert" className="h-3.5 w-3.5 text-warning-500" aria-label={t("defectsBadge", { count: r.defects.length })} />}
             </a>
           </li>

@@ -65,3 +65,5 @@ treated as a defect. Brazilian Portuguese drafts had no vistoria terminology to 
   guide's 2,500-word budget and the mock's voice.
 - Not measured against the real provider here: no OpenAI key was available. Compare drafts by `prompt_version`
   (`2026-10-v3+g2026-10-17.1+…` against `2026-09-v2+g2026-09-30.1+…`) once real inspections run.
+
+**Update 2026-10-17 (language).** AI texts no longer follow the company's report language: they follow the PT / EN switch of the inspector who requests them, stored on each analysis. See [ADR 0026](0026-ai-language-follows-the-switch.md).

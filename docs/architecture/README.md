@@ -29,3 +29,4 @@ Short records of *why* things are the way they are. Format: context → decision
 | [0023](0023-tenant-accounts-from-invitations.md) | Tenant accounts are created only from their tenancy invitation (token + invited email), in the same transaction as joining it |
 | [0024](0024-production-deployment-and-trusted-proxies.md) | Standalone production compose behind Caddy (the only published service); the API believes `X-Forwarded-For` only from listed proxies (`TRUSTED_PROXIES`); development ports on 127.0.0.1 |
 | [0025](0025-photo-gps-removal.md) | Uploaded photos lose their GPS position in place (EXIF + XMP, no re-encoding); date taken and orientation stay |
+| [0026](0026-ai-language-follows-the-switch.md) | AI drafts are written in the requester's PT / EN language (stored per analysis); default room names are shown in the UI language |

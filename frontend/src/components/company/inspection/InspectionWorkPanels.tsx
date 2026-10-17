@@ -10,11 +10,12 @@ import type { InspectionDetails, RoomProgress } from "@/lib/types";
 
 function RoomRow({ room }: { room: RoomProgress }) {
   const t = useT(companyInspectionMessages);
+  const { roomName } = useFormatters();
   return (
     <li className="flex items-center gap-3 px-4 py-2.5 sm:px-5">
       <span className="tabular w-5 text-caption font-semibold text-ink-3">{room.sequence}</span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-body font-medium text-ink">{room.name}</span>
+        <span className="block truncate text-body font-medium text-ink">{roomName(room.name)}</span>
         <span className="flex gap-3 text-caption text-ink-3">
           <span className="inline-flex items-center gap-1"><Icon name="camera" className="h-3.5 w-3.5" />{t("photos", { count: room.generalPhotoCount })}</span>
           {room.defectCount > 0 && <span className="inline-flex items-center gap-1 text-warning-700"><Icon name="alert" className="h-3.5 w-3.5" />{t("defects", { count: room.defectCount })}</span>}

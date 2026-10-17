@@ -83,6 +83,14 @@ namespace InspectFlow.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("model");
 
+                    b.Property<string>("OutputLanguage")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("en")
+                        .HasColumnName("output_language");
+
                     b.Property<string>("PromptVersion")
                         .IsRequired()
                         .HasMaxLength(50)

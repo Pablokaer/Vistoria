@@ -61,10 +61,13 @@ async function agentSeesAssignment(browser, agent, inspectionId, { base, snap, l
   const toggle = page.getByTestId("sidebar-language-toggle");
   await toggle.getByRole("radio", { name: "PT" }).click();
   await page.getByRole("button", { name: "Iniciar vistoria" }).waitFor();
+  // Default room names follow the switch too ("Bedroom 1" was typed in English when the property was created).
+  await page.getByText("Quarto 1", { exact: true }).first().waitFor();
   await snap(page, "sidebar-language-pt");
   await toggle.getByRole("radio", { name: "EN" }).click();
   await page.getByRole("button", { name: "Start inspection" }).waitFor();
-  log("team agent sees the direct inspection; sidebar PT | EN switch OK");
+  await page.getByText("Bedroom 1", { exact: true }).first().waitFor();
+  log("team agent sees the direct inspection; sidebar PT | EN switch OK, room names included");
   await ctx.close();
 }
 

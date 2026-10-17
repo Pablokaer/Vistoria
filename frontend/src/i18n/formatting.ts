@@ -2,6 +2,7 @@
 
 import type { Locale } from "./locales";
 import { enumMessages } from "./messages/enums";
+import { localizeRoomName } from "./roomNames";
 
 // en-IE keeps the day-month order and price style the product used before localization; pt-BR uses Brazilian conventions.
 export const INTL_TAG: Record<Locale, string> = { en: "en-IE", "pt-BR": "pt-BR" };
@@ -13,6 +14,8 @@ export interface Formatters {
   formatDateTime: (value?: string | null) => string;
   /** Label for an API enum value, e.g. "MoveIn" → "Move In" / "Entrada". */
   humanize: (value?: string | null) => string;
+  /** A default room name in this language ("Bedroom 2" → "Quarto 2"); custom names unchanged. */
+  roomName: (name: string) => string;
   /** Money from minor units, e.g. (4900, "EUR") → "€49.00" / "€ 49,00". */
   formatMoney: (cents: number, currency: string) => string;
   formatNumber: (value: number) => string;
@@ -31,6 +34,7 @@ export function createFormatters(locale: Locale): Formatters {
     formatDate: (value) => (value ? date.format(new Date(value)) : "—"),
     formatDateTime: (value) => (value ? dateTime.format(new Date(value)) : "—"),
     humanize: (value) => (value ? labels[value] ?? splitCamelCase(value) : "—"),
+    roomName: (name) => localizeRoomName(name, locale),
     formatMoney: (cents, currency) => new Intl.NumberFormat(tag, { style: "currency", currency }).format(cents / 100),
     formatNumber: (value) => number.format(value),
   };

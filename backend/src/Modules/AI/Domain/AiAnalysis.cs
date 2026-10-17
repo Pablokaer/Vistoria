@@ -31,6 +31,9 @@ public class AiAnalysis
     public string Provider { get; set; } = string.Empty;
     public string? Model { get; set; }
     public string PromptVersion { get; set; } = string.Empty;
+
+    /// <summary>Language of the free text ("en" / "pt-BR"): the requester's UI language, captured with the request (ADR 0026).</summary>
+    public string OutputLanguage { get; set; } = "en";
     public List<Guid> MediaIds { get; set; } = new();
     public string? ResultJson { get; set; }
     public string? Description { get; set; }

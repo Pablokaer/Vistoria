@@ -9,7 +9,7 @@ import { RoomTexts, type RegisterFlush } from "@/components/inspection/RoomTexts
 import { SaveReportProvider, SaveStatus, useSaveStatusCollector } from "@/components/inspection/SaveStatus";
 import { StepHeader } from "@/components/inspection/StepHeader";
 import { Button, ErrorBanner, LinkButton, Notice, PageSkeleton, Spinner } from "@/components/ui";
-import { useT } from "@/i18n/I18nProvider";
+import { useFormatters, useT } from "@/i18n/I18nProvider";
 import { captureMessages } from "@/i18n/messages/capture";
 import { errorMessage, post } from "@/lib/api";
 import { hasRunningAnalysis, roomTextReady, roomUrl, useInspectionRooms } from "@/lib/rooms";
@@ -18,7 +18,7 @@ import type { RoomDetail } from "@/lib/types";
 const navState = (r: RoomDetail): RoomNavItem["state"] =>
   hasRunningAnalysis(r) ? "writing" : r.status === "Completed" ? "done" : roomTextReady(r) ? "ready" : "pending";
 
-const navItems = (rooms: RoomDetail[]): RoomNavItem[] => rooms.map((r) => ({ id: r.id, name: r.name, sequence: r.sequence, state: navState(r) }));
+const navItems = (rooms: RoomDetail[], roomName: (name: string) => string): RoomNavItem[] => rooms.map((r) => ({ id: r.id, name: roomName(r.name), sequence: r.sequence, state: navState(r) }));
 
 /** Poll rooms whose AI texts are still being written. */
 function usePollWritingRooms(rooms: RoomDetail[] | null, reloadRoom: (roomId: string) => Promise<void>) {
@@ -52,6 +52,7 @@ export default function DescriptionsPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const t = useT(captureMessages);
+  const { roomName } = useFormatters();
   const { inspection, rooms, error, load, setRoom, reloadRoom } = useInspectionRooms(id);
   const flushers = useRef(new Map<string, () => Promise<void>>());
   const [saveStatus, reportSave] = useSaveStatusCollector();
@@ -68,7 +69,7 @@ export default function DescriptionsPage() {
   if (!rooms || !inspection) return error ? <ErrorBanner message={error} onRetry={() => void load()} /> : <PageSkeleton />;
 
   const writing = rooms.filter(hasRunningAnalysis).length;
-  const nav = navItems(rooms);
+  const nav = navItems(rooms, roomName);
   const ready = nav.filter((n) => n.state === "ready" || n.state === "done").length;
 
   async function completeAll() {

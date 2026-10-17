@@ -205,6 +205,7 @@ internal static class ModelConfiguration
             e.Property(a => a.Provider).HasMaxLength(50).IsRequired();
             e.Property(a => a.Model).HasMaxLength(100);
             e.Property(a => a.PromptVersion).HasMaxLength(50).IsRequired();
+            e.Property(a => a.OutputLanguage).HasMaxLength(10).IsRequired().HasDefaultValue("en");
             e.Property(a => a.ResultJson).HasColumnType("jsonb");
             e.Property(a => a.Error).HasMaxLength(1000);
             e.Property(a => a.Confidence).HasPrecision(4, 3);

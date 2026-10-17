@@ -13,17 +13,18 @@ import { continueHref } from "./activeInspection";
 /** Where the inspector is in the property: one chip per room, done rooms ticked. */
 function RoomTrack({ rooms }: { rooms: RoomProgress[] }) {
   const d = useT(agentDashboardMessages);
+  const { roomName } = useFormatters();
   const sorted = [...rooms].sort((a, b) => a.sequence - b.sequence);
   return (
     <ul className="flex flex-wrap gap-1.5">
       {sorted.map((r) => {
         const done = r.status === "Completed";
         return (
-          <li key={r.id} title={d(done ? "roomDone" : "roomOpen", { room: r.name })}
+          <li key={r.id} title={d(done ? "roomDone" : "roomOpen", { room: roomName(r.name) })}
             className={cx("inline-flex items-center gap-1 rounded-sm px-2 py-0.5 text-caption font-medium ring-1 ring-inset",
               done ? "bg-success-50 text-success-700 ring-success-700/15" : r.status === "InProgress" ? "bg-brand-50 text-brand ring-brand/20" : "bg-surface text-ink-3 ring-line")}>
             <Icon name={done ? "check" : r.status === "InProgress" ? "play" : "circleDashed"} className="h-3 w-3" />
-            {r.name}
+            {roomName(r.name)}
           </li>
         );
       })}

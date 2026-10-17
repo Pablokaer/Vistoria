@@ -42,7 +42,7 @@ function AddRoomForm({ onAdd }: { onAdd: (type: RoomType, name: string) => Promi
 /** The property's live room list (walking order). Edits affect future inspections only. */
 export function PropertyRoomsPanel({ property, onChanged, run }: { property: Property; onChanged: (p: Property) => void; run: Run }) {
   const t = useT(companyPropertyMessages);
-  const { humanize } = useFormatters();
+  const { humanize, roomName } = useFormatters();
   const [confirm, dialog] = useConfirm();
   const [editing, setEditing] = useState<string | null>(null);
   const base = `/api/properties/${property.id}/rooms`;
@@ -57,7 +57,7 @@ export function PropertyRoomsPanel({ property, onChanged, run }: { property: Pro
   const rename = (room: PropertyRoom, roomType: RoomType, name: string) =>
     run(async () => { onChanged(await put<Property>(`${base}/${room.id}`, { roomType, name })); setEditing(null); });
   const remove = async (room: PropertyRoom) => {
-    if (await confirm({ title: t("confirmRemoveRoom", { name: room.name }), description: t("confirmRemoveRoomHint"), confirmLabel: t("remove"), danger: true }))
+    if (await confirm({ title: t("confirmRemoveRoom", { name: roomName(room.name) }), description: t("confirmRemoveRoomHint"), confirmLabel: t("remove"), danger: true }))
       await run(async () => onChanged(await del<Property>(`${base}/${room.id}`)));
   };
 
@@ -70,7 +70,7 @@ export function PropertyRoomsPanel({ property, onChanged, run }: { property: Pro
             {editing === r.id ? <RenameRoomForm room={r} onCancel={() => setEditing(null)} onSubmit={(type, name) => void rename(r, type, name)} /> : (
               <>
                 <span className="tabular w-6 text-caption font-semibold text-ink-3">{i + 1}</span>
-                <span className="min-w-0 flex-1 text-body"><span className="font-medium text-ink">{r.name}</span> <span className="text-ink-3">· {humanize(r.roomType)}</span></span>
+                <span className="min-w-0 flex-1 text-body"><span className="font-medium text-ink">{roomName(r.name)}</span> <span className="text-ink-3">· {humanize(r.roomType)}</span></span>
                 <IconButton icon="chevronDown" className="rotate-180" disabled={i === 0} onClick={() => void move(i, -1)} label={t("moveUp")} />
                 <IconButton icon="chevronDown" disabled={i === rooms.length - 1} onClick={() => void move(i, 1)} label={t("moveDown")} />
                 <IconButton icon="edit" onClick={() => setEditing(r.id)} label={t("rename")} />

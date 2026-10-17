@@ -18,10 +18,10 @@ import type { RoomDetail } from "@/lib/types";
 type CaptureKey = keyof (typeof captureMessages)["en"];
 
 /** Every room and defect that still needs a photo before the AI can describe it. */
-function missingPhotos(rooms: RoomDetail[], t: Translate<CaptureKey>): string[] {
+function missingPhotos(rooms: RoomDetail[], t: Translate<CaptureKey>, roomName: (name: string) => string): string[] {
   return rooms.flatMap((r) => [
-    ...(r.generalPhotos.length === 0 ? [t("missingRoomPhoto", { room: r.name })] : []),
-    ...r.defects.filter((d) => d.photos.length === 0).map((d) => t("missingDefectPhoto", { room: r.name, number: r.defects.indexOf(d) + 1 })),
+    ...(r.generalPhotos.length === 0 ? [t("missingRoomPhoto", { room: roomName(r.name) })] : []),
+    ...r.defects.filter((d) => d.photos.length === 0).map((d) => t("missingDefectPhoto", { room: roomName(r.name), number: r.defects.indexOf(d) + 1 })),
   ]);
 }
 
@@ -37,8 +37,8 @@ function requestMissingTexts(inspectionId: string, rooms: RoomDetail[]): Promise
   });
 }
 
-const navItems = (rooms: RoomDetail[]): RoomNavItem[] =>
-  rooms.map((r) => ({ id: r.id, name: r.name, sequence: r.sequence, state: roomPhotosReady(r) ? "ready" : "pending" }));
+const navItems = (rooms: RoomDetail[], roomName: (name: string) => string): RoomNavItem[] =>
+  rooms.map((r) => ({ id: r.id, name: roomName(r.name), sequence: r.sequence, state: roomPhotosReady(r) ? "ready" : "pending" }));
 
 /**
  * Step 1 of the inspection: photos only. Every room is listed in sequence with its general photos and
@@ -48,7 +48,7 @@ export default function CapturePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const t = useT(captureMessages);
-  const { humanize } = useFormatters();
+  const { humanize, roomName } = useFormatters();
   const { inspection, rooms, error, load, setRoom, reloadRoom } = useInspectionRooms(id);
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
@@ -61,12 +61,12 @@ export default function CapturePage() {
 
   const editable = rooms.some((r) => r.editable);
   const anyUploading = Object.values(uploading).some(Boolean);
-  const nav = navItems(rooms);
+  const nav = navItems(rooms, roomName);
   const ready = nav.filter((n) => n.state === "ready").length;
 
   async function next() {
     setActionError(null);
-    const missing = missingPhotos(rooms!, t);
+    const missing = missingPhotos(rooms!, t, roomName);
     setIssues(missing);
     if (missing.length > 0) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     setBusy(true);

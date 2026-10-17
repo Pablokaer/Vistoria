@@ -23,6 +23,7 @@ function RoomFacts({ room }: { room: RoomProgress }) {
 /** Rooms in sequence with their status; while editable each row jumps to that room on the photos page. */
 export function RoomProgressList({ inspection, editable }: { inspection: InspectionDetails; editable: boolean }) {
   const t = useT(agentMessages);
+  const { roomName } = useFormatters();
   const rooms = [...inspection.rooms].sort((a, b) => a.sequence - b.sequence);
   return (
     <Card flush title={t("rooms")} description={t("roomsSubtitle", { done: inspection.roomsCompleted, total: rooms.length })}>
@@ -33,7 +34,7 @@ export function RoomProgressList({ inspection, editable }: { inspection: Inspect
             <div className="flex min-h-14 items-center gap-3 px-4 py-3 sm:px-5">
               <span className="tabular grid h-7 w-7 shrink-0 place-items-center rounded-md bg-neutral-50 text-caption font-semibold text-ink-2">{r.sequence}</span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-body font-medium text-ink">{r.name}</p>
+                <p className="truncate text-body font-medium text-ink">{roomName(r.name)}</p>
                 <RoomFacts room={r} />
               </div>
               <StatusBadge value={r.status} />
@@ -42,7 +43,7 @@ export function RoomProgressList({ inspection, editable }: { inspection: Inspect
           );
           return (
             <li key={r.id}>
-              {editable ? <Link href={`/agent/inspections/${inspection.id}/capture#room-${r.id}`} aria-label={t("openRoom", { room: r.name })} className="block transition hover:bg-surface-2">{row}</Link> : row}
+              {editable ? <Link href={`/agent/inspections/${inspection.id}/capture#room-${r.id}`} aria-label={t("openRoom", { room: roomName(r.name) })} className="block transition hover:bg-surface-2">{row}</Link> : row}
             </li>
           );
         })}

@@ -33,10 +33,10 @@ function DefectItem({ defect, index, photoUrls }: { defect: ReportDefect; index:
 
 function RoomHeader({ room }: { room: ReportRoom }) {
   const t = useT(reportMessages);
-  const { humanize } = useFormatters();
+  const { humanize, roomName } = useFormatters();
   return (
     <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-      <h2 className="text-section font-semibold text-ink">{room.sequence}. {room.name}</h2>
+      <h2 className="text-section font-semibold text-ink">{room.sequence}. {roomName(room.name)}</h2>
       <span className="text-label text-ink-3">{humanize(room.roomType)}</span>
       <span className="ml-auto inline-flex items-center gap-3 text-caption text-ink-3">
         <span className="inline-flex items-center gap-1"><Icon name="image" className="h-3.5 w-3.5" />{room.photos.length === 1 ? t("photosCountOne") : t("photosCount", { count: room.photos.length })}</span>

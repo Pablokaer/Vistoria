@@ -89,6 +89,7 @@ public sealed class AiAnalysisService(
                     "Envie pelo menos uma foto geral antes de pedir uma descrição por IA."));
 
         var now = clock.UtcNow;
+        var language = RequesterLanguage();
         var analysis = new AiAnalysis
         {
             Id = Guid.NewGuid(),
@@ -100,7 +101,8 @@ public sealed class AiAnalysisService(
             Status = AiAnalysisStatus.Pending,
             Provider = analyzer.ProviderName,
             Model = analyzer.Model,
-            PromptVersion = AiPrompts.FullVersion(await AiLanguageOfAsync(inspection.CompanyId, ct)),
+            PromptVersion = AiPrompts.FullVersion(language),
+            OutputLanguage = language.Code,
             MediaIds = mediaIds,
             RequestedBy = agentId,
             RequestedAt = now,
@@ -130,7 +132,9 @@ public sealed class AiAnalysisService(
 
     public const string MockProviderName = "mock";
 
-    /// <summary>The company's report language decides the language of every AI text (see AiOutputLanguage).</summary>
-    internal async Task<AiOutputLanguage> AiLanguageOfAsync(Guid companyId, CancellationToken ct) =>
-        AiOutputLanguage.For(await db.Companies.Where(c => c.Id == companyId).Select(c => c.ReportLanguage).FirstOrDefaultAsync(ct));
+    /// <summary>
+    /// The AI writes in the language the inspector is using (the PT | EN switch, sent as Accept-Language), so the
+    /// draft they review reads like the rest of their screen (ADR 0026). Example: switch on PT → Brazilian Portuguese.
+    /// </summary>
+    internal static AiOutputLanguage RequesterLanguage() => AiOutputLanguage.For(CurrentLanguage.Get());
 }
