@@ -1,5 +1,8 @@
 using System.Net;
+using System.Text;
+using InspectFlow.Shared.Security;
 using InspectFlow.Tests.Support;
+using Microsoft.EntityFrameworkCore;
 
 namespace InspectFlow.Tests.Integration;
 
@@ -35,6 +38,26 @@ public class UploadTests(TestApp app)
         Assert.Equal(HttpStatusCode.NotFound, (await anonymous.GetAsync(tampered)).StatusCode);
         var otherKey = url.Replace("/rooms/", "/rooms/0", StringComparison.Ordinal);
         Assert.Equal(HttpStatusCode.NotFound, (await anonymous.GetAsync(otherKey)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Gps_position_is_removed_before_the_photo_is_stored_and_hashed()
+    {
+        var (agent, inspectionId, rooms) = await StartedInspectionAsync();
+        var photo = ExifPhotoBuilder.Jpeg(ExifPhotoBuilder.Tiff(littleEndian: true), ExifPhotoBuilder.Xmp());
+        var upload = (await agent.UploadAsync($"/api/agent/inspections/{inspectionId}/rooms/{rooms[0]}/photos", photo.Bytes, "gps.jpg", "image/jpeg")).EnsureOk();
+
+        var stored = await app.Factory.CreateClient().GetByteArrayAsync(upload["url"].GetValue<string>());
+        Assert.Equal(photo.Bytes.Length, stored.Length);
+        Assert.Equal(-1, stored.AsSpan().IndexOf(ExifPhotoBuilder.RationalBytes(ExifPhotoBuilder.Latitude, littleEndian: true)));
+        var text = Encoding.Latin1.GetString(stored);
+        Assert.DoesNotContain(ExifPhotoBuilder.XmpLatitude, text, StringComparison.Ordinal);
+        Assert.Contains(ExifPhotoBuilder.DateTaken, text, StringComparison.Ordinal);
+
+        await using var db = app.CreateDbContext();
+        var mediaId = upload.Id;
+        var media = await db.InspectionRoomMedia.AsNoTracking().FirstAsync(m => m.Id == mediaId);
+        Assert.Equal(SecureTokens.Sha256Hex(stored), media.Sha256);
     }
 
     [Fact]

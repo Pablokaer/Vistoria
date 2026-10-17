@@ -27,3 +27,4 @@ Short records of *why* things are the way they are. Format: context → decision
 | [0021](0021-private-inspection-to-team-agent.md) | A `Private` inspection can be sent straight to one team agent (no link + code, no accept step); superseded by 0022 |
 | [0022](0022-agents-belong-to-their-company.md) | Agents belong to their company: no marketplace, no agent self-sign-up, no private link + code; inspections are `Public` (the company's agents) or `Direct` (one agent) |
 | [0023](0023-tenant-accounts-from-invitations.md) | Tenant accounts are created only from their tenancy invitation (token + invited email), in the same transaction as joining it |
+| [0025](0025-photo-gps-removal.md) | Uploaded photos lose their GPS position in place (EXIF + XMP, no re-encoding); date taken and orientation stay |

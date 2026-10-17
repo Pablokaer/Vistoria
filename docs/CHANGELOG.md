@@ -4,6 +4,11 @@ Every code change is recorded here (newest first), together with the docs it tou
 
 ## 2026-10-17
 
+- **Uploaded photos lose their GPS position; date taken and orientation stay.** Phone photos carried their coordinates to tenants and share-link viewers. See [ADR 0025](architecture/0025-photo-gps-removal.md).
+  - **Code:** `PhotoLocationScrubber` (+ `ExifGpsEraser`, `XmpGpsBlanker`, `PngCrc32`) edits the file in place before `MediaService` hashes and stores it: the EXIF GPS IFD in JPEG APP1, PNG `eXIf` and WebP `EXIF` (both byte orders) is zeroed and emptied, `*:GPS*` XMP values become spaces, and changed PNG chunks get a new CRC. Nothing is re-encoded, and malformed files are left as they are. The upload audit records `locationRemoved`.
+  - **Tests:** new `PhotoLocationScrubberTests` (with the `ExifPhotoBuilder` test helper) and an upload test that reads the stored file back (no GPS, date kept, stored SHA-256 = stored bytes). 246 backend tests in total.
+  - **Docs:** README (security notes, tests), ADR 0025, implementation report (also drops the removed `IAccessCodeHasher`).
+
 - **Sign-in can no longer lock out other people or reveal which emails have accounts.** See [ADR 0009, update](architecture/0009-authentication.md).
   - **Before:** 5 wrong passwords locked any account for 10 minutes, so anyone who knew an email could keep its owner out. The "locked" message came before the password check, and an unknown email answered faster.
   - **Now:** `PasswordSignInGuard` + `ILoginThrottle` (`MemoryLoginThrottle`). After 5 failures per account **and** client IP in 15 minutes (`Auth:LoginThrottle`), that device gets 429 `too_many_attempts` for that account. The Identity lockout needs 20 failures (15 minutes). An unknown email gets the same 401 and hashing time as a wrong password, and "locked" is only shown with the right password.

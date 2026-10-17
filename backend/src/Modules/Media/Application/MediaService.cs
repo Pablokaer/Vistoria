@@ -113,6 +113,10 @@ public sealed class MediaService(
             !(declared.Equals("image/jpg", StringComparison.OrdinalIgnoreCase) && detected == "image/jpeg"))
             throw new ValidationException("File", new($"The file content ({detected}) does not match its declared type ({declared}).", $"O conteúdo do arquivo ({detected}) não corresponde ao tipo informado ({declared})."));
 
+        // Before hashing and saving, so the stored SHA-256 is the hash of the stored bytes. Only the GPS position goes:
+        // date taken and orientation stay (evidence in a dispute, correct display); the address is in the report anyway.
+        var locationRemoved = PhotoLocationScrubber.RemoveLocation(bytes, detected);
+
         var now = clock.UtcNow;
         var mediaId = Guid.NewGuid();
         var key = StorageKeys.ForRoomMedia(inspection.Id, room.Id, mediaId, ImageFileValidator.ExtensionFor(detected));
@@ -140,7 +144,7 @@ public sealed class MediaService(
             db.InspectionRoomMedia.Add(media);
             room.MarkActivity(now);
             audit.Record(AuditActions.PhotoUploaded, nameof(InspectionRoomMedia), media.Id,
-                new { inspectionId = inspection.Id, roomId = room.Id, mediaType = media.MediaType.ToString(), media.FileSize, media.MimeType });
+                new { inspectionId = inspection.Id, roomId = room.Id, mediaType = media.MediaType.ToString(), media.FileSize, media.MimeType, locationRemoved });
             await db.SaveChangesAsync(ct);
         }
         catch
