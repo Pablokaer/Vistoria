@@ -9,6 +9,9 @@ namespace InspectFlow.Infrastructure.Pdf;
 /// </summary>
 internal static class PdfTheme
 {
+    /// <summary>Product name on the report (logo, page footer, PDF metadata). The code keeps its internal name, InspectFlow (ADR 0020).</summary>
+    public const string ProductName = "Olhai";
+
     // Colours: white page, deep navy identity, brand blue accents, neutral greys, semantic tones used sparingly.
     public const string Navy = "#0F1B33";
     public const string Brand = "#1D4ED8";

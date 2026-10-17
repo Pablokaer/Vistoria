@@ -21,11 +21,11 @@ internal static class PageChrome
             });
         });
 
-    /// <summary>InspectFlow · report number · Page X of Y. The full technical report ID lives in the report details.</summary>
+    /// <summary>Product name · report number · Page X of Y. The full technical report ID lives in the report details.</summary>
     public static void Footer(IContainer c, ReportSnapshot s, ReportPdfText text) =>
         c.PaddingTop(Space2).BorderTop(0.6f).BorderColor(Line).PaddingTop(Space2).Row(row =>
         {
-            row.RelativeItem().AlignLeft().Text("InspectFlow").FontSize(CaptionSize + 0.5f).SemiBold().FontColor(PdfTheme.Navy);
+            row.RelativeItem().AlignLeft().Text(PdfTheme.ProductName).FontSize(CaptionSize + 0.5f).SemiBold().FontColor(PdfTheme.Navy);
             row.RelativeItem().AlignCenter().Text(s.ReportNumber).FontSize(CaptionSize + 0.5f).FontColor(Muted);
             row.RelativeItem().AlignRight().Text(t =>
             {

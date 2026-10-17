@@ -73,7 +73,7 @@ public sealed class QuestPdfReportService : IPdfService
         Title = text.Format(text.DocumentTitleFormat, s.ReportNumber),
         Author = s.Company.Name,
         Subject = text.Format(text.DocumentSubjectFormat, text.Label(s.Inspection.Type), s.Property.FullAddress),
-        Creator = "InspectFlow",
+        Creator = PdfTheme.ProductName,
         CreationDate = s.GeneratedAt,
         ModifiedDate = s.GeneratedAt,
     };

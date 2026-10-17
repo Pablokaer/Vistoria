@@ -3,6 +3,7 @@ import { Brand } from "@/components/AppShell";
 import { getServerTranslator } from "@/i18n/server";
 import { landingMessages, type LandingKey } from "@/i18n/messages/landing";
 import { GET_STARTED_HREF } from "@/lib/billing";
+import { PRODUCT_NAME } from "@/lib/brand";
 import { cx } from "@/lib/cx";
 import { JOIN_AS_AGENT_HREF } from "./landingLinks";
 import { LANDING_CONTAINER } from "./landingStyles";
@@ -35,7 +36,7 @@ export async function LandingFooter() {
       </div>
       <div className={LANDING_CONTAINER}>
         <div className="flex flex-col gap-1 border-t border-site-line py-6 text-[0.75rem] text-site-muted sm:flex-row sm:justify-between">
-          <span>© {new Date().getFullYear()} InspectFlow</span>
+          <span>© {new Date().getFullYear()} {PRODUCT_NAME}</span>
           <span>{t("footerLanguages")}</span>
         </div>
       </div>

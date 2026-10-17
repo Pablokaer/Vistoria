@@ -12,6 +12,7 @@ import { SignedInRedirect } from "@/components/landing/SignedInRedirect";
 import { getServerLocale, getServerTranslator } from "@/i18n/server";
 import { landingMessages } from "@/i18n/messages/landing";
 import { hasSessionHint } from "@/lib/session-hint";
+import { PRODUCT_NAME } from "@/lib/brand";
 
 export async function generateMetadata(): Promise<Metadata> {
   const [t, locale] = await Promise.all([getServerTranslator(landingMessages), getServerLocale()]);
@@ -20,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: { absolute: title },
     description,
-    openGraph: { title, description, type: "website", siteName: "InspectFlow", locale: locale === "pt-BR" ? "pt_BR" : "en_GB" },
+    openGraph: { title, description, type: "website", siteName: PRODUCT_NAME, locale: locale === "pt-BR" ? "pt_BR" : "en_GB" },
     twitter: { card: "summary", title, description },
   };
 }

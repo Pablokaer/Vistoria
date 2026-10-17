@@ -30,6 +30,18 @@ public class ReportPdfRenderingTests
     }
 
     [Fact]
+    public void Report_carries_the_product_name_olhai_not_the_internal_code_name()
+    {
+        // The product is called Olhai; InspectFlow is only the code name (ADR 0020). The document info dictionary
+        // (/Creator) is stored as plain text, so the bytes show which name the report was issued under.
+        var pdf = new QuestPdfReportService().RenderInspectionReport(ReportSamples.MoveInWithDefects(), ReportSamples.SeedPhotos);
+        var raw = System.Text.Encoding.Latin1.GetString(pdf);
+
+        Assert.Contains("Olhai", raw);
+        Assert.DoesNotContain("InspectFlow", raw);
+    }
+
+    [Fact]
     public void Missing_photo_bytes_render_a_placeholder_instead_of_failing()
     {
         var pdf = new QuestPdfReportService().RenderInspectionReport(ReportSamples.MoveInWithDefects(), new Dictionary<string, byte[]>());

@@ -5,6 +5,7 @@ import { Icon, type IconName } from "./icons";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useT } from "@/i18n/I18nProvider";
 import { authMessages } from "@/i18n/messages/auth";
+import { PRODUCT_NAME } from "@/lib/brand";
 
 const POINTS: { icon: IconName; key: "panelPoint1" | "panelPoint2" | "panelPoint3" }[] = [
   { icon: "rooms", key: "panelPoint1" },
@@ -12,7 +13,7 @@ const POINTS: { icon: IconName; key: "panelPoint1" | "panelPoint2" | "panelPoint
   { icon: "shield", key: "panelPoint3" },
 ];
 
-/** Navy product panel beside the form on large screens: what InspectFlow is, in three real capabilities. */
+/** Navy product panel beside the form on large screens: what Olhai is, in three real capabilities. */
 function ProductPanel() {
   const t = useT(authMessages);
   return (
@@ -31,7 +32,7 @@ function ProductPanel() {
       </div>
       {/* Blueprint grid: a quiet nod to floor plans, not decoration for its own sake. */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-[0.06] [background-image:linear-gradient(white_1px,transparent_1px),linear-gradient(90deg,white_1px,transparent_1px)] [background-size:32px_32px]" />
-      <p className="relative text-caption text-sidebar-ink/70">© InspectFlow</p>
+      <p className="relative text-caption text-sidebar-ink/70">© {PRODUCT_NAME}</p>
     </aside>
   );
 }

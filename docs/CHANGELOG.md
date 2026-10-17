@@ -4,6 +4,13 @@ Every code change is recorded here (newest first), together with the docs it tou
 
 ## 2026-10-17
 
+- **Product name: Olhai.** See [ADR 0020](architecture/0020-product-name-olhai.md).
+  - **Web:** a single `PRODUCT_NAME` constant (`frontend/src/lib/brand.ts`) feeds the logo (`Brand`: sidebar, phone drawer, sign-in and register pages, public header and footer), the page title template (`… · Olhai`), the share preview name and the copyright lines. The interface texts that named the product (auth, billing, landing metadata) say Olhai in English and Portuguese.
+  - **PDF report:** the logo, the footer of every page and the document metadata (`Creator`) use `PdfTheme.ProductName`.
+  - **Unchanged on purpose:** the internal code name InspectFlow (C# namespaces, database `inspectflow`, Docker images and containers, the AI writing guide).
+  - **Tests:** new `Report_carries_the_product_name_olhai_not_the_internal_code_name`, 209 backend tests in total. `e2e/landing.mjs` checks the logo and the page title.
+  - **Launcher:** `run-project.sh` prints "Olhai is running".
+  - **Docs:** README, ADR 0020, implementation report.
 - **Landing page image performance.** Measured on a cold cache, after scrolling the whole page: images went from 295 KB to 138 KB on mobile (390px, DPR 3) and from 256 KB to 100 KB on desktop (1440px). LCP and CLS are unchanged, with CLS 0 on both.
   - `next.config.ts` serves AVIF first, with WebP as the fallback. It also declares the `qualities` allowlist `[50, 75]`, which Next 16 requires before any quality other than the default can be used.
   - The AI section's blurred backdrop now uses the same `sizes` as the phone photo (`PHONE_PHOTO_SIZES`), so the bedroom photo is downloaded once instead of twice.

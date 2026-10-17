@@ -21,7 +21,7 @@ internal static class PdfIcons
     public const string Notes = "<path d='M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16Z'/><path d='m13.5 6.5 4 4'/>";
     public const string Shield = "<path d='M12 3 5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6Z'/><path d='m9 12 2 2 4-4'/>";
 
-    /// <summary>The InspectFlow mark: a roofline over a check, white on a rounded brand-blue square.</summary>
+    /// <summary>The Olhai mark: a roofline over a check, white on a rounded brand-blue square.</summary>
     private const string Mark =
         "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='" + PdfTheme.Brand + "'/>" +
         "<g transform='translate(4 4)' fill='none' stroke='#fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>" +
@@ -35,11 +35,11 @@ internal static class PdfIcons
     public static void Sized(IContainer container, string paths, string color, float size) =>
         container.Width(size).Height(size).Element(x => Draw(x, paths, color));
 
-    /// <summary>Logo: mark + "InspectFlow" wordmark. <paramref name="markSize"/> sets the scale.</summary>
+    /// <summary>Logo: mark + product-name wordmark (<see cref="PdfTheme.ProductName"/>). <paramref name="markSize"/> sets the scale.</summary>
     public static void Logo(IContainer container, float markSize) => container.Row(row =>
     {
         row.AutoItem().Width(markSize).Height(markSize).Svg(Mark);
-        row.AutoItem().PaddingLeft(markSize * 0.3f).AlignMiddle().Text("InspectFlow")
+        row.AutoItem().PaddingLeft(markSize * 0.3f).AlignMiddle().Text(PdfTheme.ProductName)
             .FontSize(markSize * 0.55f).Bold().FontColor(PdfTheme.Navy);
     });
 }
