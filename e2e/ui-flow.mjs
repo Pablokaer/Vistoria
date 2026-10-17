@@ -1,4 +1,4 @@
-// End-to-end UI flow (languages, landing page + auth-aware routing, subscription, Move In + Move Out, team agents, private inspection sent to a team agent) driven through the real web app with Playwright.
+// End-to-end UI flow (languages, landing page + auth-aware routing, subscription, Move In + Move Out, company-created agents, direct inspection to one agent) driven through the real web app with Playwright.
 // Usage: BASE_URL=http://localhost:3000 node ui-flow.mjs   (screenshots in ./output)
 import { chromium, devices } from "playwright";
 import { mkdirSync } from "node:fs";
@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { abandonedCheckoutFlow, landingOnMobile, subscribeFromLanding } from "./subscription.mjs";
 import { languageFlows } from "./localization.mjs";
 import { landingFlows } from "./landing.mjs";
-import { teamFlow } from "./team.mjs";
+import { registerTeamAgent, teamFlow } from "./team.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
@@ -28,12 +28,24 @@ async function register(browser, role, email, name, opts = {}) {
   const page = await ctx.newPage();
   page.on("dialog", (d) => d.accept());
   await page.goto(`${BASE}${opts.next ? `/register?role=${role}&next=${encodeURIComponent(opts.next)}` : "/register"}`);
-  const label = { Company: "Company", Agent: "Inspector", Tenant: "Tenant" }[role];
+  const label = { Company: "Company", Tenant: "Tenant" }[role];
   await page.getByText(label, { exact: true }).click();
   await page.getByLabel("Full name").fill(name);
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
+  return { ctx, page };
+}
+
+/** Signs in an existing account (agents are created by their company, never registered here). */
+async function signIn(browser, email, opts = {}) {
+  const ctx = await browser.newContext(opts.mobile ? { ...devices["Pixel 7"] } : { viewport: { width: 1280, height: 900 } });
+  const page = await ctx.newPage();
+  page.on("dialog", (d) => d.accept());
+  await page.goto(`${BASE}/login`);
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
+  await page.getByRole("button", { name: "Sign in" }).click();
   return { ctx, page };
 }
 
@@ -156,8 +168,10 @@ try {
   await tenant.waitForURL(/\/tenant$/);
   log("tenant joined tenancy");
 
-  // ---------------- Agent (mobile) ----------------
-  const { page: agent } = await register(browser, "Agent", `agent-${run}@e2e.local`, "Ian Inspector", { mobile: true });
+  // ---------------- Agent (mobile), created by the company ----------------
+  const agentEmail = `agent-${run}@e2e.local`;
+  await registerTeamAgent(company, { name: "Ian Inspector", email: agentEmail, password: PASSWORD }, ctxOpts);
+  const { page: agent } = await signIn(browser, agentEmail, { mobile: true });
   await agent.waitForURL(/\/agent$/);
   await agent.goto(`${BASE}/agent/available`);
   await agent.locator(`a[href="/agent/available/${moveInId}"]`).click();
@@ -237,9 +251,9 @@ try {
   await company.goto(`${BASE}/company`);
   await company.getByText("disputed by tenants").waitFor();
   await snap(company, "company-dashboard-final");
-  await teamFlow(browser, company, propertyUrl.split("/").pop(), { name: "Tara Team", email: `team-${run}@e2e.local`, password: PASSWORD }, ctxOpts);
+  await teamFlow(browser, company, propertyUrl.split("/").pop(), { name: "Tara Team", email: `team-${run}@e2e.local`, password: PASSWORD }, agent, ctxOpts);
   await abandonedCheckoutFlow(browser, { name: "Rita Returning", email: `returning-${run}@e2e.local`, password: PASSWORD }, ctxOpts);
-  log("✅ UI flow completed: subscription (direct + resumed), Move In accepted, Move Out disputed, team inspection assigned, private inspection sent to the team agent");
+  log("✅ UI flow completed: subscription (direct + resumed), Move In accepted, Move Out disputed, direct inspection hidden from a colleague and assigned to its agent");
 } catch (e) {
   for (const [i, ctx] of browser.contexts().entries())
     for (const [j, p] of ctx.pages().entries()) await p.screenshot({ path: path.join(OUT, `FAILED-${i}-${j}.png`), fullPage: true }).catch(() => {});

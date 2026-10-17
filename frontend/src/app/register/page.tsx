@@ -13,9 +13,9 @@ import { authMessages, type AuthKey } from "@/i18n/messages/auth";
 import { homeFor, needsSubscription, safeNext, useAuth } from "@/lib/auth";
 import type { Me, Role } from "@/lib/types";
 
+// No Agent: inspectors' accounts are created by their company (ADR 0022); the API rejects the role here.
 const ROLES: { value: Role; title: AuthKey; text: AuthKey; icon: IconName }[] = [
   { value: "Company", title: "roleCompanyTitle", text: "roleCompanyText", icon: "building" },
-  { value: "Agent", title: "roleAgentTitle", text: "roleAgentText", icon: "clipboard" },
   { value: "Tenant", title: "roleTenantTitle", text: "roleTenantText", icon: "user" },
 ];
 
@@ -27,7 +27,7 @@ function afterRegistration(user: Me, next: string | null, plan: string | null): 
 
 /**
  * `/register?plan=<code>` (the landing page's "Get started") is the company sign-up step of the subscription flow;
- * plain `/register` keeps the role choice for inspectors and tenants (e.g. from invitation links).
+ * plain `/register` keeps the role choice for companies and tenants (e.g. from invitation links).
  */
 function RegisterForm() {
   const { register } = useAuth();
@@ -93,6 +93,7 @@ function RolePicker({ role, onChange }: { role: Role; onChange: (role: Role) => 
           <span><span className="block text-body font-medium text-ink">{t(r.title)}</span><span className="block text-caption text-ink-3">{t(r.text)}</span></span>
         </label>
       ))}
+      <p className="text-caption text-ink-3">{t("inspectorAccountHint")}</p>
     </fieldset>
   );
 }

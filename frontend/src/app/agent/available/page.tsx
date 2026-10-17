@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { applyQuery, EMPTY_QUERY, isFiltered, type MarketplaceQuery } from "@/components/agent/marketplace";
-import { MarketplaceFilters } from "@/components/agent/MarketplaceFilters";
+import { applyQuery, EMPTY_QUERY, isFiltered, type AvailableQuery } from "@/components/agent/availableQuery";
+import { AvailableFilters } from "@/components/agent/AvailableFilters";
 import { InspectionCard, InspectionCardGrid } from "@/components/inspection/InspectionCard";
 import { fromAvailable } from "@/components/inspection/inspectionCardModels";
 import { Button, EmptyState, ErrorBanner, PageHeader, Skeleton } from "@/components/ui";
 import { useFormatters, useT } from "@/i18n/I18nProvider";
-import { marketplaceMessages } from "@/i18n/messages/agent-marketplace";
+import { availableMessages } from "@/i18n/messages/agent-available";
 import { inspectionListMessages } from "@/i18n/messages/inspection-lists";
 import { useApi } from "@/lib/hooks";
 import type { AvailableInspection } from "@/lib/types";
@@ -16,13 +16,13 @@ function GridSkeleton() {
   return <InspectionCardGrid dense>{[0, 1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-44" />)}</InspectionCardGrid>;
 }
 
-/** Marketplace of open public inspections: search, filter and sort client-side over the API's full list. */
+/** Open Public inspections of the agent's company: search, filter and sort client-side over the API's full list. */
 export default function AvailablePage() {
-  const t = useT(marketplaceMessages);
+  const t = useT(availableMessages);
   const cardText = useT(inspectionListMessages);
   const formatters = useFormatters();
   const { data, error, loading, reload } = useApi<AvailableInspection[]>("/api/agent/available");
-  const [query, setQuery] = useState<MarketplaceQuery>(EMPTY_QUERY);
+  const [query, setQuery] = useState<AvailableQuery>(EMPTY_QUERY);
   const all = useMemo(() => data ?? [], [data]);
   const shown = useMemo(() => applyQuery(all, query), [all, query]);
   return (
@@ -34,7 +34,7 @@ export default function AvailablePage() {
         <EmptyState icon="search" title={t("noneTitle")}>{t("noneBody")}</EmptyState>
       ) : (
         <div className="space-y-4">
-          <MarketplaceFilters items={all} query={query} onChange={setQuery} />
+          <AvailableFilters items={all} query={query} onChange={setQuery} />
           <p className="tabular text-label text-ink-3" aria-live="polite">
             {isFiltered(query) ? t("results", { count: shown.length, total: all.length }) : t("resultsAll", { count: all.length })}
           </p>

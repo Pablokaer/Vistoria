@@ -27,7 +27,7 @@ export interface InspectionCardModel {
 }
 
 /**
- * One card for every inspection list (marketplace, my inspections, company recent). The whole card is the link;
+ * One card for every inspection list (available, my inspections, company recent). The whole card is the link;
  * the CTA text tells what happens next ("Continue inspection", "View report"…).
  * Example: `<InspectionCard model={fromSummary(item, t, fmt)} />`
  */

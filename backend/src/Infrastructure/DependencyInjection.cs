@@ -86,7 +86,6 @@ public static class DependencyInjection
         services.AddScoped<CurrentUser>();
         services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<CurrentUser>());
         services.AddSingleton<ITokenService, JwtTokenService>();
-        services.AddSingleton<IAccessCodeHasher, AccessCodeHasher>();
         services.AddSingleton<IClock, SystemClock>();
 
         // ---- Cross-cutting ----
@@ -151,7 +150,6 @@ public static class DependencyInjection
         services.AddScoped<TeamAssignmentService>();
         services.AddScoped<InspectionService>();
         services.AddScoped<AgentInspectionService>();
-        services.AddScoped<InvitationService>();
         services.AddScoped<InspectionMaintenanceService>();
         services.AddScoped<MediaUrlService>();
         services.AddScoped<MediaService>();

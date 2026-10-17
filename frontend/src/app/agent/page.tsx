@@ -11,7 +11,7 @@ import { agentDashboardMessages } from "@/i18n/messages/agent-dashboard";
 import { useApi } from "@/lib/hooks";
 import type { AgentDashboard } from "@/lib/types";
 
-/** No active work: one compact nudge towards the marketplace (or reassurance when it is empty). */
+/** No active work: one compact nudge towards the Available list (or reassurance when it is empty). */
 function NoActiveInspection({ available }: { available: number }) {
   const d = useT(agentDashboardMessages);
   return (

@@ -11,7 +11,7 @@ public class ReportLanguageTests(TestApp app)
         (await company.PutAsync("/api/companies/me/report-language", new { language = reportLanguage })).EnsureOk();
         var propertyId = await TestData.CreatePropertyAsync(company, ["Kitchen"]);
         var inspectionId = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, await TestData.CreateTenancyAsync(company, propertyId)));
-        var agent = await app.CreateClient().RegisterAsync("Agent");
+        var agent = await TestData.TeamAgentAsync(app, company);
         await TestData.CompleteAndFinalizeAsync(agent, inspectionId, await TestData.AcceptAndStartAsync(agent, inspectionId));
         return (company, inspectionId);
     }

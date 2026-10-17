@@ -83,7 +83,7 @@ const METRIC_TONES: Record<MetricTone, string> = {
 
 /**
  * Compact figure with icon, label and optional context line; links to the list it counts.
- * Example: `<MetricCard icon="globe" label="Available" value={3} hint="in the marketplace" href="/agent/available" />`
+ * Example: `<MetricCard icon="globe" label="Available" value={3} hint="open to your team" href="/agent/available" />`
  */
 export function MetricCard({ icon, label, value, hint, href, tone = "brand", emphasis }:
   { icon: IconName; label: string; value: number | string; hint?: ReactNode; href?: string; tone?: MetricTone; emphasis?: boolean }) {

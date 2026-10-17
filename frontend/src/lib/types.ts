@@ -23,8 +23,8 @@ export interface SandboxPaymentResult { approved: boolean; message: string; redi
 export interface AuthResponse { accessToken: string; accessTokenExpiresAt: string; refreshToken: string | null; user: Me }
 
 export type InspectionType = "MoveIn" | "MoveOut" | "Periodic" | "Other";
-/** Team: open only to the company's registered agents, or assigned to one of them. */
-export type Visibility = "Public" | "Private" | "Team";
+/** Public: open to every agent of the company (first to accept takes it). Direct: the company chose the agent. */
+export type Visibility = "Public" | "Direct";
 export type InspectionStatus =
   | "Draft" | "Open" | "Assigned" | "InProgress" | "Review" | "Completed"
   | "AwaitingTenant" | "Accepted" | "Disputed" | "Cancelled" | "Expired";
@@ -63,10 +63,6 @@ export interface RoomProgress {
   id: string; name: string; roomType: RoomType; sequence: number; status: RoomStatus; generalPhotoCount: number;
   defectCount: number; hasAiDescription: boolean; hasFinalDescription: boolean; comparisonDecided: boolean | null;
 }
-export interface InvitationStatus {
-  createdAt: string; expiresAt: string; attemptCount: number; maxAttempts: number; used: boolean; usedAt: string | null;
-  revoked: boolean; expired: boolean; invitedEmail: string | null;
-}
 export interface InspectionDetails {
   id: string; inspectionType: InspectionType; visibility: Visibility; status: InspectionStatus;
   property: { id: string; addressLine1: string; addressLine2: string | null; city: string; postcode: string; country: string; propertyType: string };
@@ -75,12 +71,10 @@ export interface InspectionDetails {
   instructions: string | null; scheduledDate: string | null; acceptBy: string | null; createdAt: string; publishedAt: string | null;
   acceptedAt: string | null; startedAt: string | null; completedAt: string | null; sentToTenantAt: string | null; tenantRespondedAt: string | null;
   rooms: RoomProgress[]; roomsCompleted: number; report: { reportId: string; reportNumber: string; latestVersion: number; generatedAt: string } | null;
-  invitation: InvitationStatus | null; allowedActions: string[];
+  allowedActions: string[];
 }
 /** An agent the company registered in its team (GET /api/companies/me/agents). */
 export interface TeamAgent { agentId: string; fullName: string; email: string; phone: string | null; activeInspections: number; addedAt: string }
-export interface PrivateInvitation { link: string; accessCode: string; expiresAt: string; maxAttempts: number }
-export interface PublishResult { inspection: InspectionDetails; invitation: PrivateInvitation | null }
 
 export interface CompanyDashboard {
   properties: number; draft: number; open: number; assigned: number; inProgress: number; inReview: number;
@@ -94,7 +88,6 @@ export interface AvailableInspection {
   publishedAt: string | null; hasComparison: boolean;
 }
 export interface AgentDashboard { available: number; assigned: number; inProgress: number; inReview: number; completed: number; active: InspectionSummary[] }
-export interface InvitationPreview { requiresCode: boolean; expiresAt: string; attemptsRemaining: number; inspection: AvailableInspection | null }
 
 export interface Media { id: string; mediaType: "General" | "Defect"; defectId: string | null; url: string; originalFilename: string; mimeType: string; fileSize: number; uploadedAt: string }
 export interface AiAnalysis {

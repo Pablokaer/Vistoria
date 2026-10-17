@@ -11,20 +11,19 @@ import { Field, Input, Switch, Textarea } from "./ui";
 export { InspectionCreated } from "./company/InspectionCreated";
 
 /** Inspection fields that do not depend on the property (shared by "New inspection" and "Add property"). */
-/** `assignedAgentId` applies to Team ("" = the whole team) and Private ("" = an outside inspector with link + code). */
+/** `assignedAgentId` is used only when `visibility` is Direct (the agent chosen by the company). */
 export interface InspectionSettings {
-  visibility: Visibility; inviteEmail: string; assignedAgentId: string; scheduledDate: string; acceptBy: string; instructions: string; publishNow: boolean;
+  visibility: Visibility; assignedAgentId: string; scheduledDate: string; acceptBy: string; instructions: string; publishNow: boolean;
 }
 
-export const DEFAULT_SETTINGS: InspectionSettings = { visibility: "Public", inviteEmail: "", assignedAgentId: "", scheduledDate: "", acceptBy: "", instructions: "", publishNow: true };
+export const DEFAULT_SETTINGS: InspectionSettings = { visibility: "Public", assignedAgentId: "", scheduledDate: "", acceptBy: "", instructions: "", publishNow: true };
 
-/** The team agent who gets the inspection directly, if any; Public inspections always go to the marketplace. */
-const directAgentId = (s: InspectionSettings): string | null => (s.visibility !== "Public" && s.assignedAgentId ? s.assignedAgentId : null);
+/** The API derives the visibility: an agent makes it Direct, none makes it Public to the whole team (ADR 0022). */
+const directAgentId = (s: InspectionSettings): string | null => (s.visibility === "Direct" && s.assignedAgentId ? s.assignedAgentId : null);
 
 export const settingsPayload = (s: InspectionSettings) => ({
-  visibility: s.visibility, instructions: s.instructions || null, scheduledDate: s.scheduledDate || null,
-  acceptBy: s.acceptBy ? new Date(s.acceptBy).toISOString() : null, publishNow: s.publishNow,
-  inviteEmail: directAgentId(s) ? null : s.inviteEmail || null, assignedAgentId: directAgentId(s),
+  instructions: s.instructions || null, scheduledDate: s.scheduledDate || null,
+  acceptBy: s.acceptBy ? new Date(s.acceptBy).toISOString() : null, publishNow: s.publishNow, assignedAgentId: directAgentId(s),
 });
 
 // Same identity as InspectionTypeTag: teal door-in, orange door-out, indigo calendar.
@@ -55,10 +54,9 @@ export function InspectionTypePicker({ types, value, onChange }: { types: Inspec
   );
 }
 
-const VISIBILITY_STYLE: Record<Visibility, { icon: IconName; hint: "visibilityPublicHint" | "visibilityTeamHint" | "visibilityPrivateHint" }> = {
-  Public: { icon: "globe", hint: "visibilityPublicHint" },
-  Team: { icon: "users", hint: "visibilityTeamHint" },
-  Private: { icon: "lock", hint: "visibilityPrivateHint" },
+const VISIBILITY_STYLE: Record<Visibility, { icon: IconName; hint: "visibilityPublicHint" | "visibilityDirectHint" }> = {
+  Public: { icon: "users", hint: "visibilityPublicHint" },
+  Direct: { icon: "userCheck", hint: "visibilityDirectHint" },
 };
 
 function VisibilityOption({ v, selected, onSelect }: { v: Visibility; selected: boolean; onSelect: () => void }) {
@@ -74,10 +72,7 @@ function VisibilityOption({ v, selected, onSelect }: { v: Visibility; selected: 
   );
 }
 
-/**
- * Marketplace, the company's own team (whole team or one agent) or private: straight to one team agent, or an
- * invitation with link + code for an outside inspector (+ optional inspector email).
- */
+/** Public to every agent of the company (first to accept takes it) or Direct to the one agent picked here. */
 export function InspectionAssignmentFields({ value, onChange }: { value: InspectionSettings; onChange: (s: InspectionSettings) => void }) {
   const t = useT(companyFormMessages);
   const setAgent = (id: string) => onChange({ ...value, assignedAgentId: id });
@@ -85,19 +80,13 @@ export function InspectionAssignmentFields({ value, onChange }: { value: Inspect
     <div className="space-y-4">
       <fieldset>
         <legend className="mb-1.5 text-label font-medium text-ink-2">{t("visibility")}</legend>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {(["Public", "Team", "Private"] as Visibility[]).map((v) => (
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {(["Public", "Direct"] as Visibility[]).map((v) => (
             <VisibilityOption key={v} v={v} selected={value.visibility === v} onSelect={() => onChange({ ...value, visibility: v })} />
           ))}
         </div>
       </fieldset>
-      {value.visibility === "Team" && <TeamAgentPicker value={value.assignedAgentId} onChange={setAgent} />}
-      {value.visibility === "Private" && <TeamAgentPicker mode="private" value={value.assignedAgentId} onChange={setAgent} />}
-      {value.visibility === "Private" && !value.assignedAgentId && (
-        <Field label={t("agentEmail")} hint={t("agentEmailHint")}>
-          <Input type="email" value={value.inviteEmail} onChange={(e) => onChange({ ...value, inviteEmail: e.target.value })} />
-        </Field>
-      )}
+      {value.visibility === "Direct" && <TeamAgentPicker value={value.assignedAgentId} onChange={setAgent} />}
     </div>
   );
 }

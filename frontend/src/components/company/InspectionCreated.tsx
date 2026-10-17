@@ -1,41 +1,24 @@
 "use client";
 
 import { Icon } from "@/components/icons";
-import { Card, CopyField, InspectionTypeTag, LinkButton, Notice, StatusBadge } from "@/components/ui";
-import { useFormatters, useT } from "@/i18n/I18nProvider";
+import { Card, InspectionTypeTag, LinkButton, StatusBadge } from "@/components/ui";
+import { useT } from "@/i18n/I18nProvider";
 import { companyFormMessages } from "@/i18n/messages/company-forms";
 import type { Translate } from "@/i18n/translate";
-import type { PublishResult } from "@/lib/types";
+import type { InspectionDetails } from "@/lib/types";
 
 type CompanyFormKey = keyof (typeof companyFormMessages)["en"];
 
-function InvitationDetails({ invitation }: { invitation: NonNullable<PublishResult["invitation"]> }) {
-  const t = useT(companyFormMessages);
-  const { formatDate } = useFormatters();
-  return (
-    <div className="space-y-4">
-      <Notice tone="warning">{t("copyNowWarning")}</Notice>
-      <CopyField label={t("invitationLink")} value={invitation.link} />
-      <div>
-        <span className="mb-1.5 block text-label font-medium text-ink-2">{t("accessCode")}</span>
-        <div className="tabular rounded-md bg-sidebar px-4 py-3 text-center font-mono text-3xl tracking-[0.4em] text-white">{invitation.accessCode}</div>
-        <p className="mt-1.5 text-caption text-ink-3">{t("codeValidity", { date: formatDate(invitation.expiresAt), attempts: invitation.maxAttempts })}</p>
-      </div>
-    </div>
-  );
-}
-
-/** What happened on publish, by visibility: marketplace, open to the team, or assigned to one agent. */
-function publishedMessage(i: PublishResult["inspection"], t: Translate<CompanyFormKey>): string {
+/** What happened on publish: open to the whole team (Public) or assigned to one agent (Direct). */
+function publishedMessage(i: InspectionDetails, t: Translate<CompanyFormKey>): string {
   if (i.status === "Draft") return t("publishFromInspectionPage");
   if (i.status === "Assigned" && i.agent) return t("assignedToAgent", { agent: i.agent.fullName, rooms: i.rooms.length });
-  return t(i.visibility === "Team" ? "openToTeam" : "openInMarketplace", { rooms: i.rooms.length });
+  return t("openToTeam", { rooms: i.rooms.length });
 }
 
-/** Shown once after creating an inspection (a private invitation's code can never be displayed again). */
-export function InspectionCreated({ result, extra }: { result: PublishResult; extra?: React.ReactNode }) {
+/** Shown after creating an inspection. Example: `<InspectionCreated inspection={created} />` */
+export function InspectionCreated({ inspection: i, extra }: { inspection: InspectionDetails; extra?: React.ReactNode }) {
   const t = useT(companyFormMessages);
-  const i = result.inspection;
   const published = i.status !== "Draft";
   return (
     <div className="mx-auto max-w-narrow animate-fade-in">
@@ -49,10 +32,7 @@ export function InspectionCreated({ result, extra }: { result: PublishResult; ex
         </div>
       </div>
       <Card title={t("nextSteps")}>
-        {result.invitation ? <InvitationDetails invitation={result.invitation} /> : (
-          <p className="text-body text-ink-2">{publishedMessage(i, t)}</p>
-        )}
-        {result.invitation && <p className="mt-4 text-label text-ink-3">{t("privateNextStep")}</p>}
+        <p className="text-body text-ink-2">{publishedMessage(i, t)}</p>
         <div className="mt-5 flex flex-wrap gap-2 border-t border-line pt-4">
           <LinkButton href={`/company/inspections/${i.id}`}>{t("goToInspection")}</LinkButton>{extra}
         </div>

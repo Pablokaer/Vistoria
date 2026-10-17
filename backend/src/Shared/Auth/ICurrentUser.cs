@@ -22,6 +22,9 @@ public static class AppRoles
 
     public static readonly string[] All = [Company, Agent, Tenant];
 
-    /// <summary>Roles a user may pick when self-registering.</summary>
-    public static bool IsSelfRegistrable(string role) => All.Contains(role, StringComparer.Ordinal);
+    /// <summary>
+    /// Roles a user may pick when self-registering. Agent accounts are created by their company (ADR 0022).
+    /// Example: <c>AppRoles.IsSelfRegistrable("Agent") // false</c>.
+    /// </summary>
+    public static bool IsSelfRegistrable(string role) => role is Company or Tenant;
 }

@@ -75,7 +75,8 @@ public static class DatabaseInitializer
     }
 
     /// <summary>
-    /// Registers the demo agent in the demo company's team, so Team inspections can be tried right away.
+    /// Databases seeded before ADR 0022 have a self-registered demo agent: link it to the demo company's team so it
+    /// keeps seeing the company's inspections. New seeds create it through the team already.
     /// Example: <c>await EnsureDemoTeamAgentAsync(db, ct);</c>
     /// </summary>
     private static async Task EnsureDemoTeamAgentAsync(AppDbContext db, CancellationToken ct)
@@ -126,25 +127,25 @@ public static class DatabaseInitializer
         public async Task RunAsync(CancellationToken ct)
         {
             var company = await RegisterAsync(CompanyEmail, "Demo Company Owner", AppRoles.Company, ct);
-            var agent = await RegisterAsync(AgentEmail, "Demo Inspector", AppRoles.Agent, ct);
             var tenant = await RegisterAsync(TenantEmail, "Demo Tenant", AppRoles.Tenant, ct);
 
             await As(company, AppRoles.Company, sp => sp.GetRequiredService<CompanyService>()
                 .CreateWorkspaceAsync(new CreateCompanyRequest("Demo Property Management", "hello@demo-pm.local", "+353 1 555 0100"), ct));
+            var agent = await RegisterTeamAgentAsync(company, ct);
 
-            // Property 1: open public Move In waiting for an agent (marketplace demo).
+            // Property 1: open Public Move In waiting for an agent (the demo agent sees it under Available).
             var (mainStreet, mainTenancy) = await CreatePropertyWithTenancyAsync(company, tenant, "12 Main Street", "D02 XY45", ct);
             await As(company, AppRoles.Company, sp => sp.GetRequiredService<InspectionService>().CreateAsync(
-                new CreateInspectionRequest(mainStreet, mainTenancy, InspectionType.MoveIn, InspectionVisibility.Public, null,
+                new CreateInspectionRequest(mainStreet, mainTenancy, InspectionType.MoveIn, null,
                     "Keys are with the concierge. Please photograph every room from two corners.", DateOnly.FromDateTime(DateTime.UtcNow.AddDays(3)),
-                    null, PublishNow: true, InviteEmail: null), ct));
+                    null, PublishNow: true), ct));
 
             // Property 2: finalized and accepted Move In, ready for a Move Out comparison demo.
             var (oakAvenue, oakTenancy) = await CreatePropertyWithTenancyAsync(company, tenant, "48 Oak Avenue", "D04 AB12", ct);
             var moveIn = await As(company, AppRoles.Company, sp => sp.GetRequiredService<InspectionService>().CreateAsync(
-                new CreateInspectionRequest(oakAvenue, oakTenancy, InspectionType.MoveIn, InspectionVisibility.Public, null,
-                    null, null, null, PublishNow: true, InviteEmail: null), ct));
-            var inspectionId = moveIn.Inspection.Id;
+                new CreateInspectionRequest(oakAvenue, oakTenancy, InspectionType.MoveIn, null,
+                    null, null, null, PublishNow: true), ct));
+            var inspectionId = moveIn.Id;
 
             await As(agent, AppRoles.Agent, sp => sp.GetRequiredService<AgentInspectionService>().AcceptAsync(inspectionId, ct));
             var started = await As(agent, AppRoles.Agent, sp => sp.GetRequiredService<AgentInspectionService>().StartAsync(inspectionId, ct));
@@ -202,6 +203,14 @@ public static class DatabaseInitializer
                 return await sp.GetRequiredService<MediaService>().UploadAsync(
                     new UploadMediaCommand(inspectionId, roomId, type, defectId, stream, asset, "image/jpeg", stream.Length), ct);
             });
+
+        /// <summary>The demo company creates the demo agent's account, like any company does (ADR 0022).</summary>
+        private async Task<Guid> RegisterTeamAgentAsync(Guid company, CancellationToken ct)
+        {
+            var agent = await As(company, AppRoles.Company, sp => sp.GetRequiredService<CompanyAgentService>()
+                .RegisterAsync(new RegisterTeamAgentRequest(AgentEmail, "Demo Inspector", DemoPassword, "+353 87 555 0199"), ct));
+            return agent.AgentId;
+        }
 
         private async Task<Guid> RegisterAsync(string email, string name, string role, CancellationToken ct)
         {

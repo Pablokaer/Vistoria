@@ -48,8 +48,12 @@ public class Inspection
 
     public bool IsFinalized => InspectionStateMachine.IsFinalized(Status);
 
+    /// <summary>
+    /// A new draft is Public (open to the company's agents); <see cref="AssignToTeamAgent"/> makes it Direct.
+    /// Example: <c>Inspection.CreateDraft(companyId, propertyId, tenancyId, InspectionType.MoveIn, null, null, null, null, userId, now)</c>.
+    /// </summary>
     public static Inspection CreateDraft(Guid companyId, Guid propertyId, Guid? tenancyId, InspectionType type,
-        InspectionVisibility visibility, Guid? comparisonInspectionId, string? instructions, DateOnly? scheduledDate,
+        Guid? comparisonInspectionId, string? instructions, DateOnly? scheduledDate,
         DateTimeOffset? acceptBy, Guid createdBy, DateTimeOffset now)
     {
         if (type is InspectionType.MoveIn or InspectionType.MoveOut && tenancyId is null)
@@ -67,7 +71,7 @@ public class Inspection
             PropertyId = propertyId,
             TenancyId = tenancyId,
             InspectionType = type,
-            Visibility = visibility,
+            Visibility = InspectionVisibility.Public,
             Status = InspectionStatus.Draft,
             ComparisonInspectionId = comparisonInspectionId,
             Instructions = Normalize(instructions, 2000),
@@ -116,41 +120,41 @@ public class Inspection
     }
 
     /// <summary>
-    /// The company hands a Team or Private inspection to one of its agents. On a draft the agent is only designated
-    /// (assigned on publish); an Open or not-yet-started Assigned inspection is (re)assigned at once. Public
-    /// inspections belong to the marketplace and are never assigned directly.
-    /// Example: <c>inspection.AssignToTeamAgent(agentUserId, clock.UtcNow)</c>.
+    /// The company hands the inspection to one of its agents, making it Direct. On a draft the agent is only designated
+    /// (assigned on publish); an Open or not-yet-started Assigned inspection is (re)assigned at once, also when another
+    /// agent accepted it from the Available list. Example: <c>inspection.AssignToTeamAgent(agentUserId, clock.UtcNow)</c>.
     /// </summary>
     public void AssignToTeamAgent(Guid agentId, DateTimeOffset now)
     {
-        if (Visibility == InspectionVisibility.Public)
-            throw new DomainRuleException("inspection.public_not_assignable", new(
-                $"Only Team or Private inspections can be assigned to an agent (this one is {Visibility}).",
-                $"Apenas vistorias da equipe ou privadas podem ser atribuídas a um vistoriador (esta é {InspectionTerms.Of(Visibility).PtBr})."));
         if (Status is not (InspectionStatus.Draft or InspectionStatus.Open or InspectionStatus.Assigned))
             throw new DomainRuleException("inspection.not_assignable", new(
                 $"The inspection can no longer be assigned while {Status}; expected Draft, Open or Assigned.",
                 $"A vistoria não pode mais ser atribuída enquanto estiver {InspectionTerms.Of(Status).PtBr}."));
         AgentId = agentId;
+        Visibility = InspectionVisibility.Direct;
         UpdatedAt = now;
         if (Status == InspectionStatus.Draft) return;
         if (Status == InspectionStatus.Assigned) { AcceptedAt = now; return; }
         MarkAssigned(now);
     }
 
-    /// <summary>Assigned (not started) → Open: the inspection goes back to the team list. Example: <c>inspection.ReleaseToTeam(now)</c>.</summary>
+    /// <summary>
+    /// Takes the inspection back from its agent (Direct or accepted, not started yet) and makes it Public again:
+    /// a draft just loses its designated agent; Assigned → Open. Example: <c>inspection.ReleaseToTeam(now)</c>.
+    /// </summary>
     public void ReleaseToTeam(DateTimeOffset now)
     {
-        if (Visibility != InspectionVisibility.Team)
-            throw new DomainRuleException("inspection.not_team", new(
-                $"Only Team inspections can be released to the team (this one is {Visibility}).",
-                $"Apenas vistorias da equipe podem voltar para a equipe (esta é {InspectionTerms.Of(Visibility).PtBr})."));
-        if (Status == InspectionStatus.Draft) { AgentId = null; UpdatedAt = now; return; }
-        InspectionStateMachine.EnsureCanTransition(Status, InspectionStatus.Open);
+        if (AgentId is null)
+            throw new DomainRuleException("inspection.not_assigned", new(
+                $"The inspection has no agent to release (status {Status}); it is already open to the whole team.",
+                "A vistoria não tem vistoriador para liberar; ela já está aberta para toda a equipe."));
+        if (Status != InspectionStatus.Draft) InspectionStateMachine.EnsureCanTransition(Status, InspectionStatus.Open);
         AgentId = null;
+        Visibility = InspectionVisibility.Public;
+        UpdatedAt = now;
+        if (Status == InspectionStatus.Draft) return;
         AcceptedAt = null;
         Status = InspectionStatus.Open;
-        UpdatedAt = now;
     }
 
     private void MarkAssigned(DateTimeOffset now)
@@ -165,7 +169,7 @@ public class Inspection
     {
         if (Status == InspectionStatus.Open && AcceptBy is not null && AcceptBy <= now)
             throw new DomainRuleException("inspection.expired", new("This inspection is no longer available.", "Esta vistoria não está mais disponível."));
-        if (AgentId is not null || Status != InspectionStatus.Open)
+        if (Visibility != InspectionVisibility.Public || AgentId is not null || Status != InspectionStatus.Open)
             throw new DomainRuleException("inspection.not_available", InspectionMessages.NotAvailable);
         AgentId = agentId;
         MarkAssigned(now);
@@ -249,13 +253,11 @@ public class Inspection
         UpdatedAt = now;
     }
 
-    public void UpdateDraft(InspectionVisibility visibility, string? instructions, DateOnly? scheduledDate,
-        DateTimeOffset? acceptBy, DateTimeOffset now)
+    /// <summary>Who takes the draft changes through <see cref="AssignToTeamAgent"/> / <see cref="ReleaseToTeam"/>, not here.</summary>
+    public void UpdateDraft(string? instructions, DateOnly? scheduledDate, DateTimeOffset? acceptBy, DateTimeOffset now)
     {
         if (Status != InspectionStatus.Draft)
             throw new DomainRuleException("inspection.not_draft", new("Only draft inspections can be edited.", "Apenas vistorias em rascunho podem ser editadas."));
-        Visibility = visibility;
-        if (visibility == InspectionVisibility.Public) AgentId = null; // only Team and Private drafts carry a designated agent
         Instructions = Normalize(instructions, 2000);
         ScheduledDate = scheduledDate;
         AcceptBy = acceptBy;

@@ -3,8 +3,9 @@ using InspectFlow.Tests.Support;
 
 namespace InspectFlow.Tests.Integration;
 
+/// <summary>Public inspections: listed to the publishing company's agents only (ADR 0022); the first to accept takes it.</summary>
 [Collection(ApiCollection.Name)]
-public class MarketplaceTests(TestApp app)
+public class AvailableInspectionsTests(TestApp app)
 {
     [Fact]
     public async Task Agent_sees_public_inspection_without_private_details_and_accepts_it()
@@ -15,7 +16,7 @@ public class MarketplaceTests(TestApp app)
         await TestData.AddTenantAsync(app, company, tenancyId);
         var inspectionId = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId));
 
-        var agent = await app.CreateClient().RegisterAsync("Agent");
+        var agent = await TestData.TeamAgentAsync(app, company);
         var available = (await agent.GetAsync("/api/agent/available")).EnsureOk();
         var listed = available.Body!.AsArray().Single(i => i!["id"]!.GetValue<string>() == inspectionId.ToString())!;
         Assert.Equal("D02", listed["postcodeArea"]!.GetValue<string>());
@@ -36,10 +37,26 @@ public class MarketplaceTests(TestApp app)
         var after = (await agent.GetAsync("/api/agent/available")).EnsureOk();
         Assert.DoesNotContain(after.Body!.AsArray(), i => i!["id"]!.GetValue<string>() == inspectionId.ToString());
 
-        var other = await app.CreateClient().RegisterAsync("Agent");
+        var other = await TestData.TeamAgentAsync(app, company);
         var second = await other.PostAsync($"/api/agent/inspections/{inspectionId}/accept");
         Assert.Contains(second.Status, TestData.Rejected);
         (await other.GetAsync($"/api/agent/inspections/{inspectionId}")).EnsureStatus(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Agents_of_other_companies_never_see_or_accept_a_public_inspection()
+    {
+        var company = await TestData.CompanyAsync(app);
+        var propertyId = await TestData.CreatePropertyAsync(company, ["Kitchen"]);
+        var tenancyId = await TestData.CreateTenancyAsync(company, propertyId);
+        var inspectionId = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId));
+        var outsider = await TestData.OtherCompanyAgentAsync(app);
+
+        var available = (await outsider.GetAsync("/api/agent/available")).EnsureOk();
+        Assert.DoesNotContain(available.Body!.AsArray(), i => i!["id"]!.GetValue<string>() == inspectionId.ToString());
+        (await outsider.GetAsync($"/api/agent/available/{inspectionId}")).EnsureStatus(HttpStatusCode.NotFound);
+        (await outsider.PostAsync($"/api/agent/inspections/{inspectionId}/accept")).EnsureStatus(HttpStatusCode.NotFound);
+        Assert.Equal(0, (await outsider.GetAsync("/api/agent/dashboard")).EnsureOk()["available"].GetValue<int>());
     }
 
     [Fact]
@@ -50,7 +67,7 @@ public class MarketplaceTests(TestApp app)
         var tenancyId = await TestData.CreateTenancyAsync(company, propertyId);
         var inspectionId = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId));
 
-        var agents = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => app.CreateClient().RegisterAsync("Agent")));
+        var agents = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => TestData.TeamAgentAsync(app, company)));
         var results = await Task.WhenAll(agents.Select(a => a.PostAsync($"/api/agent/inspections/{inspectionId}/accept")));
 
         Assert.Single(results, r => r.Status == HttpStatusCode.OK);
@@ -69,7 +86,7 @@ public class MarketplaceTests(TestApp app)
         var propertyId = await TestData.CreatePropertyAsync(company);
         var tenancyId = await TestData.CreateTenancyAsync(company, propertyId);
         var inspectionId = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId));
-        var agent = await app.CreateClient().RegisterAsync("Agent");
+        var agent = await TestData.TeamAgentAsync(app, company);
         var accepted = (await agent.PostAsync($"/api/agent/inspections/{inspectionId}/accept")).EnsureOk();
         var roomId = accepted["rooms"].AsArray()[0]!["id"]!.GetValue<string>();
 
@@ -77,7 +94,7 @@ public class MarketplaceTests(TestApp app)
         early.EnsureStatus(HttpStatusCode.UnprocessableEntity);
         Assert.Equal("inspection.not_editable", early.Code);
 
-        var intruder = await app.CreateClient().RegisterAsync("Agent");
+        var intruder = await TestData.TeamAgentAsync(app, company);
         (await intruder.PostAsync($"/api/agent/inspections/{inspectionId}/start")).EnsureStatus(HttpStatusCode.NotFound);
         (await intruder.UploadAsync($"/api/agent/inspections/{inspectionId}/rooms/{roomId}/photos", TestData.Jpeg(), "a.jpg", "image/jpeg"))
             .EnsureStatus(HttpStatusCode.NotFound);
@@ -93,7 +110,7 @@ public class MarketplaceTests(TestApp app)
         var propertyId = await TestData.CreatePropertyAsync(company, ["Kitchen", "Bathroom"]);
         var tenancyId = await TestData.CreateTenancyAsync(company, propertyId);
         var inspectionId = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId));
-        var agent = await app.CreateClient().RegisterAsync("Agent");
+        var agent = await TestData.TeamAgentAsync(app, company);
         var rooms = await TestData.AcceptAndStartAsync(agent, inspectionId);
         await TestData.CompleteRoomAsync(agent, inspectionId, rooms[0]);
         var url = $"/api/agent/inspections/{inspectionId}/rooms/{rooms[0]}";
@@ -122,7 +139,7 @@ public class MarketplaceTests(TestApp app)
         Assert.Equal("Cancelled", cancelled["status"].GetValue<string>());
 
         var finalizeMe = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId));
-        var agent = await app.CreateClient().RegisterAsync("Agent");
+        var agent = await TestData.TeamAgentAsync(app, company);
         var rooms = await TestData.AcceptAndStartAsync(agent, finalizeMe);
         await TestData.CompleteAndFinalizeAsync(agent, finalizeMe, rooms);
         (await company.PostAsync($"/api/inspections/{finalizeMe}/cancel")).EnsureStatus(HttpStatusCode.UnprocessableEntity);

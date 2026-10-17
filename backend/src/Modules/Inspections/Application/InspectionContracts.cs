@@ -7,33 +7,20 @@ using InspectFlow.Modules.Tenancies.Application;
 namespace InspectFlow.Modules.Inspections.Application;
 
 /// <param name="AssignedAgentId">
-/// Optional, Team or Private visibility: a team agent who gets the inspection directly (Assigned on publish). A Private
-/// inspection with an agent creates no invitation, so <paramref name="InviteEmail"/> is ignored.
+/// A team agent who gets the inspection directly (Direct, Assigned on publish); null makes it Public to the whole team.
 /// </param>
 public sealed record CreateInspectionRequest(
     Guid PropertyId,
     Guid? TenancyId,
     InspectionType InspectionType,
-    InspectionVisibility Visibility,
     Guid? ComparisonInspectionId,
     string? Instructions,
     DateOnly? ScheduledDate,
     DateTimeOffset? AcceptBy,
     bool PublishNow,
-    string? InviteEmail,
     Guid? AssignedAgentId = null);
 
-public sealed record UpdateDraftRequest(InspectionVisibility Visibility, string? Instructions, DateOnly? ScheduledDate, DateTimeOffset? AcceptBy);
-
-public sealed record RegenerateInvitationRequest(string? InviteEmail);
-
-/// <summary>Plain-text token and code are returned exactly once; only hashes are stored.</summary>
-public sealed record PrivateInvitationDto(string Link, string AccessCode, DateTimeOffset ExpiresAt, int MaxAttempts);
-
-public sealed record InvitationStatusDto(DateTimeOffset CreatedAt, DateTimeOffset ExpiresAt, int AttemptCount, int MaxAttempts,
-    bool Used, DateTimeOffset? UsedAt, bool Revoked, bool Expired, string? InvitedEmail);
-
-public sealed record PublishResultDto(InspectionDetailsDto Inspection, PrivateInvitationDto? Invitation);
+public sealed record UpdateDraftRequest(string? Instructions, DateOnly? ScheduledDate, DateTimeOffset? AcceptBy);
 
 public sealed record InspectionSummaryDto(
     Guid Id,
@@ -85,7 +72,6 @@ public sealed record InspectionDetailsDto(
     IReadOnlyList<RoomProgressDto> Rooms,
     int RoomsCompleted,
     ReportRefDto? Report,
-    InvitationStatusDto? Invitation,
     IReadOnlyList<string> AllowedActions);
 
 /// <summary>What an agent sees before accepting: no street address, no tenant data.</summary>
@@ -169,10 +155,6 @@ public sealed record UpdateDefectRequest(string? Description, string? Location, 
     DefectClassification Classification, bool AgentConfirmed);
 
 public sealed record ComparisonDecisionRequest(ComparisonDecision Decision, string? Notes);
-
-public sealed record VerifyInvitationRequest(string AccessCode);
-
-public sealed record InvitationPreviewDto(bool RequiresCode, DateTimeOffset ExpiresAt, int AttemptsRemaining, AvailableInspectionDto? Inspection);
 
 public sealed record ReviewDto(InspectionDetailsDto Inspection, ReportSnapshot Preview, IReadOnlyDictionary<Guid, string> PhotoUrls,
     IReadOnlyList<string> BlockingIssues, bool CanFinalize);

@@ -41,7 +41,6 @@ public interface IAppDbContext
     DbSet<InspectionRoom> InspectionRooms { get; }
     DbSet<InspectionDefect> InspectionDefects { get; }
     DbSet<InspectionComparison> InspectionComparisons { get; }
-    DbSet<InspectionInvitation> InspectionInvitations { get; }
 
     DbSet<InspectionRoomMedia> InspectionRoomMedia { get; }
     DbSet<AiAnalysis> AiAnalyses { get; }

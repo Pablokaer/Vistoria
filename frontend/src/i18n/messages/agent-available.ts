@@ -1,19 +1,17 @@
 import { defineMessages } from "../translate";
 
-// Marketplace of available inspections (app/agent/available/page.tsx, components/agent/Marketplace*).
-export const marketplaceMessages = defineMessages(
+// Inspections the agent's company opened to its agents (app/agent/available/page.tsx, components/agent/Available*).
+export const availableMessages = defineMessages(
   {
     title: "Available inspections",
-    subtitle: "Public inspections waiting for an inspector. Exact addresses are shown after you accept.",
+    subtitle: "Inspections your company opened to its agents; the first to accept takes it. Exact addresses are shown after you accept.",
     searchLabel: "Search inspections",
     searchPlaceholder: "Search city, postcode, company or room",
     typeLabel: "Inspection type",
     propertyTypeLabel: "Property type",
-    visibilityLabel: "Visibility",
     sortLabel: "Sort by",
     allTypes: "All types",
     allProperties: "All properties",
-    allVisibility: "Public and private",
     sortNewest: "Newest first",
     sortAcceptBy: "Accept-by date (soonest)",
     sortScheduled: "Scheduled date (soonest)",
@@ -23,22 +21,20 @@ export const marketplaceMessages = defineMessages(
     clearFilters: "Clear filters",
     refresh: "Refresh",
     noneTitle: "No inspections available right now",
-    noneBody: "New public inspections appear here as soon as companies publish them. Check back later.",
+    noneBody: "New inspections appear here as soon as your company publishes them to the team. Check back later.",
     noMatchTitle: "No inspections match these filters",
     noMatchBody: "Try another search or clear the filters.",
   },
   {
     title: "Vistorias disponíveis",
-    subtitle: "Vistorias públicas aguardando um vistoriador. O endereço exato aparece depois que você aceitar.",
+    subtitle: "Vistorias que a sua empresa abriu para os vistoriadores dela; o primeiro que aceitar fica com ela. O endereço exato aparece depois que você aceitar.",
     searchLabel: "Buscar vistorias",
     searchPlaceholder: "Buscar cidade, CEP, empresa ou cômodo",
     typeLabel: "Tipo de vistoria",
     propertyTypeLabel: "Tipo de imóvel",
-    visibilityLabel: "Visibilidade",
     sortLabel: "Ordenar por",
     allTypes: "Todos os tipos",
     allProperties: "Todos os imóveis",
-    allVisibility: "Públicas e privadas",
     sortNewest: "Mais recentes",
     sortAcceptBy: "Prazo de aceite (mais próximo)",
     sortScheduled: "Data agendada (mais próxima)",
@@ -48,7 +44,7 @@ export const marketplaceMessages = defineMessages(
     clearFilters: "Limpar filtros",
     refresh: "Atualizar",
     noneTitle: "Nenhuma vistoria disponível no momento",
-    noneBody: "Novas vistorias públicas aparecem aqui assim que as empresas as publicam. Volte mais tarde.",
+    noneBody: "Novas vistorias aparecem aqui assim que a sua empresa as publica para a equipe. Volte mais tarde.",
     noMatchTitle: "Nenhuma vistoria corresponde a estes filtros",
     noMatchBody: "Tente outra busca ou limpe os filtros.",
   },

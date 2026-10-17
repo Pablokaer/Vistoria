@@ -60,15 +60,15 @@ public static class TestData
         return tenant;
     }
 
+    /// <summary>Public to the company's agents, or Direct to <paramref name="assignedAgentId"/>. Returns the inspection details.</summary>
     public static async Task<JsonNode> CreateInspectionAsync(ApiClient company, Guid propertyId, Guid? tenancyId, string type = "MoveIn",
-        string visibility = "Public", Guid? comparisonInspectionId = null, bool publish = true, Guid? assignedAgentId = null)
+        Guid? comparisonInspectionId = null, bool publish = true, Guid? assignedAgentId = null)
     {
         var res = await company.PostAsync("/api/inspections", new
         {
             propertyId,
             tenancyId,
             inspectionType = type,
-            visibility,
             comparisonInspectionId,
             publishNow = publish,
             assignedAgentId,
@@ -76,15 +76,18 @@ public static class TestData
         return res.EnsureOk().Body!;
     }
 
-    /// <summary>Registers a self-signed-up agent and adds them to the company's team (linked by email). Returns the agent's client.</summary>
-    public static async Task<ApiClient> TeamAgentAsync(TestApp app, ApiClient company)
+    /// <summary>The company creates an agent account (agents cannot sign up themselves) and the agent signs in. Returns the agent's client.</summary>
+    public static async Task<ApiClient> TeamAgentAsync(TestApp app, ApiClient company, string fullName = "Test Agent")
     {
-        var agent = await app.CreateClient().RegisterAsync("Agent");
-        (await company.PostAsync("/api/companies/me/agents", new { email = agent.Email, fullName = "Ignored For Existing" })).EnsureOk();
-        return agent;
+        var email = $"agent-{Guid.NewGuid():N}@test.local";
+        (await company.PostAsync("/api/companies/me/agents", new { email, fullName, password = Password })).EnsureOk();
+        return await app.CreateClient().LoginAsync(email);
     }
 
-    public static Guid InspectionId(JsonNode created) => Guid.Parse(created["inspection"]!["id"]!.GetValue<string>());
+    /// <summary>An agent of a different, newly created company: must never see the first company's inspections.</summary>
+    public static async Task<ApiClient> OtherCompanyAgentAsync(TestApp app) => await TeamAgentAsync(app, await CompanyAsync(app));
+
+    public static Guid InspectionId(JsonNode created) => Guid.Parse(created["id"]!.GetValue<string>());
 
     /// <summary>Agent accepts and starts; returns room ids in order.</summary>
     public static async Task<List<Guid>> AcceptAndStartAsync(ApiClient agent, Guid inspectionId)

@@ -1,4 +1,4 @@
 // Destinations of the public pages' calls to action that are not billing-related (GET_STARTED_HREF lives in lib/billing).
 
-/** Inspector sign-up: the register page pre-selects the Agent role (inspectors join free). */
-export const JOIN_AS_AGENT_HREF = "/register?role=Agent";
+/** Inspectors cannot sign up: their company creates their account (ADR 0022), so their entry point is sign-in. */
+export const INSPECTOR_SIGN_IN_HREF = "/login";

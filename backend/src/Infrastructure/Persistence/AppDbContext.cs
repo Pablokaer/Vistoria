@@ -38,7 +38,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<InspectionRoom> InspectionRooms => Set<InspectionRoom>();
     public DbSet<InspectionDefect> InspectionDefects => Set<InspectionDefect>();
     public DbSet<InspectionComparison> InspectionComparisons => Set<InspectionComparison>();
-    public DbSet<InspectionInvitation> InspectionInvitations => Set<InspectionInvitation>();
     public DbSet<InspectionRoomMedia> InspectionRoomMedia => Set<InspectionRoomMedia>();
     public DbSet<AiAnalysis> AiAnalyses => Set<AiAnalysis>();
     public DbSet<InspectionReport> InspectionReports => Set<InspectionReport>();

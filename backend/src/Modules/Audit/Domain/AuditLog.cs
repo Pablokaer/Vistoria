@@ -31,9 +31,6 @@ public static class AuditActions
     public const string TenantJoinedTenancy = nameof(TenantJoinedTenancy);
     public const string InspectionCreated = nameof(InspectionCreated);
     public const string InspectionPublished = nameof(InspectionPublished);
-    public const string InspectionInvitationCreated = nameof(InspectionInvitationCreated);
-    public const string InspectionInvitationFailedAttempt = nameof(InspectionInvitationFailedAttempt);
-    public const string InspectionInvitationVerified = nameof(InspectionInvitationVerified);
     public const string InspectionAccepted = nameof(InspectionAccepted);
     public const string InspectionStarted = nameof(InspectionStarted);
     public const string InspectionCancelled = nameof(InspectionCancelled);

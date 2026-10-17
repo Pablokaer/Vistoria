@@ -16,7 +16,7 @@ public class MoveOutFlowTests(TestApp app)
 
         // Baseline Move In (with AI analysis so the structured comparison has data).
         var moveInId = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId));
-        var agent = await app.CreateClient().RegisterAsync("Agent");
+        var agent = await TestData.TeamAgentAsync(app, company);
         var moveInRooms = await TestData.AcceptAndStartAsync(agent, moveInId);
         foreach (var roomId in moveInRooms)
         {
@@ -35,15 +35,15 @@ public class MoveOutFlowTests(TestApp app)
         Assert.Contains(candidates.Body!.AsArray(), c => c!["id"]!.GetValue<string>() == moveInId.ToString());
         var otherProperty = await TestData.CreatePropertyAsync(company, ["Kitchen"]);
         var otherTenancy = await TestData.CreateTenancyAsync(company, otherProperty);
-        (await company.PostAsync("/api/inspections", new { propertyId = otherProperty, tenancyId = otherTenancy, inspectionType = "MoveOut", visibility = "Public", comparisonInspectionId = moveInId }))
+        (await company.PostAsync("/api/inspections", new { propertyId = otherProperty, tenancyId = otherTenancy, inspectionType = "MoveOut", comparisonInspectionId = moveInId }))
             .EnsureStatus(HttpStatusCode.BadRequest);
 
         // Move Out linked to the Move In.
         var moveOut = await TestData.CreateInspectionAsync(company, propertyId, tenancyId, type: "MoveOut", comparisonInspectionId: moveInId);
         var moveOutId = TestData.InspectionId(moveOut);
-        Assert.Equal(moveInId.ToString(), moveOut["inspection"]!["comparisonInspection"]!["inspectionId"]!.GetValue<string>());
+        Assert.Equal(moveInId.ToString(), moveOut["comparisonInspection"]!["inspectionId"]!.GetValue<string>());
 
-        var agent2 = await app.CreateClient().RegisterAsync("Agent");
+        var agent2 = await TestData.TeamAgentAsync(app, company);
         var available = (await agent2.GetAsync("/api/agent/available")).EnsureOk();
         Assert.True(available.Body!.AsArray().Single(i => i!["id"]!.GetValue<string>() == moveOutId.ToString())!["hasComparison"]!.GetValue<bool>());
         var rooms = await TestData.AcceptAndStartAsync(agent2, moveOutId);
@@ -124,14 +124,14 @@ public class MoveOutFlowTests(TestApp app)
         var propertyId = await TestData.CreatePropertyAsync(company, ["Kitchen"]);
         var oldTenancy = await TestData.CreateTenancyAsync(company, propertyId);
         var moveIn = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, oldTenancy));
-        var agent = await app.CreateClient().RegisterAsync("Agent");
+        var agent = await TestData.TeamAgentAsync(app, company);
         await TestData.CompleteAndFinalizeAsync(agent, moveIn, await TestData.AcceptAndStartAsync(agent, moveIn));
 
         var newTenancy = await TestData.CreateTenancyAsync(company, propertyId);
         foreach (var type in new[] { "MoveOut", "Periodic" })
-            (await company.PostAsync("/api/inspections", new { propertyId, tenancyId = newTenancy, inspectionType = type, visibility = "Public", comparisonInspectionId = moveIn }))
+            (await company.PostAsync("/api/inspections", new { propertyId, tenancyId = newTenancy, inspectionType = type, comparisonInspectionId = moveIn }))
                 .EnsureStatus(HttpStatusCode.BadRequest);
-        (await company.PostAsync("/api/inspections", new { propertyId, tenancyId = oldTenancy, inspectionType = "Periodic", visibility = "Public", comparisonInspectionId = moveIn }))
+        (await company.PostAsync("/api/inspections", new { propertyId, tenancyId = oldTenancy, inspectionType = "Periodic", comparisonInspectionId = moveIn }))
             .EnsureOk();
     }
 
@@ -142,7 +142,7 @@ public class MoveOutFlowTests(TestApp app)
         var propertyId = await TestData.CreatePropertyAsync(company, ["Kitchen"]);
         var tenancyId = await TestData.CreateTenancyAsync(company, propertyId);
         var openMoveIn = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId));
-        (await company.PostAsync("/api/inspections", new { propertyId, tenancyId, inspectionType = "MoveOut", visibility = "Public", comparisonInspectionId = openMoveIn }))
+        (await company.PostAsync("/api/inspections", new { propertyId, tenancyId, inspectionType = "MoveOut", comparisonInspectionId = openMoveIn }))
             .EnsureStatus(HttpStatusCode.BadRequest);
     }
 }

@@ -3,11 +3,11 @@
 import { Icon } from "@/components/icons";
 import { Button, Select } from "@/components/ui";
 import { useFormatters, useT } from "@/i18n/I18nProvider";
-import { marketplaceMessages } from "@/i18n/messages/agent-marketplace";
-import type { AvailableInspection, InspectionType, Visibility } from "@/lib/types";
-import { distinct, EMPTY_QUERY, isFiltered, type MarketplaceQuery, type MarketplaceSort } from "./marketplace";
+import { availableMessages } from "@/i18n/messages/agent-available";
+import type { AvailableInspection, InspectionType } from "@/lib/types";
+import { distinct, EMPTY_QUERY, isFiltered, type AvailableQuery, type AvailableSort } from "./availableQuery";
 
-const SORTS: { value: MarketplaceSort; label: "sortNewest" | "sortAcceptBy" | "sortScheduled" | "sortRooms" }[] = [
+const SORTS: { value: AvailableSort; label: "sortNewest" | "sortAcceptBy" | "sortScheduled" | "sortRooms" }[] = [
   { value: "newest", label: "sortNewest" }, { value: "acceptBy", label: "sortAcceptBy" },
   { value: "scheduled", label: "sortScheduled" }, { value: "rooms", label: "sortRooms" },
 ];
@@ -23,16 +23,15 @@ function FilterSelect({ label, value, onChange, children }: { label: string; val
 
 /**
  * Search + filter bar. Filter options come from the list itself, so nothing is offered that cannot match.
- * Example: `<MarketplaceFilters items={all} query={q} onChange={setQ} />`
+ * Example: `<AvailableFilters items={all} query={q} onChange={setQ} />`
  */
-export function MarketplaceFilters({ items, query, onChange }: { items: AvailableInspection[]; query: MarketplaceQuery; onChange: (q: MarketplaceQuery) => void }) {
-  const t = useT(marketplaceMessages);
+export function AvailableFilters({ items, query, onChange }: { items: AvailableInspection[]; query: AvailableQuery; onChange: (q: AvailableQuery) => void }) {
+  const t = useT(availableMessages);
   const { humanize } = useFormatters();
   // A filter with a single option cannot narrow anything; hide it until the list has variety.
   const types = distinct(items, "inspectionType");
   const propertyTypes = distinct(items, "propertyType");
-  const visibilities = distinct(items, "visibility");
-  const set = <K extends keyof MarketplaceQuery>(key: K, value: MarketplaceQuery[K]) => onChange({ ...query, [key]: value });
+  const set = <K extends keyof AvailableQuery>(key: K, value: AvailableQuery[K]) => onChange({ ...query, [key]: value });
   return (
     <div className="rounded-lg border border-line bg-surface p-3 shadow-card">
       <div className="flex flex-wrap gap-2">
@@ -50,11 +49,7 @@ export function MarketplaceFilters({ items, query, onChange }: { items: Availabl
           <option value="all">{t("allProperties")}</option>
           {propertyTypes.map((v) => <option key={v} value={v}>{humanize(v)}</option>)}
         </FilterSelect>}
-        {visibilities.length > 1 && <FilterSelect label={t("visibilityLabel")} value={query.visibility} onChange={(v) => set("visibility", v as Visibility | "all")}>
-          <option value="all">{t("allVisibility")}</option>
-          {visibilities.map((v) => <option key={v} value={v}>{humanize(v)}</option>)}
-        </FilterSelect>}
-        <FilterSelect label={t("sortLabel")} value={query.sort} onChange={(v) => set("sort", v as MarketplaceSort)}>
+        <FilterSelect label={t("sortLabel")} value={query.sort} onChange={(v) => set("sort", v as AvailableSort)}>
           {SORTS.map((s) => <option key={s.value} value={s.value}>{t(s.label)}</option>)}
         </FilterSelect>
       </div>

@@ -37,7 +37,7 @@ public class PropertyAndSnapshotTests(TestApp app)
         var tenancyId = await TestData.CreateTenancyAsync(company, propertyId);
         var created = await TestData.CreateInspectionAsync(company, propertyId, tenancyId);
         var inspectionId = TestData.InspectionId(created);
-        Assert.Equal("Open", created["inspection"]!["status"]!.GetValue<string>());
+        Assert.Equal("Open", created["status"]!.GetValue<string>());
 
         var property = (await company.GetAsync($"/api/properties/{propertyId}")).EnsureOk();
         var rooms = property["rooms"].AsArray();
@@ -60,7 +60,7 @@ public class PropertyAndSnapshotTests(TestApp app)
         var emptyProperty = await TestData.CreatePropertyAsync(company, rooms: []);
         var draft = TestData.InspectionId(await TestData.CreateInspectionAsync(company, emptyProperty, null, type: "Periodic", publish: false));
 
-        var agent = await app.CreateClient().RegisterAsync("Agent");
+        var agent = await TestData.TeamAgentAsync(app, company);
         var available = (await agent.GetAsync("/api/agent/available")).EnsureOk();
         Assert.DoesNotContain(available.Body!.AsArray(), i => i!["id"]!.GetValue<string>() == draft.ToString());
         (await agent.PostAsync($"/api/agent/inspections/{draft}/accept")).EnsureStatus(HttpStatusCode.NotFound);
@@ -77,8 +77,8 @@ public class PropertyAndSnapshotTests(TestApp app)
         var p1 = await TestData.CreatePropertyAsync(company);
         var p2 = await TestData.CreatePropertyAsync(company);
         var tenancyOfP2 = await TestData.CreateTenancyAsync(company, p2);
-        (await company.PostAsync("/api/inspections", new { propertyId = p1, inspectionType = "MoveIn", visibility = "Public" })).EnsureStatus(HttpStatusCode.BadRequest);
-        (await company.PostAsync("/api/inspections", new { propertyId = p1, tenancyId = tenancyOfP2, inspectionType = "MoveIn", visibility = "Public" }))
+        (await company.PostAsync("/api/inspections", new { propertyId = p1, inspectionType = "MoveIn" })).EnsureStatus(HttpStatusCode.BadRequest);
+        (await company.PostAsync("/api/inspections", new { propertyId = p1, tenancyId = tenancyOfP2, inspectionType = "MoveIn" }))
             .EnsureStatus(HttpStatusCode.BadRequest);
     }
 }

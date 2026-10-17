@@ -3,12 +3,18 @@ using InspectFlow.Tests.Support;
 
 namespace InspectFlow.Tests.Integration;
 
-/// <summary>Companies register their own agents; Team inspections are open to that team or assigned to one agent.</summary>
+/// <summary>
+/// Companies create their own agents' accounts (ADR 0022). Inspections are Public to that team or Direct to one agent,
+/// and the company can move an inspection between agents until it starts.
+/// </summary>
 [Collection(ApiCollection.Name)]
 public class TeamAgentTests(TestApp app)
 {
     private static bool Lists(ApiResponse res, Guid id) =>
         res.Body!.AsArray().Any(i => i!["id"]!.GetValue<string>() == id.ToString());
+
+    private static IEnumerable<string> Actions(ApiResponse details) =>
+        details["allowedActions"].AsArray().Select(a => a!.GetValue<string>());
 
     private async Task<(ApiClient Company, Guid PropertyId, Guid TenancyId)> CompanyWithPropertyAsync()
     {
@@ -35,39 +41,24 @@ public class TeamAgentTests(TestApp app)
     }
 
     [Fact]
-    public async Task Registration_rejects_duplicates_non_agents_and_new_accounts_without_password()
+    public async Task Registration_never_links_an_existing_account_and_requires_a_password()
     {
         var company = await TestData.CompanyAsync(app);
-        var agent = await TestData.TeamAgentAsync(app, company);
-
-        var duplicate = await company.PostAsync("/api/companies/me/agents", new { email = agent.Email, fullName = "Again" });
-        duplicate.EnsureStatus(HttpStatusCode.UnprocessableEntity);
-        Assert.Equal("team.agent_already_registered", duplicate.Code);
-
+        var member = await TestData.TeamAgentAsync(app, company);
+        var otherCompanyAgent = await TestData.OtherCompanyAgentAsync(app);
         var tenant = await app.CreateClient().RegisterAsync("Tenant");
-        (await company.PostAsync("/api/companies/me/agents", new { email = tenant.Email, fullName = "Tenant" })).EnsureStatus(HttpStatusCode.BadRequest);
+
+        // Same answer for every existing account, so the role of an address is not revealed.
+        foreach (var email in new[] { member.Email, otherCompanyAgent.Email, tenant.Email })
+        {
+            var res = await company.PostAsync("/api/companies/me/agents", new { email, fullName = "Taken", password = TestData.Password });
+            res.EnsureStatus(HttpStatusCode.BadRequest);
+            Assert.Contains("already used by an account", res.Raw, StringComparison.Ordinal);
+        }
+        Assert.Single((await company.GetAsync("/api/companies/me/agents")).EnsureOk().Body!.AsArray());
         (await company.PostAsync("/api/companies/me/agents", new { email = $"new-{Guid.NewGuid():N}@test.local", fullName = "No Password" }))
             .EnsureStatus(HttpStatusCode.BadRequest);
-        (await agent.GetAsync("/api/companies/me/agents")).EnsureStatus(HttpStatusCode.Forbidden);
-    }
-
-    [Fact]
-    public async Task Team_inspection_is_listed_only_to_the_company_team()
-    {
-        var (company, propertyId, tenancyId) = await CompanyWithPropertyAsync();
-        var member = await TestData.TeamAgentAsync(app, company);
-        var outsider = await app.CreateClient().RegisterAsync("Agent");
-        var inspectionId = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId, visibility: "Team"));
-
-        var listed = (await member.GetAsync("/api/agent/available")).EnsureOk();
-        Assert.Equal("Team", listed.Body!.AsArray().Single(i => i!["id"]!.GetValue<string>() == inspectionId.ToString())!["visibility"]!.GetValue<string>());
-        Assert.False(Lists((await outsider.GetAsync("/api/agent/available")).EnsureOk(), inspectionId));
-        (await outsider.GetAsync($"/api/agent/available/{inspectionId}")).EnsureStatus(HttpStatusCode.NotFound);
-        (await outsider.PostAsync($"/api/agent/inspections/{inspectionId}/accept")).EnsureStatus(HttpStatusCode.NotFound);
-
-        var accepted = (await member.PostAsync($"/api/agent/inspections/{inspectionId}/accept")).EnsureOk();
-        Assert.Equal("Assigned", accepted["status"].GetValue<string>());
-        Assert.Equal(member.UserId.ToString(), accepted["agent"]["id"].GetValue<string>());
+        (await member.GetAsync("/api/companies/me/agents")).EnsureStatus(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -76,11 +67,13 @@ public class TeamAgentTests(TestApp app)
         var (company, propertyId, tenancyId) = await CompanyWithPropertyAsync();
         var chosen = await TestData.TeamAgentAsync(app, company);
         var colleague = await TestData.TeamAgentAsync(app, company);
-        var created = await TestData.CreateInspectionAsync(company, propertyId, tenancyId, visibility: "Team", assignedAgentId: chosen.UserId);
+        var created = await TestData.CreateInspectionAsync(company, propertyId, tenancyId, assignedAgentId: chosen.UserId);
         var inspectionId = TestData.InspectionId(created);
 
-        Assert.Equal("Assigned", created["inspection"]!["status"]!.GetValue<string>());
+        Assert.Equal("Assigned", created["status"]!.GetValue<string>());
+        Assert.Equal("Direct", created["visibility"]!.GetValue<string>());
         Assert.False(Lists((await colleague.GetAsync("/api/agent/available")).EnsureOk(), inspectionId));
+        (await colleague.GetAsync($"/api/agent/inspections/{inspectionId}")).EnsureStatus(HttpStatusCode.NotFound);
         Assert.True(Lists((await chosen.GetAsync("/api/agent/inspections")).EnsureOk(), inspectionId));
         (await chosen.PostAsync($"/api/agent/inspections/{inspectionId}/start")).EnsureOk();
 
@@ -94,32 +87,26 @@ public class TeamAgentTests(TestApp app)
         var (company, propertyId, tenancyId) = await CompanyWithPropertyAsync();
         var agent = await TestData.TeamAgentAsync(app, company);
         var inspectionId = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId,
-            visibility: "Team", publish: false, assignedAgentId: agent.UserId));
+            publish: false, assignedAgentId: agent.UserId));
 
         (await agent.GetAsync($"/api/agent/inspections/{inspectionId}")).EnsureStatus(HttpStatusCode.NotFound);
         var published = (await company.PostAsync($"/api/inspections/{inspectionId}/publish")).EnsureOk();
-        Assert.Equal("Assigned", published["inspection"]["status"].GetValue<string>());
+        Assert.Equal("Assigned", published["status"].GetValue<string>());
         (await agent.GetAsync($"/api/agent/inspections/{inspectionId}")).EnsureOk();
     }
 
     [Fact]
-    public async Task Assignment_requires_a_team_agent_and_a_non_public_inspection()
+    public async Task Assignment_requires_an_agent_of_the_company()
     {
         var (company, propertyId, tenancyId) = await CompanyWithPropertyAsync();
-        var outsider = await app.CreateClient().RegisterAsync("Agent");
-        var member = await TestData.TeamAgentAsync(app, company);
+        var outsider = await TestData.OtherCompanyAgentAsync(app);
 
-        var notMember = await company.PostAsync("/api/inspections", new
+        var res = await company.PostAsync("/api/inspections", new
         {
-            propertyId, tenancyId, inspectionType = "MoveIn", visibility = "Team", publishNow = true, assignedAgentId = outsider.UserId,
+            propertyId, tenancyId, inspectionType = "MoveIn", publishNow = true, assignedAgentId = outsider.UserId,
         });
-        notMember.EnsureStatus(HttpStatusCode.BadRequest);
-        var publicOne = await company.PostAsync("/api/inspections", new
-        {
-            propertyId, tenancyId, inspectionType = "MoveIn", visibility = "Public", publishNow = true, assignedAgentId = member.UserId,
-        });
-        publicOne.EnsureStatus(HttpStatusCode.UnprocessableEntity);
-        Assert.Equal("inspection.public_not_assignable", publicOne.Code);
+        res.EnsureStatus(HttpStatusCode.BadRequest);
+        Assert.Contains(outsider.UserId.ToString(), res.Raw, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -128,18 +115,24 @@ public class TeamAgentTests(TestApp app)
         var (company, propertyId, tenancyId) = await CompanyWithPropertyAsync();
         var first = await TestData.TeamAgentAsync(app, company);
         var second = await TestData.TeamAgentAsync(app, company);
-        var inspectionId = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId, visibility: "Team"));
+        var inspectionId = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId));
         var url = $"/api/inspections/{inspectionId}/assignment";
 
         var assigned = (await company.PutAsync(url, new { agentId = first.UserId })).EnsureOk();
-        Assert.Contains("release", assigned["allowedActions"].AsArray().Select(a => a!.GetValue<string>()));
+        Assert.Equal("Direct", assigned["visibility"].GetValue<string>());
+        Assert.Contains("release", Actions(assigned));
         var reassigned = (await company.PutAsync(url, new { agentId = second.UserId })).EnsureOk();
         Assert.Equal(second.UserId.ToString(), reassigned["agent"]["id"].GetValue<string>());
         (await first.GetAsync($"/api/agent/inspections/{inspectionId}")).EnsureStatus(HttpStatusCode.NotFound);
 
         var released = (await company.PutAsync(url, new { agentId = (Guid?)null })).EnsureOk();
         Assert.Equal("Open", released["status"].GetValue<string>());
+        Assert.Equal("Public", released["visibility"].GetValue<string>());
         Assert.True(Lists((await first.GetAsync("/api/agent/available")).EnsureOk(), inspectionId));
+
+        var again = await company.PutAsync(url, new { agentId = (Guid?)null });
+        again.EnsureStatus(HttpStatusCode.UnprocessableEntity);
+        Assert.Equal("inspection.not_assigned", again.Code);
 
         await TestData.AcceptAndStartAsync(first, inspectionId);
         var late = await company.PutAsync(url, new { agentId = second.UserId });
@@ -148,12 +141,29 @@ public class TeamAgentTests(TestApp app)
     }
 
     [Fact]
+    public async Task Company_takes_back_a_public_inspection_an_agent_accepted_but_did_not_start()
+    {
+        var (company, propertyId, tenancyId) = await CompanyWithPropertyAsync();
+        var taker = await TestData.TeamAgentAsync(app, company);
+        var colleague = await TestData.TeamAgentAsync(app, company);
+        var inspectionId = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId));
+        (await taker.PostAsync($"/api/agent/inspections/{inspectionId}/accept")).EnsureOk();
+
+        var details = (await company.GetAsync($"/api/inspections/{inspectionId}")).EnsureOk();
+        Assert.Contains("release", Actions(details));
+        var released = (await company.PutAsync($"/api/inspections/{inspectionId}/assignment", new { agentId = (Guid?)null })).EnsureOk();
+        Assert.Equal("Open", released["status"].GetValue<string>());
+        (await taker.GetAsync($"/api/agent/inspections/{inspectionId}")).EnsureStatus(HttpStatusCode.NotFound);
+        (await colleague.PostAsync($"/api/agent/inspections/{inspectionId}/accept")).EnsureOk();
+    }
+
+    [Fact]
     public async Task Removed_agent_no_longer_sees_team_inspections_but_keeps_assigned_work()
     {
         var (company, propertyId, tenancyId) = await CompanyWithPropertyAsync();
         var agent = await TestData.TeamAgentAsync(app, company);
-        var assignedId = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId, visibility: "Team", assignedAgentId: agent.UserId));
-        var openId = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId, visibility: "Team"));
+        var assignedId = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId, assignedAgentId: agent.UserId));
+        var openId = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId));
         var team = (await company.GetAsync("/api/companies/me/agents")).EnsureOk();
         Assert.Equal(1, team.Body!.AsArray()[0]!["activeInspections"]!.GetValue<int>());
 

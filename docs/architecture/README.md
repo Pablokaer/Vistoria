@@ -20,8 +20,9 @@ Short records of *why* things are the way they are. Format: context → decision
 | [0014](0014-localization.md) | English + Brazilian Portuguese: UI language per user (cookie / Accept-Language), report and AI language per company |
 | [0015](0015-design-system.md) | In-house design system (tokens + primitives, no UI library) and a role-aware sidebar app shell |
 | [0016](0016-pdf-report-layout.md) | PDF report built from themed components with explicit keep-together rules, reviewed through rendered page previews |
-| [0017](0017-company-team-agents.md) | Companies register their own agents; `Team` inspections are open only to that team or assigned directly to one agent |
+| [0017](0017-company-team-agents.md) | Companies register their own agents; `Team` inspections are open only to that team or assigned directly to one agent (marketplace part superseded by 0022) |
 | [0018](0018-landing-page-and-root-routing.md) | "/" routes on a no-secret session hint cookie (landing page for visitors, dashboard for signed-in users); its "paper record" visual language is superseded by 0019 |
 | [0019](0019-landing-page-redesign.md) | Landing page redesign: `site-*` tokens, Inter only, local architectural photography through `next/image`, product mockups drawn from the app's real labels, no invented claims |
 | [0020](0020-product-name-olhai.md) | Product name **Olhai** on everything people see; `InspectFlow` stays as the internal code name |
-| [0021](0021-private-inspection-to-team-agent.md) | A `Private` inspection can be sent straight to one team agent (no link + code, no accept step); outsiders still use link + code |
+| [0021](0021-private-inspection-to-team-agent.md) | A `Private` inspection can be sent straight to one team agent (no link + code, no accept step); superseded by 0022 |
+| [0022](0022-agents-belong-to-their-company.md) | Agents belong to their company: no marketplace, no agent self-sign-up, no private link + code; inspections are `Public` (the company's agents) or `Direct` (one agent) |

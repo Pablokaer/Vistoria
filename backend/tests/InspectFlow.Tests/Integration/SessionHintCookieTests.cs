@@ -29,7 +29,7 @@ public class SessionHintCookieTests(TestApp app)
 
     private async Task<(HttpClient Http, string RefreshCookie)> SignInAsync()
     {
-        var registered = await app.CreateClient().RegisterAsync("Agent");
+        var registered = await app.CreateClient().RegisterAsync("Tenant");
         var http = RawClient();
         using var login = await http.SendAsync(WebPost("/api/auth/login", new { email = registered.Email, password = TestData.Password }));
         login.EnsureSuccessStatusCode();

@@ -23,7 +23,18 @@ public sealed class ApiClient(HttpClient http)
     {
         email ??= $"{role.ToLowerInvariant()}-{Guid.NewGuid():N}@test.local";
         var res = await PostAsync("/api/auth/register", new { email, password = TestData.Password, fullName = name ?? $"Test {role}", role });
-        res.EnsureOk();
+        return SignedIn(res.EnsureOk(), email);
+    }
+
+    /// <summary>Signs in an existing account (e.g. an agent created by its company). Example: <c>await client.LoginAsync(email)</c>.</summary>
+    public async Task<ApiClient> LoginAsync(string email, string password = TestData.Password)
+    {
+        var res = await PostAsync("/api/auth/login", new { email, password });
+        return SignedIn(res.EnsureOk(), email);
+    }
+
+    private ApiClient SignedIn(ApiResponse res, string email)
+    {
         UseToken(res.Body!["accessToken"]!.GetValue<string>());
         UserId = Guid.Parse(res.Body!["user"]!["id"]!.GetValue<string>());
         RefreshToken = res.Body!["refreshToken"]?.GetValue<string>();

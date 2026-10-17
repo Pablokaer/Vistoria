@@ -19,7 +19,7 @@ export function agentCta(status: InspectionStatus, t: T): string {
   return t("ctaOpen");
 }
 
-/** Marketplace / invitation preview card. Example: `fromAvailable(item, t, formatters)`. */
+/** Available-list card. Example: `fromAvailable(item, t, formatters)`. */
 export function fromAvailable(item: AvailableInspection, t: T, f: Formatters): InspectionCardModel {
   return {
     href: `/agent/available/${item.id}`,

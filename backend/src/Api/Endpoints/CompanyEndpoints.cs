@@ -7,8 +7,6 @@ using InspectFlow.Modules.Tenancies.Application;
 
 namespace InspectFlow.Api.Endpoints;
 
-public sealed record PublishRequest(string? InviteEmail);
-
 public sealed record ShareLinkRequest(int? Days);
 
 public static class CompanyEndpoints
@@ -54,8 +52,7 @@ public static class CompanyEndpoints
         api.MapPost("/inspections", (CreateInspectionRequest req, InspectionService s, CancellationToken ct) => s.CreateAsync(req, ct));
         api.MapGet("/inspections/{id:guid}", (Guid id, InspectionService s, CancellationToken ct) => s.GetAsync(id, ct));
         api.MapPut("/inspections/{id:guid}", (Guid id, UpdateDraftRequest req, InspectionService s, CancellationToken ct) => s.UpdateDraftAsync(id, req, ct));
-        api.MapPost("/inspections/{id:guid}/publish", (Guid id, PublishRequest? req, InspectionService s, CancellationToken ct) => s.PublishAsync(id, req?.InviteEmail, ct));
-        api.MapPost("/inspections/{id:guid}/invitation", (Guid id, RegenerateInvitationRequest? req, InspectionService s, CancellationToken ct) => s.RegenerateInvitationAsync(id, req?.InviteEmail, ct));
+        api.MapPost("/inspections/{id:guid}/publish", (Guid id, InspectionService s, CancellationToken ct) => s.PublishAsync(id, ct));
         api.MapPut("/inspections/{id:guid}/assignment", (Guid id, AssignInspectionRequest req, TeamAssignmentService s, CancellationToken ct) => s.SetAssignmentAsync(id, req, ct));
         api.MapPost("/inspections/{id:guid}/cancel", (Guid id, InspectionService s, CancellationToken ct) => s.CancelAsync(id, ct));
         api.MapPost("/inspections/{id:guid}/send-to-tenant", (Guid id, InspectionService s, CancellationToken ct) => s.SendToTenantAsync(id, ct));

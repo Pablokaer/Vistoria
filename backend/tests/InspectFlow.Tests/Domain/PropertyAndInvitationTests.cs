@@ -34,33 +34,6 @@ public class PropertyAndInvitationTests
         property.AddRoom(RoomType.Kitchen, "Kitchen", Now);
     }
 
-    [Fact]
-    public void Invitation_locks_after_max_attempts_and_is_single_use()
-    {
-        var invitation = new InspectionInvitation { Id = Guid.NewGuid(), ExpiresAt = Now.AddDays(1), MaxAttempts = 3 };
-        var agent = Guid.NewGuid();
-        for (var i = 0; i < 3; i++)
-        {
-            invitation.EnsureUsable(agent, Now);
-            invitation.RegisterFailedAttempt(Now);
-        }
-        Assert.Throws<TooManyAttemptsException>(() => invitation.EnsureUsable(agent, Now));
-
-        var fresh = new InspectionInvitation { Id = Guid.NewGuid(), ExpiresAt = Now.AddDays(1) };
-        fresh.MarkUsed(agent, Now);
-        fresh.EnsureUsable(agent, Now); // same agent may come back
-        Assert.Throws<DomainRuleException>(() => fresh.EnsureUsable(Guid.NewGuid(), Now));
-        Assert.Throws<DomainRuleException>(() => fresh.EnsureUsable(agent, Now.AddDays(2))); // expired
-    }
-
-    [Fact]
-    public void Access_codes_are_six_uniform_digits()
-    {
-        var codes = Enumerable.Range(0, 200).Select(_ => SecureTokens.CreateNumericCode()).ToList();
-        Assert.All(codes, c => Assert.Matches("^[0-9]{6}$", c));
-        Assert.True(codes.Distinct().Count() > 190);
-    }
-
     [Theory]
     [InlineData(new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 }, "image/jpeg")]
     [InlineData(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }, "image/png")]

@@ -23,7 +23,6 @@ public interface INotificationService
 public static class NotificationTypes
 {
     public const string TenancyInvitation = "tenancy.invitation";
-    public const string InspectionInvitation = "inspection.invitation";
     public const string InspectionAccepted = "inspection.accepted";
     public const string InspectionFinalized = "inspection.finalized";
     public const string ReportAwaitingTenant = "report.awaiting_tenant";

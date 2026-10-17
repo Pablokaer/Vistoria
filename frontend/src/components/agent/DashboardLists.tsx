@@ -22,7 +22,7 @@ function ListSkeleton() {
   return <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-16" />)}</div>;
 }
 
-/** Newest marketplace opportunities; the full, filterable list is one click away. */
+/** Newest open inspections of the agent's company; the full, filterable list is one click away. */
 export function AvailablePreview() {
   const d = useT(agentDashboardMessages);
   const t = useT(inspectionListMessages);

@@ -5,7 +5,7 @@ import { landingMessages, type LandingKey } from "@/i18n/messages/landing";
 import { GET_STARTED_HREF } from "@/lib/billing";
 import { PRODUCT_NAME } from "@/lib/brand";
 import { cx } from "@/lib/cx";
-import { JOIN_AS_AGENT_HREF } from "./landingLinks";
+import { INSPECTOR_SIGN_IN_HREF } from "./landingLinks";
 import { LANDING_CONTAINER } from "./landingStyles";
 
 const PRODUCT_LINKS: { href: string; label: LandingKey }[] = [
@@ -18,7 +18,7 @@ const PRODUCT_LINKS: { href: string; label: LandingKey }[] = [
 const ACCOUNT_LINKS: { href: string; label: LandingKey }[] = [
   { href: "/login", label: "signIn" },
   { href: GET_STARTED_HREF, label: "createCompanyAccount" },
-  { href: JOIN_AS_AGENT_HREF, label: "joinAsAgent" },
+  { href: INSPECTOR_SIGN_IN_HREF, label: "inspectorSignIn" },
 ];
 
 /** Logo, product and account links. Only real destinations: there are no legal or contact pages to link yet. */

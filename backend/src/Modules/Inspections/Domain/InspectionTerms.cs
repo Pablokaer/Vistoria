@@ -31,17 +31,8 @@ public static class InspectionTerms
         [InspectionType.Other] = new("Other", "de outro tipo"),
     };
 
-    private static readonly Dictionary<InspectionVisibility, LocalizedText> Visibilities = new()
-    {
-        [InspectionVisibility.Public] = new("Public", "pública"),
-        [InspectionVisibility.Private] = new("Private", "privada"),
-        [InspectionVisibility.Team] = new("Team", "da equipe"),
-    };
-
     // English keeps the enum identifier: existing clients and tests match on it (e.g. "cannot move from Draft to Completed").
     public static LocalizedText Of(InspectionStatus status) => Statuses[status];
 
     public static LocalizedText Of(InspectionType type) => Types[type];
-
-    public static LocalizedText Of(InspectionVisibility visibility) => Visibilities[visibility];
 }

@@ -18,3 +18,5 @@
 - Assigned → Open is allowed only before the agent starts (InProgress and later stay with the agent). Releasing after the acceptance deadline lets the expiry worker expire the inspection, as for any Open inspection.
 
 **Update 2026-10-17.** Direct assignment is no longer limited to Team inspections: a Private inspection can also be sent straight to a team agent, without link + code. Release back to the team stays Team-only. See [ADR 0021](0021-private-inspection-to-team-agent.md).
+
+**Update 2026-10-17 (later).** Superseded in part by [ADR 0022](0022-agents-belong-to-their-company.md): there is no marketplace and no agent self-sign-up any more. Companies create their agents' accounts (an existing account is never linked), inspections are `Public` (open to the company's agents only) or `Direct` (one agent), and a company can take an accepted inspection back until the agent starts.

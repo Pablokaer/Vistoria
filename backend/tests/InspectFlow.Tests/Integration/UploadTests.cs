@@ -12,7 +12,7 @@ public class UploadTests(TestApp app)
         var propertyId = await TestData.CreatePropertyAsync(company, ["Kitchen", "Bathroom"]);
         var tenancyId = await TestData.CreateTenancyAsync(company, propertyId);
         var inspectionId = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId));
-        var agent = await app.CreateClient().RegisterAsync("Agent");
+        var agent = await TestData.TeamAgentAsync(app, company);
         return (agent, inspectionId, await TestData.AcceptAndStartAsync(agent, inspectionId));
     }
 

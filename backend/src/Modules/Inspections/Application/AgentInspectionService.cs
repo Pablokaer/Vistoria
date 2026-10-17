@@ -17,7 +17,7 @@ using Microsoft.Extensions.Options;
 
 namespace InspectFlow.Modules.Inspections.Application;
 
-/// <summary>Agent-side use cases: marketplace, accept (race-safe), start, room execution, defects, comparison, review.</summary>
+/// <summary>Agent-side use cases: the company's Available list, accept (race-safe), start, room execution, defects, comparison, review.</summary>
 public sealed class AgentInspectionService(
     IAppDbContext db,
     InspectionAccess access,
@@ -33,7 +33,7 @@ public sealed class AgentInspectionService(
     IClock clock,
     IOptions<AppUrlOptions> urls)
 {
-    // ---------- Marketplace ----------
+    // ---------- Available (Public inspections of the agent's company) ----------
 
     public async Task<IReadOnlyList<AvailableInspectionDto>> ListAvailableAsync(CancellationToken ct)
     {
@@ -72,8 +72,7 @@ public sealed class AgentInspectionService(
                              .FirstOrDefaultAsync(i => i.Id == inspectionId, ct)
                          ?? throw new NotFoundException(EntityNames.Inspection, inspectionId);
 
-        // Never published, a Team inspection of another company, or a private one without a verified code:
-        // the agent must not learn it exists.
+        // Never published or of another company: the agent must not learn it exists.
         if (inspection.Status is InspectionStatus.Draft || !await access.CanAgentSeeAsync(inspection, agentId, ct))
             throw new NotFoundException(EntityNames.Inspection, inspectionId);
         if (inspection.Status != InspectionStatus.Open && inspection.AgentId != agentId)

@@ -26,7 +26,7 @@ public class ErrorLanguageTests(TestApp app)
     public async Task Identity_password_rules_are_returned_in_Portuguese()
     {
         var response = (await PortugueseClient().PostAsync("/api/auth/register",
-                new { email = $"pt{Guid.NewGuid():N}@t.local", password = "short", fullName = "Ana", role = "Agent" }))
+                new { email = $"pt{Guid.NewGuid():N}@t.local", password = "short", fullName = "Ana", role = "Company" }))
             .EnsureStatus(HttpStatusCode.BadRequest);
         var passwordErrors = response["errors"]["Password"]!.AsArray().Select(e => e!.GetValue<string>()).ToList();
         Assert.Contains(passwordErrors, e => e.StartsWith("A senha deve", StringComparison.Ordinal));

@@ -16,3 +16,5 @@
 - The difference between Team and Private now lies in who may see the inspection *before* it is assigned: with Team, the whole team sees it; with Private, nobody except the invited outside inspector sees it. When an agent is chosen, both behave the same, but the inspection keeps the visibility the company picked.
 - Other agents of the team never see a Private inspection, even when it is assigned to a colleague.
 - The audit log records the assignment (`InspectionAssignedToAgent`) for both visibilities.
+
+**Superseded 2026-10-17** by [ADR 0022](0022-agents-belong-to-their-company.md): Private inspections and the link + 6-digit code were removed. Sending an inspection straight to one agent is now the `Direct` visibility.

@@ -8,19 +8,17 @@ public enum InspectionType
     Other,
 }
 
+/// <summary>
+/// Who may take an inspection. Agents only ever see inspections of the company that created their account
+/// (<c>CompanyAgent</c>); there is no marketplace and no outside inspector (see ADR 0022).
+/// </summary>
 public enum InspectionVisibility
 {
-    /// <summary>Listed in the agent marketplace ("Available Inspections").</summary>
+    /// <summary>Listed to every agent of the company under "Available"; the first to accept takes it.</summary>
     Public,
 
-    /// <summary>Only reachable through an invitation link plus a 6-digit access code.</summary>
-    Private,
-
-    /// <summary>
-    /// Listed only to the agents the company registered in its team (<c>CompanyAgent</c>); the first to accept
-    /// takes it. The company may instead assign it directly to one of them.
-    /// </summary>
-    Team,
+    /// <summary>The company chose the agent; only that agent sees it (Assigned on publish).</summary>
+    Direct,
 }
 
 public enum InspectionStatus

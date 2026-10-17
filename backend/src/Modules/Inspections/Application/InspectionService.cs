@@ -9,27 +9,24 @@ using InspectFlow.Modules.Properties.Domain;
 using InspectFlow.Shared.Auth;
 using InspectFlow.Shared.Errors;
 using InspectFlow.Shared.Localization;
-using InspectFlow.Shared.Security;
 using InspectFlow.Shared.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace InspectFlow.Modules.Inspections.Application;
 
-/// <summary>Company-side inspection use cases: create, publish (room snapshot), invitations, cancel, send to tenant. Team assignment: <see cref="TeamAssignmentService"/>.</summary>
+/// <summary>Company-side inspection use cases: create, publish (room snapshot), cancel, send to tenant. Who takes it: <see cref="TeamAssignmentService"/>.</summary>
 public sealed class InspectionService(
     IAppDbContext db,
     CompanyAccess companyAccess,
     InspectionAccess access,
     InspectionDetailsBuilder details,
     TeamAssignmentService team,
-    IAccessCodeHasher codeHasher,
     INotificationService notifications,
     IAuditLogger audit,
     ICurrentUser currentUser,
     IClock clock,
-    IOptions<AppUrlOptions> urls,
-    IOptions<InspectionRulesOptions> rules)
+    IOptions<AppUrlOptions> urls)
 {
     public async Task<IReadOnlyList<InspectionSummaryDto>> ListAsync(Guid? propertyId, InspectionStatus? status, CancellationToken ct)
     {
@@ -46,7 +43,11 @@ public sealed class InspectionService(
         return await details.BuildAsync(inspection, InspectionViewerKind.Company, ct);
     }
 
-    public async Task<PublishResultDto> CreateAsync(CreateInspectionRequest request, CancellationToken ct)
+    /// <summary>
+    /// Creates a draft (and publishes it when asked). With <c>AssignedAgentId</c> it is Direct to that team agent,
+    /// otherwise Public to the whole team. Example: <c>await service.CreateAsync(request with { AssignedAgentId = agentId }, ct)</c>.
+    /// </summary>
+    public async Task<InspectionDetailsDto> CreateAsync(CreateInspectionRequest request, CancellationToken ct)
     {
         var companyId = await companyAccess.RequireAsync(CompanyPermission.ManageInspections, ct);
         var userId = currentUser.RequireUserId();
@@ -62,28 +63,27 @@ public sealed class InspectionService(
 
         var now = clock.UtcNow;
         var inspection = Inspection.CreateDraft(companyId, property.Id, request.TenancyId, request.InspectionType,
-            request.Visibility, request.ComparisonInspectionId, request.Instructions, request.ScheduledDate, request.AcceptBy, userId, now);
+            request.ComparisonInspectionId, request.Instructions, request.ScheduledDate, request.AcceptBy, userId, now);
         if (request.AssignedAgentId is { } agentId) await team.AssignAsync(inspection, agentId, ct);
         db.Inspections.Add(inspection);
         audit.Record(AuditActions.InspectionCreated, nameof(Inspection), inspection.Id,
             new { type = inspection.InspectionType.ToString(), visibility = inspection.Visibility.ToString(), propertyId = property.Id, comparisonInspectionId = request.ComparisonInspectionId });
         await db.SaveChangesAsync(ct);
 
-        if (!request.PublishNow)
-            return new PublishResultDto(await details.BuildAsync(inspection, InspectionViewerKind.Company, ct), null);
-        return await PublishAsync(inspection.Id, request.InviteEmail, ct);
+        if (!request.PublishNow) return await details.BuildAsync(inspection, InspectionViewerKind.Company, ct);
+        return await PublishAsync(inspection.Id, ct);
     }
 
     public async Task<InspectionDetailsDto> UpdateDraftAsync(Guid inspectionId, UpdateDraftRequest request, CancellationToken ct)
     {
         var inspection = await access.GetForCompanyAsync(inspectionId, CompanyPermission.ManageInspections, ct);
-        inspection.UpdateDraft(request.Visibility, request.Instructions, request.ScheduledDate, request.AcceptBy, clock.UtcNow);
+        inspection.UpdateDraft(request.Instructions, request.ScheduledDate, request.AcceptBy, clock.UtcNow);
         await SaveAsync(ct);
         return await details.BuildAsync(inspection, InspectionViewerKind.Company, ct);
     }
 
-    /// <summary>Draft → Open. Snapshots the property's current rooms into the inspection.</summary>
-    public async Task<PublishResultDto> PublishAsync(Guid inspectionId, string? inviteEmail, CancellationToken ct)
+    /// <summary>Draft → Open (Public) or Assigned (Direct). Snapshots the property's current rooms into the inspection.</summary>
+    public async Task<InspectionDetailsDto> PublishAsync(Guid inspectionId, CancellationToken ct)
     {
         var inspection = await access.GetForCompanyAsync(inspectionId, CompanyPermission.ManageInspections, ct);
         var now = clock.UtcNow;
@@ -122,29 +122,11 @@ public sealed class InspectionService(
             }
         }
 
-        PrivateInvitationDto? invitation = null;
-        // A Private inspection sent straight to a team agent is already Assigned: no link + code to hand out.
-        if (inspection.Visibility == InspectionVisibility.Private && inspection.AgentId is null)
-            invitation = CreateInvitation(inspection, inviteEmail, now);
-
         audit.Record(AuditActions.InspectionPublished, nameof(Inspection), inspection.Id,
             new { rooms = inspection.Rooms.Count, visibility = inspection.Visibility.ToString() });
         await team.NotifyPublishedAsync(inspection, ct);
         await SaveAsync(ct);
-        return new PublishResultDto(await details.BuildAsync(inspection, InspectionViewerKind.Company, ct), invitation);
-    }
-
-    public async Task<PrivateInvitationDto> RegenerateInvitationAsync(Guid inspectionId, string? inviteEmail, CancellationToken ct)
-    {
-        var inspection = await access.GetForCompanyAsync(inspectionId, CompanyPermission.ManageInspections, ct);
-        if (inspection.Visibility != InspectionVisibility.Private || inspection.Status != InspectionStatus.Open)
-            throw new DomainRuleException("invitation.not_applicable", new("Invitations can only be regenerated for open private inspections.", "Convites só podem ser gerados novamente para vistorias privadas abertas."));
-        var now = clock.UtcNow;
-        var previous = await db.InspectionInvitations.Where(x => x.InspectionId == inspectionId && x.RevokedAt == null).ToListAsync(ct);
-        foreach (var inv in previous) inv.Revoke(now);
-        var invitation = CreateInvitation(inspection, inviteEmail, now);
-        await SaveAsync(ct);
-        return invitation;
+        return await details.BuildAsync(inspection, InspectionViewerKind.Company, ct);
     }
 
     public async Task<InspectionDetailsDto> CancelAsync(Guid inspectionId, CancellationToken ct)
@@ -196,37 +178,6 @@ public sealed class InspectionService(
         // A baseline from another tenancy would expose previous tenants' records to the current ones.
         if (source.TenancyId != request.TenancyId)
             throw new ValidationException("ComparisonInspectionId", new("The comparison inspection belongs to a different tenancy.", "A vistoria de comparação pertence a outra locação."));
-    }
-
-    private PrivateInvitationDto CreateInvitation(Inspection inspection, string? inviteEmail, DateTimeOffset now)
-    {
-        var token = SecureTokens.Create();
-        var code = SecureTokens.CreateNumericCode(6);
-        var invitation = new InspectionInvitation
-        {
-            Id = Guid.NewGuid(),
-            InspectionId = inspection.Id,
-            TokenHash = SecureTokens.Sha256Hex(token),
-            AccessCodeHash = codeHasher.Hash(code),
-            InvitedEmail = string.IsNullOrWhiteSpace(inviteEmail) ? null : inviteEmail.Trim(),
-            CreatedAt = now,
-            CreatedBy = currentUser.RequireUserId(),
-            ExpiresAt = now.AddDays(rules.Value.PrivateInvitationDays),
-            MaxAttempts = InspectionInvitation.DefaultMaxAttempts,
-        };
-        db.InspectionInvitations.Add(invitation);
-        var link = urls.Value.Web($"/inspection/invite/{token}");
-        if (invitation.InvitedEmail is not null)
-        {
-            // The code is deliberately NOT included next to the link: the company shares it through a separate channel.
-            notifications.Enqueue(new NotificationMessage(NotificationTypes.InspectionInvitation,
-                "You have been invited to carry out an inspection",
-                "A company invited you to a private inspection. Open the link and enter the 6-digit access code the company shares with you separately.",
-                RecipientEmail: invitation.InvitedEmail, TransientLink: link));
-        }
-        audit.Record(AuditActions.InspectionInvitationCreated, nameof(Inspection), inspection.Id,
-            new { invitationId = invitation.Id, expiresAt = invitation.ExpiresAt });
-        return new PrivateInvitationDto(link, code, invitation.ExpiresAt, invitation.MaxAttempts);
     }
 
     private async Task SaveAsync(CancellationToken ct)

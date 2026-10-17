@@ -9,10 +9,19 @@ public class AuthAndAuthorizationTests(TestApp app)
     [Fact]
     public async Task Register_assigns_role_and_me_returns_it()
     {
-        var agent = await app.CreateClient().RegisterAsync("Agent");
-        var me = (await agent.GetAsync("/api/auth/me")).EnsureOk();
-        Assert.Equal("Agent", me["roles"].AsArray().Single()!.GetValue<string>());
+        var tenant = await app.CreateClient().RegisterAsync("Tenant");
+        var me = (await tenant.GetAsync("/api/auth/me")).EnsureOk();
+        Assert.Equal("Tenant", me["roles"].AsArray().Single()!.GetValue<string>());
         Assert.Null(me.Body!["company"]);
+    }
+
+    [Fact]
+    public async Task Agents_cannot_sign_up_themselves()
+    {
+        var res = await app.CreateClient().PostAsync("/api/auth/register",
+            new { email = $"agent-{Guid.NewGuid():N}@t.local", password = TestData.Password, fullName = "Self Made", role = "Agent" });
+        res.EnsureStatus(HttpStatusCode.BadRequest);
+        Assert.Contains("created by their company", res.Raw, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -29,7 +38,7 @@ public class AuthAndAuthorizationTests(TestApp app)
         var client = app.CreateClient();
         (await client.PostAsync("/api/auth/register", new { email = $"x{Guid.NewGuid():N}@t.local", password = TestData.Password, fullName = "X", role = "Admin" }))
             .EnsureStatus(HttpStatusCode.BadRequest);
-        (await client.PostAsync("/api/auth/register", new { email = $"x{Guid.NewGuid():N}@t.local", password = "short", fullName = "X", role = "Agent" }))
+        (await client.PostAsync("/api/auth/register", new { email = $"x{Guid.NewGuid():N}@t.local", password = "short", fullName = "X", role = "Tenant" }))
             .EnsureStatus(HttpStatusCode.BadRequest);
     }
 
@@ -55,7 +64,7 @@ public class AuthAndAuthorizationTests(TestApp app)
     [Fact]
     public async Task Web_clients_get_the_refresh_token_only_as_http_only_cookie()
     {
-        var registered = await app.CreateClient().RegisterAsync("Agent");
+        var registered = await app.CreateClient().RegisterAsync("Tenant");
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login")
         {
             Content = System.Net.Http.Json.JsonContent.Create(new { email = registered.Email, password = TestData.Password }),
@@ -76,9 +85,9 @@ public class AuthAndAuthorizationTests(TestApp app)
         (await anonymous.GetAsync("/api/properties")).EnsureStatus(HttpStatusCode.Unauthorized);
         (await anonymous.GetAsync("/api/agent/available")).EnsureStatus(HttpStatusCode.Unauthorized);
 
-        var agent = await app.CreateClient().RegisterAsync("Agent");
         var tenant = await app.CreateClient().RegisterAsync("Tenant");
         var company = await TestData.CompanyAsync(app);
+        var agent = await TestData.TeamAgentAsync(app, company);
 
         (await agent.GetAsync("/api/properties")).EnsureStatus(HttpStatusCode.Forbidden);
         (await agent.PostAsync("/api/inspections", new { })).EnsureStatus(HttpStatusCode.Forbidden);
@@ -106,7 +115,7 @@ public class AuthAndAuthorizationTests(TestApp app)
         (await companyB.GetAsync($"/api/tenancies/{tenancyA}")).EnsureStatus(HttpStatusCode.NotFound);
 
         // Creating an inspection or tenancy on someone else's property is rejected too.
-        (await companyB.PostAsync("/api/inspections", new { propertyId = propertyA, tenancyId = tenancyA, inspectionType = "MoveIn", visibility = "Public" }))
+        (await companyB.PostAsync("/api/inspections", new { propertyId = propertyA, tenancyId = tenancyA, inspectionType = "MoveIn" }))
             .EnsureStatus(HttpStatusCode.NotFound);
         (await companyB.PostAsync("/api/tenancies", new { propertyId = propertyA, startDate = "2026-01-01" })).EnsureStatus(HttpStatusCode.NotFound);
 

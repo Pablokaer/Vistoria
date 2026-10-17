@@ -1019,88 +1019,6 @@ namespace InspectFlow.Infrastructure.Persistence.Migrations
                     b.ToTable("inspection_defects", "inspections");
                 });
 
-            modelBuilder.Entity("InspectFlow.Modules.Inspections.Domain.InspectionInvitation", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("AccessCodeHash")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("access_code_hash");
-
-                    b.Property<int>("AttemptCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("attempt_count");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("expires_at");
-
-                    b.Property<Guid>("InspectionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("inspection_id");
-
-                    b.Property<string>("InvitedEmail")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("invited_email");
-
-                    b.Property<DateTimeOffset?>("LastAttemptAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_attempt_at");
-
-                    b.Property<int>("MaxAttempts")
-                        .HasColumnType("integer")
-                        .HasColumnName("max_attempts");
-
-                    b.Property<DateTimeOffset?>("RevokedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("revoked_at");
-
-                    b.Property<string>("TokenHash")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("token_hash");
-
-                    b.Property<DateTimeOffset?>("UsedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("used_at");
-
-                    b.Property<Guid?>("UsedByUserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("used_by_user_id");
-
-                    b.Property<uint>("Version")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
-
-                    b.HasKey("Id")
-                        .HasName("pk_inspection_invitations");
-
-                    b.HasIndex("InspectionId")
-                        .HasDatabaseName("ix_inspection_invitations_inspection_id");
-
-                    b.HasIndex("TokenHash")
-                        .IsUnique()
-                        .HasDatabaseName("ix_inspection_invitations_token_hash");
-
-                    b.ToTable("inspection_invitations", "inspections");
-                });
-
             modelBuilder.Entity("InspectFlow.Modules.Inspections.Domain.InspectionRoom", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2135,16 +2053,6 @@ namespace InspectFlow.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_inspection_defects_inspection_rooms_inspection_room_id");
-                });
-
-            modelBuilder.Entity("InspectFlow.Modules.Inspections.Domain.InspectionInvitation", b =>
-                {
-                    b.HasOne("InspectFlow.Modules.Inspections.Domain.Inspection", null)
-                        .WithMany()
-                        .HasForeignKey("InspectionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_inspection_invitations_inspections_inspection_id");
                 });
 
             modelBuilder.Entity("InspectFlow.Modules.Inspections.Domain.InspectionRoom", b =>

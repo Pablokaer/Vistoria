@@ -44,7 +44,7 @@ async function anonymousVisitor(browser, { base, snap, log }) {
   log("landing: anonymous visitor OK (server-rendered, no refresh call, no console errors, entry points work)");
 }
 
-/** Every call to action leads somewhere real: sign in, company sign-up, agent sign-up and the in-page sections. */
+/** Every call to action leads somewhere real: sign in, company sign-up, inspector sign-in and the in-page sections. */
 async function entryPoints(page, base) {
   await page.getByRole("banner").getByRole("link", { name: "Sign in" }).click();
   await page.waitForURL("**/login");
@@ -54,8 +54,8 @@ async function entryPoints(page, base) {
   await page.goto(base);
   await page.getByRole("link", { name: "See how it works" }).click();
   await page.waitForURL("**/#how-it-works");
-  await page.locator("#agents").getByRole("link", { name: "Join as an agent" }).click();
-  await page.waitForURL("**/register?role=Agent");
+  await page.locator("#agents").getByRole("link", { name: "Inspector sign-in" }).click();
+  await page.waitForURL("**/login");
   await page.goto(base);
   await page.getByRole("link", { name: "Get started today" }).click();
   await page.waitForURL("**/register?plan=professional");
@@ -112,13 +112,16 @@ async function accessibility(browser, { base, log }) {
   log(`landing: accessibility OK (axe, WCAG 2.2 AA; minor findings: ${violations.length - blocking.length})`);
 }
 
-/** Signs in through the API in the browser context, as the web app does (cookies land in the context). */
-async function signInAsNewAgent(page, base, run) {
+/**
+ * Signs in through the API in the browser context, as the web app does (cookies land in the context). A tenant, because
+ * agents cannot sign up (ADR 0022) and a new company would first be sent to the subscription step.
+ */
+async function signInAsNewTenant(page, base, run) {
   const res = await page.request.post(`${base}/api/auth/register`, {
     headers: { "X-Client": "web" },
-    data: { email: `landing-${run}@e2e.local`, password: PASSWORD, fullName: "Lena Landing", role: "Agent" },
+    data: { email: `landing-${run}@e2e.local`, password: PASSWORD, fullName: "Lena Landing", role: "Tenant" },
   });
-  if (!res.ok()) fail(`could not register the test agent: ${res.status()}`);
+  if (!res.ok()) fail(`could not register the test tenant: ${res.status()}`);
 }
 
 const hasCookie = async (ctx, name) => (await ctx.cookies()).some((c) => c.name === name);
@@ -136,16 +139,16 @@ async function signedInRouting(browser, { base, snap, log }) {
   const run = Date.now().toString(36);
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: "en-GB" });
   const page = await ctx.newPage();
-  await signInAsNewAgent(page, base, run);
+  await signInAsNewTenant(page, base, run);
   if (!(await hasCookie(ctx, "if_session"))) fail("sign-in did not set the session hint");
 
   await page.addInitScript(WATCH_FOR_LANDING);
   await page.goto(base);
-  await page.waitForURL(/\/agent$/);
+  await page.waitForURL(/\/tenant$/);
   // The landing markup travels in the RSC payload (so a stale hint can fall back without a reload) but is never rendered.
   if (await page.evaluate(() => window.__landingSeen)) fail("the landing page flashed before the redirect");
   await page.reload();
-  await page.waitForURL(/\/agent$/);
+  await page.waitForURL(/\/tenant$/);
   await snap(page, "landing-signed-in-redirect");
 
   await page.getByRole("button", { name: "Sign out" }).first().click();
@@ -155,7 +158,7 @@ async function signedInRouting(browser, { base, snap, log }) {
   await hero(page).waitFor();
   log("landing: signed-in redirect, reload and logout OK");
 
-  await signInAsNewAgent(page, `${base}`, `${run}x`);
+  await signInAsNewTenant(page, `${base}`, `${run}x`);
   await ctx.clearCookies({ name: "if_refresh" }); // the session ends (expired/revoked) but the hint is still there
   await page.goto(base);
   await hero(page).waitFor({ timeout: 15000 });

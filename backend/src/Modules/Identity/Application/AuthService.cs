@@ -40,7 +40,8 @@ public sealed class AuthService(
         if (string.IsNullOrWhiteSpace(request.FullName)) errors["FullName"] = [new("Full name is required.", "O nome completo é obrigatório.")];
         if (string.IsNullOrEmpty(request.Password)) errors["Password"] = [new("Password is required.", "A senha é obrigatória.")];
         if (!AppRoles.IsSelfRegistrable(request.Role))
-            errors["Role"] = [new($"Role must be Company, Agent or Tenant (got '{request.Role}').", $"O perfil deve ser Company, Agent ou Tenant (recebido: '{request.Role}').")];
+            errors["Role"] = [new($"Role must be Company or Tenant (got '{request.Role}'); agent accounts are created by their company.",
+                $"O perfil deve ser Company ou Tenant (recebido: '{request.Role}'); contas de vistoriador são criadas pela empresa.")];
         if (errors.Count > 0) throw new ValidationException(RegistrationInvalid, errors);
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);

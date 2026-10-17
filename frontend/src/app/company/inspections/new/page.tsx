@@ -10,7 +10,7 @@ import { errorMessage, post } from "@/lib/api";
 import { useFormatters, useT } from "@/i18n/I18nProvider";
 import { companyNewMessages } from "@/i18n/messages/company-new";
 import { useApi } from "@/lib/hooks";
-import type { InspectionSummary, InspectionType, PropertySummary, PublishResult, Tenancy } from "@/lib/types";
+import type { InspectionDetails, InspectionSummary, InspectionType, PropertySummary, Tenancy } from "@/lib/types";
 
 const TYPES: InspectionType[] = ["MoveIn", "MoveOut", "Periodic", "Other"];
 
@@ -75,7 +75,7 @@ function NewInspectionForm() {
   const [settings, setSettings] = useState<InspectionSettings>(DEFAULT_SETTINGS);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<PublishResult | null>(null);
+  const [result, setResult] = useState<InspectionDetails | null>(null);
 
   const defaultTenancy = (tenancies.data ?? []).find((tn) => tn.status === "Active" || tn.status === "Upcoming") ?? tenancies.data?.[0];
   const tenancyId = tenancyChoice ?? defaultTenancy?.id ?? "";
@@ -90,7 +90,7 @@ function NewInspectionForm() {
     setBusy(true);
     setError(null);
     try {
-      setResult(await post<PublishResult>("/api/inspections", {
+      setResult(await post<InspectionDetails>("/api/inspections", {
         propertyId, tenancyId: tenancyId || null, inspectionType: type, comparisonInspectionId: comparisonId || null, ...settingsPayload(settings),
       }));
     } catch (err) {
@@ -100,7 +100,7 @@ function NewInspectionForm() {
     }
   }
 
-  if (result) return <InspectionCreated result={result} />;
+  if (result) return <InspectionCreated inspection={result} />;
 
   return (
     <div className="mx-auto max-w-page">

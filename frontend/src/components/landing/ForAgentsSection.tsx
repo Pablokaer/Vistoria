@@ -5,7 +5,7 @@ import { getServerTranslator } from "@/i18n/server";
 import { landingMessages } from "@/i18n/messages/landing";
 import { landingSectionMessages, type LandingSectionKey } from "@/i18n/messages/landing-sections";
 import { cx } from "@/lib/cx";
-import { JOIN_AS_AGENT_HREF } from "./landingLinks";
+import { INSPECTOR_SIGN_IN_HREF } from "./landingLinks";
 import { agentMoveInVisit } from "./landingPhotos";
 import { LANDING_CONTAINER, PRIMARY_LINK, SECTION_SPACING } from "./landingStyles";
 import { Reveal } from "./Reveal";
@@ -13,7 +13,7 @@ import { SectionHeading } from "./SectionHeading";
 
 const AGENT_BENEFITS: LandingSectionKey[] = ["agentsBenefit1", "agentsBenefit2", "agentsBenefit3"];
 
-/** "For agents": why an inspector joins, and the free sign-up. */
+/** "For your inspectors": how a company works with its own inspectors, and where they sign in. */
 export async function ForAgentsSection() {
   const [t, common] = await Promise.all([getServerTranslator(landingSectionMessages), getServerTranslator(landingMessages)]);
   return (
@@ -23,7 +23,7 @@ export async function ForAgentsSection() {
           <SectionHeading id="agents-title" eyebrow={t("agentsEyebrow")} title={t("agentsTitle")} intro={t("agentsText")} />
           <AgentBenefits items={AGENT_BENEFITS.map((key) => t(key))} />
           <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
-            <Link href={JOIN_AS_AGENT_HREF} className={PRIMARY_LINK}>{common("joinAsAgent")}<Icon name="arrowRight" className="h-4 w-4" /></Link>
+            <Link href={INSPECTOR_SIGN_IN_HREF} className={PRIMARY_LINK}>{common("inspectorSignIn")}<Icon name="arrowRight" className="h-4 w-4" /></Link>
             <span className="text-[0.875rem] text-site-muted">{t("agentsFree")}</span>
           </div>
         </div>

@@ -12,7 +12,7 @@ interface AgentDraft { fullName: string; email: string; phone: string; password:
 const EMPTY_AGENT: AgentDraft = { fullName: "", email: "", phone: "", password: "" };
 
 /**
- * Registers an agent: a new email creates the agent account, an existing agent account is linked.
+ * Creates an agent account owned by the company (agents cannot sign up themselves; an email in use is refused).
  * Example: `<RegisterAgentForm onRegistered={() => void team.reload()} />`
  */
 export function RegisterAgentForm({ onRegistered }: { onRegistered: (agent: TeamAgent) => void }) {
@@ -28,7 +28,7 @@ export function RegisterAgentForm({ onRegistered }: { onRegistered: (agent: Team
     setBusy(true);
     setError(null);
     try {
-      const agent = await post<TeamAgent>("/api/companies/me/agents", { ...draft, phone: draft.phone || null, password: draft.password || null });
+      const agent = await post<TeamAgent>("/api/companies/me/agents", { ...draft, phone: draft.phone || null });
       setDraft(EMPTY_AGENT);
       toast.notify({ tone: "success", title: t("registeredToast", { name: agent.fullName }) });
       onRegistered(agent);
@@ -48,7 +48,7 @@ export function RegisterAgentForm({ onRegistered }: { onRegistered: (agent: Team
           <Field label={t("email")}><Input required type="email" name="email" value={draft.email} onChange={set("email")} /></Field>
           <Field label={t("phone")}><Input type="tel" name="phone" value={draft.phone} onChange={set("phone")} /></Field>
           <Field label={t("initialPassword")} hint={t("initialPasswordHint")}>
-            <Input type="password" name="password" autoComplete="new-password" value={draft.password} onChange={set("password")} />
+            <Input required type="password" name="password" autoComplete="new-password" value={draft.password} onChange={set("password")} />
           </Field>
         </div>
         <div className="flex justify-end border-t border-line pt-4">

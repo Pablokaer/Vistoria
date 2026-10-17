@@ -180,18 +180,6 @@ internal static class ModelConfiguration
             e.HasOne<InspectionRoom>().WithMany().HasForeignKey(c => c.InspectionRoomId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<InspectionRoom>().WithMany().HasForeignKey(c => c.SourceInspectionRoomId).OnDelete(DeleteBehavior.Restrict);
         });
-        b.Entity<InspectionInvitation>(e =>
-        {
-            e.ToTable("inspection_invitations", "inspections");
-            e.Property(x => x.TokenHash).HasMaxLength(64).IsRequired();
-            e.Property(x => x.AccessCodeHash).HasMaxLength(200).IsRequired();
-            e.Property(x => x.InvitedEmail).HasMaxLength(256);
-            e.Property(x => x.Version).IsRowVersion();
-            e.HasIndex(x => x.TokenHash).IsUnique();
-            e.HasIndex(x => x.InspectionId);
-            e.HasOne<Inspection>().WithMany().HasForeignKey(x => x.InspectionId).OnDelete(DeleteBehavior.Cascade);
-            e.Ignore(x => x.IsLocked);
-        });
 
         // ---------------- Media ----------------
         b.Entity<InspectionRoomMedia>(e =>

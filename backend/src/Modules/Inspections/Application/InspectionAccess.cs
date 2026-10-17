@@ -34,7 +34,7 @@ public sealed class InspectionAccess(IAppDbContext db, ICurrentUser currentUser,
     }
 
     /// <summary>
-    /// Loads an inspection assigned to the calling agent (tracked, with rooms and defects). A Team draft already
+    /// Loads an inspection assigned to the calling agent (tracked, with rooms and defects). A Direct draft already
     /// designated to the agent stays hidden until the company publishes it.
     /// </summary>
     public async Task<Inspection> GetForAssignedAgentAsync(Guid inspectionId, CancellationToken ct, bool tracking = true)
@@ -47,35 +47,26 @@ public sealed class InspectionAccess(IAppDbContext db, ICurrentUser currentUser,
     }
 
     /// <summary>
-    /// Open, unassigned inspections an agent may see and accept without an invitation: every Public one plus the
-    /// Team ones of companies that registered the agent. Example: <c>await access.OpenForAgent(agentId).CountAsync(ct)</c>.
+    /// Open, unassigned Public inspections of the companies that registered the agent: the only ones an agent may see
+    /// and accept before they are assigned (ADR 0022). Example: <c>await access.OpenForAgent(agentId).CountAsync(ct)</c>.
     /// </summary>
     public IQueryable<Inspection> OpenForAgent(Guid agentId)
     {
         var now = clock.UtcNow;
         return db.Inspections.Where(i => i.Status == InspectionStatus.Open && i.AgentId == null && (i.AcceptBy == null || i.AcceptBy > now) &&
-            (i.Visibility == InspectionVisibility.Public ||
-             (i.Visibility == InspectionVisibility.Team && db.CompanyAgents.Any(a => a.CompanyId == i.CompanyId && a.AgentUserId == agentId))));
+            i.Visibility == InspectionVisibility.Public && db.CompanyAgents.Any(a => a.CompanyId == i.CompanyId && a.AgentUserId == agentId));
     }
 
-    /// <summary>Whether <paramref name="agentId"/> may see <paramref name="inspection"/> before it is assigned to them.</summary>
-    public Task<bool> CanAgentSeeAsync(Inspection inspection, Guid agentId, CancellationToken ct) => inspection.Visibility switch
-    {
-        InspectionVisibility.Private => HasVerifiedInvitationAsync(inspection.Id, agentId, ct),
-        InspectionVisibility.Team => IsTeamAgentAsync(inspection.CompanyId, agentId, ct),
-        _ => Task.FromResult(true),
-    };
+    /// <summary>
+    /// Whether <paramref name="agentId"/> may see <paramref name="inspection"/> before it is assigned to them: only an
+    /// agent of the company that published it. Example: <c>await access.CanAgentSeeAsync(inspection, agentId, ct)</c>.
+    /// </summary>
+    public Task<bool> CanAgentSeeAsync(Inspection inspection, Guid agentId, CancellationToken ct) =>
+        IsTeamAgentAsync(inspection.CompanyId, agentId, ct);
 
     /// <summary>True when the company registered <paramref name="agentId"/> in its team. Example: <c>await access.IsTeamAgentAsync(companyId, agentId, ct)</c>.</summary>
     public Task<bool> IsTeamAgentAsync(Guid companyId, Guid agentId, CancellationToken ct) =>
         db.CompanyAgents.AnyAsync(a => a.CompanyId == companyId && a.AgentUserId == agentId, ct);
-
-    private Task<bool> HasVerifiedInvitationAsync(Guid inspectionId, Guid agentId, CancellationToken ct)
-    {
-        var now = clock.UtcNow;
-        return db.InspectionInvitations.AnyAsync(x => x.InspectionId == inspectionId && x.UsedByUserId == agentId &&
-                                                      x.RevokedAt == null && x.ExpiresAt > now, ct);
-    }
 
     public Guid RequireAgent()
     {

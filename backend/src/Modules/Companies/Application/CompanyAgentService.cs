@@ -15,15 +15,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace InspectFlow.Modules.Companies.Application;
 
-/// <param name="Password">Required only when no account exists for <paramref name="Email"/>; an existing agent account is linked as is.</param>
+/// <param name="Password">The new agent account's password; the company hands it to the agent.</param>
 public sealed record RegisterTeamAgentRequest(string Email, string FullName, string? Password, string? Phone);
 
 /// <param name="ActiveInspections">This company's inspections the agent holds that are Assigned, InProgress or in Review.</param>
 public sealed record TeamAgentDto(Guid AgentId, string FullName, string Email, string? Phone, int ActiveInspections, DateTimeOffset AddedAt);
 
 /// <summary>
-/// The company's own team of agents: list, register (create the agent account or link an existing one) and remove.
-/// Team agents see the company's Team inspections and can be assigned one directly (see ADR 0017).
+/// The company's own team of agents: list, register (always a new agent account owned by the company) and remove.
+/// Agents only ever see this company's Public inspections and the ones assigned to them (see ADR 0017 and ADR 0022).
 /// </summary>
 public sealed class CompanyAgentService(
     IAppDbContext db,
@@ -43,23 +43,22 @@ public sealed class CompanyAgentService(
     }
 
     /// <summary>
-    /// Adds an agent to the team. A new email creates an Agent account with the given password; an email that already
-    /// belongs to an agent links that account. Example: <c>await service.RegisterAsync(new("ana@x.com", "Ana", "Passw0rd!", null), ct)</c>.
+    /// Creates an Agent account with the given password and adds it to the team. Agents cannot sign up themselves and
+    /// an existing account is never linked: that would let a company take over someone else's account without consent.
+    /// Example: <c>await service.RegisterAsync(new("ana@x.com", "Ana", "Passw0rd!", null), ct)</c>.
     /// </summary>
     public async Task<TeamAgentDto> RegisterAsync(RegisterTeamAgentRequest request, CancellationToken ct)
     {
         var companyId = await access.RequireAsync(CompanyPermission.ManageMembers, ct);
         ValidateRequest(request);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
-        var agent = await FindOrCreateAgentAsync(request, ct);
-        if (await db.CompanyAgents.AnyAsync(a => a.CompanyId == companyId && a.AgentUserId == agent.Id, ct))
-            throw new DomainRuleException("team.agent_already_registered", new(
-                $"{agent.Email} is already in your team.", $"{agent.Email} já faz parte da sua equipe."));
+        await EnsureEmailIsFreeAsync(request.Email);
+        var agent = await CreateAgentAsync(request);
         var link = new CompanyAgent { Id = Guid.NewGuid(), CompanyId = companyId, AgentUserId = agent.Id, CreatedAt = clock.UtcNow, CreatedBy = currentUser.RequireUserId() };
         db.CompanyAgents.Add(link);
         audit.Record(AuditActions.TeamAgentRegistered, nameof(CompanyAgent), link.Id, new { agentId = agent.Id });
         notifications.Enqueue(new NotificationMessage(NotificationTypes.TeamAgentAdded, "You were added to a company team",
-            "A company registered you as one of its agents. Its team inspections now appear under Available.", RecipientUserId: agent.Id));
+            "Your company registered you as one of its agents. Its open inspections appear under Available.", RecipientUserId: agent.Id));
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         return await ProjectTeam(companyId, agent.Id).FirstAsync(ct);
@@ -88,15 +87,16 @@ public sealed class CompanyAgentService(
         if (errors.Count > 0) throw new ValidationException(UserAccountFactory.RegistrationInvalid, errors);
     }
 
-    private async Task<User> FindOrCreateAgentAsync(RegisterTeamAgentRequest request, CancellationToken ct)
+    /// <summary>
+    /// The same answer for every existing account (agent, company or tenant, this team or another): the role of an
+    /// address is not revealed. Example: <c>await EnsureEmailIsFreeAsync("ana@x.com")</c>.
+    /// </summary>
+    private async Task EnsureEmailIsFreeAsync(string email)
     {
-        var existing = await userManager.FindByEmailAsync(request.Email.Trim());
-        if (existing is null) return await CreateAgentAsync(request);
-        if (!await userManager.IsInRoleAsync(existing, AppRoles.Agent))
-            throw new ValidationException("Email", new(
-                $"{existing.Email} belongs to an account that is not an agent; use another email.",
-                $"{existing.Email} pertence a uma conta que não é de vistoriador; use outro e-mail."));
-        return existing;
+        if (await userManager.FindByEmailAsync(email.Trim()) is null) return;
+        throw new ValidationException("Email", new(
+            $"{email.Trim()} is already used by an account; agent accounts need an email of their own.",
+            $"{email.Trim()} já é usado por uma conta; contas de vistoriador precisam de um e-mail próprio."));
     }
 
     private Task<User> CreateAgentAsync(RegisterTeamAgentRequest request)

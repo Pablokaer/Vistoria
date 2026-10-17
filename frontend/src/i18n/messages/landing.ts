@@ -10,7 +10,7 @@ export const landingMessages = defineMessages(
     metaPricingTitle: "Pricing",
     navFeatures: "Features",
     navHowItWorks: "How it works",
-    navAgents: "For agents",
+    navAgents: "For inspectors",
     navPricing: "Pricing",
     navMain: "Main",
     navMobile: "Mobile",
@@ -49,7 +49,7 @@ export const landingMessages = defineMessages(
     footerProduct: "Product",
     footerAccount: "Account",
     createCompanyAccount: "Create a company account",
-    joinAsAgent: "Join as an agent",
+    inspectorSignIn: "Inspector sign-in",
     footerLanguages: "Available in English and Brazilian Portuguese.",
   },
   {
@@ -97,7 +97,7 @@ export const landingMessages = defineMessages(
     footerProduct: "Produto",
     footerAccount: "Conta",
     createCompanyAccount: "Criar conta da empresa",
-    joinAsAgent: "Cadastrar-se como vistoriador",
+    inspectorSignIn: "Entrar como vistoriador",
     footerLanguages: "Disponível em português do Brasil e inglês.",
   },
 );

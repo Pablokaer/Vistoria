@@ -23,7 +23,7 @@ public class MoveInFlowTests(TestApp app)
         var inspectionId = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId));
 
         // Agent finds, accepts and starts it.
-        var agent = await app.CreateClient().RegisterAsync("Agent", name: "Ian Inspector");
+        var agent = await TestData.TeamAgentAsync(app, company, "Ian Inspector");
         var available = (await agent.GetAsync("/api/agent/available")).EnsureOk();
         Assert.Contains(available.Body!.AsArray(), i => i!["id"]!.GetValue<string>() == inspectionId.ToString());
         var rooms = await TestData.AcceptAndStartAsync(agent, inspectionId);
@@ -170,7 +170,7 @@ public class MoveInFlowTests(TestApp app)
         var propertyId = await TestData.CreatePropertyAsync(company, ["Kitchen", "Bathroom"]);
         var tenancyId = await TestData.CreateTenancyAsync(company, propertyId);
         var inspectionId = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId));
-        var agent = await app.CreateClient().RegisterAsync("Agent");
+        var agent = await TestData.TeamAgentAsync(app, company);
         var rooms = await TestData.AcceptAndStartAsync(agent, inspectionId);
         var finalized = await TestData.CompleteAndFinalizeAsync(agent, inspectionId, rooms);
         Assert.Equal("Completed", finalized["status"]!.GetValue<string>()); // no tenants → stays Completed
@@ -217,7 +217,7 @@ public class MoveInFlowTests(TestApp app)
         var tenancyId = await TestData.CreateTenancyAsync(company, propertyId);
         await TestData.AddTenantAsync(app, company, tenancyId);
         var inspectionId = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId));
-        var agent = await app.CreateClient().RegisterAsync("Agent");
+        var agent = await TestData.TeamAgentAsync(app, company);
         var finalized = await TestData.CompleteAndFinalizeAsync(agent, inspectionId, await TestData.AcceptAndStartAsync(agent, inspectionId));
         var reportId = finalized["reportId"]!.GetValue<string>();
 

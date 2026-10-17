@@ -34,7 +34,7 @@ function useAccept(id: string) {
 /**
  * Decision screen for an open inspection: what, where (area only — the address is revealed on accept), when,
  * rooms, and one prominent accept action (sticky at the bottom on phones).
- * `insideShell`: the phone tab bar (h-14) sits under the sticky bar; standalone pages (private invite) have none.
+ * `insideShell`: the phone tab bar (h-14) sits under the sticky bar; standalone pages have none.
  */
 export function AcceptPanel({ item, insideShell = true }: { item: AvailableInspection; insideShell?: boolean }) {
   const t = useT(agentMessages);

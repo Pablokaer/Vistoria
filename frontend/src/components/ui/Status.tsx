@@ -96,12 +96,12 @@ export function PropertyThumb({ type, size = "md" }: { type?: InspectionType; si
   );
 }
 
-/** Public (marketplace) vs Private (link + code). */
+/** Public (any agent of the company may accept) vs Direct (the company chose the agent). */
 export function VisibilityTag({ visibility }: { visibility: Visibility }) {
   const { humanize } = useFormatters();
   return (
     <span className="inline-flex items-center gap-1 text-caption font-medium text-ink-3">
-      <Icon name={visibility === "Private" ? "lock" : visibility === "Team" ? "users" : "globe"} className="h-3.5 w-3.5" />
+      <Icon name={visibility === "Direct" ? "userCheck" : "users"} className="h-3.5 w-3.5" />
       {humanize(visibility)}
     </span>
   );

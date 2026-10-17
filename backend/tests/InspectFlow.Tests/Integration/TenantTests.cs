@@ -13,7 +13,7 @@ public class TenantTests(TestApp app)
         var tenancyId = await TestData.CreateTenancyAsync(company, propertyId);
         var tenant = await TestData.AddTenantAsync(app, company, tenancyId);
         var inspectionId = TestData.InspectionId(await TestData.CreateInspectionAsync(company, propertyId, tenancyId));
-        var agent = await app.CreateClient().RegisterAsync("Agent");
+        var agent = await TestData.TeamAgentAsync(app, company);
         await TestData.CompleteAndFinalizeAsync(agent, inspectionId, await TestData.AcceptAndStartAsync(agent, inspectionId));
         return (company, tenant, tenancyId, inspectionId);
     }
@@ -31,7 +31,7 @@ public class TenantTests(TestApp app)
         (await tenant.GetAsync($"/api/tenant/inspections/{inspectionId}/report")).EnsureStatus(HttpStatusCode.NotFound);
         Assert.Empty((await tenant.GetAsync("/api/tenant/dashboard")).EnsureOk()["awaitingReview"].AsArray());
 
-        var agent = await app.CreateClient().RegisterAsync("Agent");
+        var agent = await TestData.TeamAgentAsync(app, company);
         await TestData.CompleteAndFinalizeAsync(agent, inspectionId, await TestData.AcceptAndStartAsync(agent, inspectionId));
         (await tenant.GetAsync($"/api/tenant/inspections/{inspectionId}/report")).EnsureOk();
 
@@ -59,7 +59,7 @@ public class TenantTests(TestApp app)
         var wrongPerson = await app.CreateClient().RegisterAsync("Tenant");
         (await wrongPerson.PostAsync($"/api/tenant/invitations/{token}/accept")).EnsureStatus(HttpStatusCode.Forbidden);
 
-        var agent = await app.CreateClient().RegisterAsync("Agent");
+        var agent = await TestData.TeamAgentAsync(app, company);
         (await agent.PostAsync($"/api/tenant/invitations/{token}/accept")).EnsureStatus(HttpStatusCode.Forbidden);
     }
 

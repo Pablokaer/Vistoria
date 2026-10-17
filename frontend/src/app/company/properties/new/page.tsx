@@ -10,7 +10,7 @@ import { Button, ErrorBanner, Field, Input, LinkButton, Notice, PageHeader, Sele
 import { errorMessage, post } from "@/lib/api";
 import { useFormatters, useT } from "@/i18n/I18nProvider";
 import { companyNewMessages } from "@/i18n/messages/company-new";
-import { PROPERTY_TYPES, type InspectionType, type Property, type PublishResult, type Tenancy } from "@/lib/types";
+import { PROPERTY_TYPES, type InspectionDetails, type InspectionType, type Property, type Tenancy } from "@/lib/types";
 
 // A brand-new property has no Move In to compare with, so Move Out is not offered here.
 const TYPES: InspectionType[] = ["MoveIn", "Periodic", "Other"];
@@ -62,7 +62,7 @@ export default function NewPropertyPage() {
   // Kept across attempts so a failed inspection step can be retried without duplicating the property or tenancy.
   const [property, setProperty] = useState<Property | null>(null);
   const [createdTenancy, setCreatedTenancy] = useState<Tenancy | null>(null);
-  const [result, setResult] = useState<PublishResult | null>(null);
+  const [result, setResult] = useState<InspectionDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -83,7 +83,7 @@ export default function NewPropertyPage() {
         tenancyToUse = await post<Tenancy>("/api/tenancies", { propertyId: saved.id, startDate: tenancy.startDate, endDate: tenancy.endDate || null, reference: null });
         setCreatedTenancy(tenancyToUse);
       }
-      setResult(await post<PublishResult>("/api/inspections", {
+      setResult(await post<InspectionDetails>("/api/inspections", {
         propertyId: saved.id, tenancyId: tenancyToUse?.id ?? null, inspectionType: type, comparisonInspectionId: null, ...settingsPayload(settings),
       }));
     } catch (err) {
@@ -93,7 +93,7 @@ export default function NewPropertyPage() {
   }
 
   if (result && property) {
-    return <InspectionCreated result={result} extra={<LinkButton variant="secondary" href={`/company/properties/${property.id}`}>{t("goToProperty")}</LinkButton>} />;
+    return <InspectionCreated inspection={result} extra={<LinkButton variant="secondary" href={`/company/properties/${property.id}`}>{t("goToProperty")}</LinkButton>} />;
   }
 
   const submitLabel = !withInspection ? t("createProperty") : settings.publishNow ? t("createPropertyAndPublish") : t("createPropertyAndDraft");

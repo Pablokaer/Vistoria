@@ -22,11 +22,6 @@ public static class AgentEndpoints
         agent.MapGet("/available", (AgentInspectionService s, CancellationToken ct) => s.ListAvailableAsync(ct));
         agent.MapGet("/available/{id:guid}", (Guid id, AgentInspectionService s, CancellationToken ct) => s.GetAvailableAsync(id, ct));
 
-        agent.MapGet("/invitations/{token}", (string token, InvitationService s, CancellationToken ct) => s.PreviewAsync(token, ct))
-            .RequireRateLimiting(RateLimits.Invitation);
-        agent.MapPost("/invitations/{token}/verify", (string token, VerifyInvitationRequest req, InvitationService s, CancellationToken ct) =>
-            s.VerifyAsync(token, req.AccessCode, ct)).RequireRateLimiting(RateLimits.Invitation);
-
         var i = agent.MapGroup("/inspections");
         i.MapGet("", (string? scope, AgentInspectionService s, CancellationToken ct) => s.ListMineAsync(scope == "completed", ct));
         i.MapGet("/{id:guid}", (Guid id, AgentInspectionService s, CancellationToken ct) => s.GetAsync(id, ct));

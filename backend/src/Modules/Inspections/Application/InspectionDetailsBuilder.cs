@@ -2,12 +2,11 @@ using InspectFlow.Modules.Common;
 using InspectFlow.Modules.Inspections.Domain;
 using InspectFlow.Modules.Media.Domain;
 using InspectFlow.Modules.Tenancies.Application;
-using InspectFlow.Shared.Time;
 using Microsoft.EntityFrameworkCore;
 
 namespace InspectFlow.Modules.Inspections.Application;
 
-public sealed class InspectionDetailsBuilder(IAppDbContext db, IClock clock)
+public sealed class InspectionDetailsBuilder(IAppDbContext db)
 {
     public async Task<InspectionDetailsDto> BuildAsync(Inspection inspection, InspectionViewerKind viewer, CancellationToken ct)
     {
@@ -67,17 +66,6 @@ public sealed class InspectionDetailsBuilder(IAppDbContext db, IClock clock)
                 r.Versions.Where(v => v.VersionNumber == r.LatestVersionNumber).Select(v => v.GeneratedAt).First()))
             .FirstOrDefaultAsync(ct);
 
-        InvitationStatusDto? invitation = null;
-        if (viewer == InspectionViewerKind.Company && inspection.Visibility == InspectionVisibility.Private)
-        {
-            var now = clock.UtcNow;
-            invitation = await db.InspectionInvitations.AsNoTracking().Where(x => x.InspectionId == inspection.Id)
-                .OrderByDescending(x => x.CreatedAt)
-                .Select(x => new InvitationStatusDto(x.CreatedAt, x.ExpiresAt, x.AttemptCount, x.MaxAttempts, x.UsedAt != null,
-                    x.UsedAt, x.RevokedAt != null, x.ExpiresAt <= now, x.InvitedEmail))
-                .FirstOrDefaultAsync(ct);
-        }
-
         var hideAddress = viewer == InspectionViewerKind.Agent && inspection.AgentId is null;
         var propertyRef = new PropertyRefDto(property.Id, hideAddress ? string.Empty : property.AddressLine1,
             hideAddress ? null : property.AddressLine2, property.City, hideAddress ? PostcodeArea(property.Postcode) : property.Postcode,
@@ -88,7 +76,7 @@ public sealed class InspectionDetailsBuilder(IAppDbContext db, IClock clock)
             propertyRef, tenancy, agent, companyName, comparison, inspection.Instructions, inspection.ScheduledDate, inspection.AcceptBy,
             inspection.CreatedAt, inspection.PublishedAt, inspection.AcceptedAt, inspection.StartedAt, inspection.CompletedAt,
             inspection.SentToTenantAt, inspection.TenantRespondedAt,
-            rooms, rooms.Count(r => r.Status == nameof(InspectionRoomStatus.Completed)), report, invitation,
+            rooms, rooms.Count(r => r.Status == nameof(InspectionRoomStatus.Completed)), report,
             AllowedActions(inspection, viewer, tenancy, rooms));
     }
 
@@ -101,15 +89,14 @@ public sealed class InspectionDetailsBuilder(IAppDbContext db, IClock clock)
     }
 
     /// <summary>
-    /// "assign" for Team and Private inspections the agent has not started yet; "release" (back to the whole team)
-    /// only for Team ones, since a Private inspection has no team list to return to.
+    /// "assign" while no agent has started (also to take an accepted Public inspection from one agent to another);
+    /// "release" (back to the whole team) once an agent holds it but has not started.
     /// </summary>
     private static void AddAssignmentActions(Inspection i, List<string> actions)
     {
-        if (i.Visibility == InspectionVisibility.Public) return;
-        if (i.Status is InspectionStatus.Draft or InspectionStatus.Open or InspectionStatus.Assigned) actions.Add("assign");
-        if (i.Visibility != InspectionVisibility.Team) return;
-        if (i.AgentId is not null && i.Status is InspectionStatus.Draft or InspectionStatus.Assigned) actions.Add("release");
+        if (i.Status is not (InspectionStatus.Draft or InspectionStatus.Open or InspectionStatus.Assigned)) return;
+        actions.Add("assign");
+        if (i.AgentId is not null) actions.Add("release");
     }
 
     private static List<string> AllowedActions(Inspection i, InspectionViewerKind viewer, TenancyDto? tenancy, IReadOnlyList<RoomProgressDto> rooms)
@@ -119,7 +106,6 @@ public sealed class InspectionDetailsBuilder(IAppDbContext db, IClock clock)
         {
             if (i.Status == InspectionStatus.Draft) actions.AddRange(["publish", "edit"]);
             if (InspectionStateMachine.CanTransition(i.Status, InspectionStatus.Cancelled)) actions.Add("cancel");
-            if (i.Status == InspectionStatus.Open && i.Visibility == InspectionVisibility.Private) actions.Add("regenerateInvitation");
             AddAssignmentActions(i, actions);
             if (i.Status == InspectionStatus.Completed && tenancy is { Members.Count: > 0 }) actions.Add("sendToTenant");
             if (i.IsFinalized) actions.AddRange(["viewReport", "shareReport"]);

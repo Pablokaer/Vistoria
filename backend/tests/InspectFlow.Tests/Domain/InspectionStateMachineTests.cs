@@ -10,7 +10,7 @@ public class InspectionStateMachineTests
     private static readonly Guid Agent = Guid.NewGuid();
 
     public static Inspection NewDraft(InspectionType type = InspectionType.MoveIn, DateTimeOffset? acceptBy = null) =>
-        Inspection.CreateDraft(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), type, InspectionVisibility.Public, null, null, null,
+        Inspection.CreateDraft(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), type, null, null, null,
             acceptBy, Guid.NewGuid(), Now);
 
     public static IReadOnlyList<RoomSnapshotSource> Rooms(int count = 2) =>
@@ -138,11 +138,11 @@ public class InspectionStateMachineTests
     public void Move_in_and_move_out_require_a_tenancy_and_only_move_out_or_periodic_can_compare()
     {
         Assert.Throws<ValidationException>(() => Inspection.CreateDraft(Guid.NewGuid(), Guid.NewGuid(), null, InspectionType.MoveIn,
-            InspectionVisibility.Public, null, null, null, null, Guid.NewGuid(), Now));
+            null, null, null, null, Guid.NewGuid(), Now));
         Assert.Throws<ValidationException>(() => Inspection.CreateDraft(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), InspectionType.MoveIn,
-            InspectionVisibility.Public, Guid.NewGuid(), null, null, null, Guid.NewGuid(), Now));
+            Guid.NewGuid(), null, null, null, Guid.NewGuid(), Now));
         var moveOut = Inspection.CreateDraft(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), InspectionType.MoveOut,
-            InspectionVisibility.Public, Guid.NewGuid(), null, null, null, Guid.NewGuid(), Now);
+            Guid.NewGuid(), null, null, null, Guid.NewGuid(), Now);
         Assert.NotNull(moveOut.ComparisonInspectionId);
     }
 

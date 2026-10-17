@@ -53,7 +53,7 @@ public class SubscriptionFlowTests(TestApp app)
     [Fact]
     public async Task Agents_and_tenants_do_not_need_a_subscription()
     {
-        var agent = await app.CreateClient().RegisterAsync("Agent");
+        var agent = await TestData.OtherCompanyAgentAsync(app);
         (await agent.GetAsync("/api/agent/dashboard")).EnsureOk();
         var tenant = await app.CreateClient().RegisterAsync("Tenant");
         (await tenant.GetAsync("/api/tenant/dashboard")).EnsureOk();
