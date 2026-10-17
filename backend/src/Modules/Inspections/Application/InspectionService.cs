@@ -123,7 +123,8 @@ public sealed class InspectionService(
         }
 
         PrivateInvitationDto? invitation = null;
-        if (inspection.Visibility == InspectionVisibility.Private)
+        // A Private inspection sent straight to a team agent is already Assigned: no link + code to hand out.
+        if (inspection.Visibility == InspectionVisibility.Private && inspection.AgentId is null)
             invitation = CreateInvitation(inspection, inviteEmail, now);
 
         audit.Record(AuditActions.InspectionPublished, nameof(Inspection), inspection.Id,

@@ -16,3 +16,5 @@
 - The company chooses the initial password of a new agent account. There is no email delivery or password reset yet, so the company shares it out of band; the agent can keep it until those features exist.
 - Linking an existing agent account needs no consent from the agent. Linking only lets the agent *see* the company's Team inspections. It gives the company no access to the agent's other work.
 - Assigned → Open is allowed only before the agent starts (InProgress and later stay with the agent). Releasing after the acceptance deadline lets the expiry worker expire the inspection, as for any Open inspection.
+
+**Update 2026-10-17.** Direct assignment is no longer limited to Team inspections: a Private inspection can also be sent straight to a team agent, without link + code. Release back to the team stays Team-only. See [ADR 0021](0021-private-inspection-to-team-agent.md).

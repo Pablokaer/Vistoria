@@ -4,6 +4,22 @@ Every code change is recorded here (newest first), together with the docs it tou
 
 ## 2026-10-17
 
+- **Private inspections sent straight to a team agent.** See [ADR 0021](architecture/0021-private-inspection-to-team-agent.md).
+  - **Form:** the Private option now has a *Send to* dropdown listing the company's agents, plus *An outside inspector (link + 6-digit code)*. The invitation email field shows only for the outside inspector. `TeamAgentPicker` gained a `mode` (`team` / `private`), and the payload sends `assignedAgentId` for Team and Private.
+  - **API:**
+    - `Inspection.AssignToTeamAgent` accepts Private inspections. Public ones are refused with the new code `inspection.public_not_assignable`, which replaces `inspection.not_team` for assignment.
+    - Publishing a Private inspection that has an agent creates no invitation, and the agent is notified (`team.inspection_assigned`).
+    - Assigning an open Private inspection revokes its invitations.
+    - The API offers `assign` for Private inspections, never `release`.
+    - Switching a draft between Team and Private keeps the designated agent.
+  - **Tests:**
+    - `TeamAssignmentDomainTests` gains 3 new tests, and its Public/Private theory becomes one Public test.
+    - New `PrivateTeamAssignmentTests` (3): no invitation, hidden from colleagues, team agents only, earlier link revoked, no release.
+    - `TeamAgentTests` expects the new error code.
+    - 220 backend tests in total.
+    - `e2e/team.mjs` publishes a Private inspection to the team agent and checks that the agent sees it.
+  - **Docs:** README (features, how to test, API overview), ADR 0021 (+ note in ADR 0017), implementation report.
+
 - **AI drafts in the inspector's report voice.** See [ADR 0013, update](architecture/0013-ai-writing-guide-and-language.md).
   - **Prompt `2026-10-v3`** (`AiPrompts`):
     - The safety rules ask for the inspector's own report entry: no references to AI or to "the image"; photos are mentioned only in `limitations`. The example phrase is now "No visible damage noted."

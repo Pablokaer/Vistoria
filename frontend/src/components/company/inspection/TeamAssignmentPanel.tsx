@@ -9,8 +9,9 @@ import { errorMessage, put } from "@/lib/api";
 import type { InspectionDetails } from "@/lib/types";
 
 /**
- * Assign a Team inspection to one agent, switch agents, or release it back to the whole team (until it starts).
- * Shown when the API allows "assign". Example: `<TeamAssignmentPanel inspection={i} onChange={setData} />`
+ * Assign a Team or Private inspection to one team agent, switch agents, or release a Team one back to the whole
+ * team (until it starts). Assigning a Private one revokes its link + code. Shown when the API allows "assign".
+ * Example: `<TeamAssignmentPanel inspection={i} onChange={setData} />`
  */
 export function TeamAssignmentPanel({ inspection: i, onChange }: { inspection: InspectionDetails; onChange: (d: InspectionDetails) => void }) {
   const t = useT(companyTeamMessages);

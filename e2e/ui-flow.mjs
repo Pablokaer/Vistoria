@@ -1,4 +1,4 @@
-// End-to-end UI flow (languages, landing page + auth-aware routing, subscription, Move In + Move Out, team agents) driven through the real web app with Playwright.
+// End-to-end UI flow (languages, landing page + auth-aware routing, subscription, Move In + Move Out, team agents, private inspection sent to a team agent) driven through the real web app with Playwright.
 // Usage: BASE_URL=http://localhost:3000 node ui-flow.mjs   (screenshots in ./output)
 import { chromium, devices } from "playwright";
 import { mkdirSync } from "node:fs";
@@ -239,7 +239,7 @@ try {
   await snap(company, "company-dashboard-final");
   await teamFlow(browser, company, propertyUrl.split("/").pop(), { name: "Tara Team", email: `team-${run}@e2e.local`, password: PASSWORD }, ctxOpts);
   await abandonedCheckoutFlow(browser, { name: "Rita Returning", email: `returning-${run}@e2e.local`, password: PASSWORD }, ctxOpts);
-  log("✅ UI flow completed: subscription (direct + resumed), Move In accepted, Move Out disputed, team inspection assigned");
+  log("✅ UI flow completed: subscription (direct + resumed), Move In accepted, Move Out disputed, team inspection assigned, private inspection sent to the team agent");
 } catch (e) {
   for (const [i, ctx] of browser.contexts().entries())
     for (const [j, p] of ctx.pages().entries()) await p.screenshot({ path: path.join(OUT, `FAILED-${i}-${j}.png`), fullPage: true }).catch(() => {});

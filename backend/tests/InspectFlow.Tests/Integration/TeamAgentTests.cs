@@ -103,7 +103,7 @@ public class TeamAgentTests(TestApp app)
     }
 
     [Fact]
-    public async Task Assignment_requires_a_team_agent_and_a_team_inspection()
+    public async Task Assignment_requires_a_team_agent_and_a_non_public_inspection()
     {
         var (company, propertyId, tenancyId) = await CompanyWithPropertyAsync();
         var outsider = await app.CreateClient().RegisterAsync("Agent");
@@ -119,7 +119,7 @@ public class TeamAgentTests(TestApp app)
             propertyId, tenancyId, inspectionType = "MoveIn", visibility = "Public", publishNow = true, assignedAgentId = member.UserId,
         });
         publicOne.EnsureStatus(HttpStatusCode.UnprocessableEntity);
-        Assert.Equal("inspection.not_team", publicOne.Code);
+        Assert.Equal("inspection.public_not_assignable", publicOne.Code);
     }
 
     [Fact]

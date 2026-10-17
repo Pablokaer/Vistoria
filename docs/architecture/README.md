@@ -24,3 +24,4 @@ Short records of *why* things are the way they are. Format: context → decision
 | [0018](0018-landing-page-and-root-routing.md) | "/" routes on a no-secret session hint cookie (landing page for visitors, dashboard for signed-in users); its "paper record" visual language is superseded by 0019 |
 | [0019](0019-landing-page-redesign.md) | Landing page redesign: `site-*` tokens, Inter only, local architectural photography through `next/image`, product mockups drawn from the app's real labels, no invented claims |
 | [0020](0020-product-name-olhai.md) | Product name **Olhai** on everything people see; `InspectFlow` stays as the internal code name |
+| [0021](0021-private-inspection-to-team-agent.md) | A `Private` inspection can be sent straight to one team agent (no link + code, no accept step); outsiders still use link + code |

@@ -116,16 +116,17 @@ public class Inspection
     }
 
     /// <summary>
-    /// The company hands a Team inspection to one of its agents. On a draft the agent is only designated (assigned
-    /// on publish); an Open or not-yet-started Assigned inspection is (re)assigned at once.
+    /// The company hands a Team or Private inspection to one of its agents. On a draft the agent is only designated
+    /// (assigned on publish); an Open or not-yet-started Assigned inspection is (re)assigned at once. Public
+    /// inspections belong to the marketplace and are never assigned directly.
     /// Example: <c>inspection.AssignToTeamAgent(agentUserId, clock.UtcNow)</c>.
     /// </summary>
     public void AssignToTeamAgent(Guid agentId, DateTimeOffset now)
     {
-        if (Visibility != InspectionVisibility.Team)
-            throw new DomainRuleException("inspection.not_team", new(
-                $"Only Team inspections can be assigned to an agent (this one is {Visibility}).",
-                $"Apenas vistorias da equipe podem ser atribuídas a um vistoriador (esta é {InspectionTerms.Of(Visibility).PtBr})."));
+        if (Visibility == InspectionVisibility.Public)
+            throw new DomainRuleException("inspection.public_not_assignable", new(
+                $"Only Team or Private inspections can be assigned to an agent (this one is {Visibility}).",
+                $"Apenas vistorias da equipe ou privadas podem ser atribuídas a um vistoriador (esta é {InspectionTerms.Of(Visibility).PtBr})."));
         if (Status is not (InspectionStatus.Draft or InspectionStatus.Open or InspectionStatus.Assigned))
             throw new DomainRuleException("inspection.not_assignable", new(
                 $"The inspection can no longer be assigned while {Status}; expected Draft, Open or Assigned.",
@@ -254,7 +255,7 @@ public class Inspection
         if (Status != InspectionStatus.Draft)
             throw new DomainRuleException("inspection.not_draft", new("Only draft inspections can be edited.", "Apenas vistorias em rascunho podem ser editadas."));
         Visibility = visibility;
-        if (visibility != InspectionVisibility.Team) AgentId = null; // only Team drafts carry a designated agent
+        if (visibility == InspectionVisibility.Public) AgentId = null; // only Team and Private drafts carry a designated agent
         Instructions = Normalize(instructions, 2000);
         ScheduledDate = scheduledDate;
         AcceptBy = acceptBy;

@@ -13,19 +13,31 @@ export function useTeamAgents() {
 }
 
 /**
- * "Who does it" for a Team inspection: the whole team (empty value) or one agent, who gets it without accepting.
- * Example: `<TeamAgentPicker value={agentId} onChange={setAgentId} />`
+ * What the empty choice means: the whole team for a Team inspection, or an outside inspector with link + code for a
+ * Private one (ADR 0021). Picking an agent works the same in both: they get the inspection without accepting it.
  */
-export function TeamAgentPicker({ value, onChange }: { value: string; onChange: (agentId: string) => void }) {
+export type TeamAgentPickerMode = "team" | "private";
+
+const PICKER_TEXT = {
+  team: { label: "whoInspects", empty: "anyTeamAgent", emptyHint: "anyAgentHint", assignedHint: "assignedHint" },
+  private: { label: "sendTo", empty: "outsideInspector", emptyHint: "outsideInspectorHint", assignedHint: "privateAssignedHint" },
+} as const;
+
+/**
+ * "Who does it": one of the company's agents, who gets it without accepting, or the mode's empty choice.
+ * Example: `<TeamAgentPicker mode="private" value={agentId} onChange={setAgentId} />`
+ */
+export function TeamAgentPicker({ value, onChange, mode = "team" }: { value: string; onChange: (agentId: string) => void; mode?: TeamAgentPickerMode }) {
   const t = useT(companyTeamMessages);
   const team = useTeamAgents();
+  const text = PICKER_TEXT[mode];
   if (team.data?.length === 0) {
     return <Notice>{t("teamEmpty")} <Link className="font-medium underline" href="/company/agents">{t("registerAgents")}</Link></Notice>;
   }
   return (
-    <Field label={t("whoInspects")} hint={value ? t("assignedHint") : t("anyAgentHint")}>
-      <Select value={value} onChange={(e) => onChange(e.target.value)} data-testid="team-agent">
-        <option value="">{t("anyTeamAgent")}</option>
+    <Field label={t(text.label)} hint={value ? t(text.assignedHint) : t(text.emptyHint)}>
+      <Select value={value} onChange={(e) => onChange(e.target.value)} data-testid={`${mode}-agent`}>
+        <option value="">{t(text.empty)}</option>
         {team.data?.map((a) => <option key={a.agentId} value={a.agentId}>{a.fullName} · {a.email}</option>)}
       </Select>
     </Field>

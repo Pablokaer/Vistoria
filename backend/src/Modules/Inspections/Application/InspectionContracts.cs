@@ -6,7 +6,10 @@ using InspectFlow.Modules.Tenancies.Application;
 
 namespace InspectFlow.Modules.Inspections.Application;
 
-/// <param name="AssignedAgentId">Optional, Team visibility only: a team agent who gets the inspection directly (Assigned on publish).</param>
+/// <param name="AssignedAgentId">
+/// Optional, Team or Private visibility: a team agent who gets the inspection directly (Assigned on publish). A Private
+/// inspection with an agent creates no invitation, so <paramref name="InviteEmail"/> is ignored.
+/// </param>
 public sealed record CreateInspectionRequest(
     Guid PropertyId,
     Guid? TenancyId,

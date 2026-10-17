@@ -1,6 +1,6 @@
 import { defineMessages } from "../translate";
 
-// The company's own agents: /company/agents, the agent picker of Team inspections and the assignment panel.
+// The company's own agents: /company/agents, the agent picker of Team and Private inspections and the assignment panel.
 export const companyTeamMessages = defineMessages(
   {
     teamTitle: "Agents",
@@ -28,6 +28,10 @@ export const companyTeamMessages = defineMessages(
     anyTeamAgent: "Any agent in my team (first to accept)",
     anyAgentHint: "Every agent in your team sees it; the first to accept takes it.",
     assignedHint: "The agent gets it right away, without having to accept it.",
+    sendTo: "Send to",
+    outsideInspector: "An outside inspector (link + 6-digit code)",
+    outsideInspectorHint: "You get a link and a code to share with an inspector outside your team.",
+    privateAssignedHint: "It goes straight to the agent's account: no link, no code, no accept step. Other agents never see it.",
     teamEmpty: "You have no agents in your team yet.",
     registerAgents: "Register agents",
     assignmentTitle: "Team assignment",
@@ -64,6 +68,10 @@ export const companyTeamMessages = defineMessages(
     anyTeamAgent: "Qualquer agente da minha equipe (o primeiro que aceitar)",
     anyAgentHint: "Todos os agentes da sua equipe a veem; o primeiro que aceitar fica com ela.",
     assignedHint: "O agente recebe a vistoria na hora, sem precisar aceitar.",
+    sendTo: "Enviar para",
+    outsideInspector: "Um vistoriador externo (link + código de 6 dígitos)",
+    outsideInspectorHint: "Você recebe um link e um código para compartilhar com um vistoriador de fora da sua equipe.",
+    privateAssignedHint: "Vai direto para a conta do agente: sem link, sem código e sem aceite. Os outros agentes não a veem.",
     teamEmpty: "Você ainda não tem agentes na sua equipe.",
     registerAgents: "Cadastrar agentes",
     assignmentTitle: "Atribuição na equipe",

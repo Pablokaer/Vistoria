@@ -3,7 +3,10 @@ using InspectFlow.Shared.Errors;
 
 namespace InspectFlow.Tests.Domain;
 
-/// <summary>Domain rules for Team inspections: designation on drafts, direct assignment, reassignment and release.</summary>
+/// <summary>
+/// Domain rules for inspections handed to a team agent (Team and Private): designation on drafts, direct assignment,
+/// reassignment and release (Team only).
+/// </summary>
 public class TeamAssignmentDomainTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 16, 10, 0, 0, TimeSpan.Zero);
@@ -59,15 +62,49 @@ public class TeamAssignmentDomainTests
         Assert.Equal("inspection.invalid_transition", release.Code);
     }
 
-    [Theory]
-    [InlineData(InspectionVisibility.Public)]
-    [InlineData(InspectionVisibility.Private)]
-    public void Only_team_inspections_accept_a_direct_assignment(InspectionVisibility visibility)
+    [Fact]
+    public void Public_inspections_reject_a_direct_assignment()
     {
-        var inspection = TeamDraft(visibility);
+        var inspection = TeamDraft(InspectionVisibility.Public);
         var ex = Assert.Throws<DomainRuleException>(() => inspection.AssignToTeamAgent(AgentA, Now));
+        Assert.Equal("inspection.public_not_assignable", ex.Code);
+        Assert.Contains("Public", ex.Text.En, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Private_draft_sent_to_a_team_agent_is_assigned_on_publish()
+    {
+        var inspection = TeamDraft(InspectionVisibility.Private);
+        inspection.AssignToTeamAgent(AgentA, Now);
+        Assert.Equal(InspectionStatus.Draft, inspection.Status);
+
+        inspection.Publish(InspectionStateMachineTests.Rooms(), Now);
+        Assert.Equal(InspectionStatus.Assigned, inspection.Status);
+        Assert.Equal(AgentA, inspection.AgentId);
+    }
+
+    [Fact]
+    public void Private_inspection_switches_agent_but_cannot_be_released_to_the_team()
+    {
+        var inspection = TeamDraft(InspectionVisibility.Private);
+        inspection.AssignToTeamAgent(AgentA, Now);
+        inspection.Publish(InspectionStateMachineTests.Rooms(), Now);
+        inspection.AssignToTeamAgent(AgentB, Now.AddHours(1));
+        Assert.Equal(AgentB, inspection.AgentId);
+
+        var ex = Assert.Throws<DomainRuleException>(() => inspection.ReleaseToTeam(Now));
         Assert.Equal("inspection.not_team", ex.Code);
-        Assert.Contains(visibility.ToString(), ex.Text.En, StringComparison.Ordinal);
+        Assert.Contains("Private", ex.Text.En, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Changing_a_draft_between_team_and_private_keeps_the_designated_agent()
+    {
+        var inspection = TeamDraft();
+        inspection.AssignToTeamAgent(AgentA, Now);
+        inspection.UpdateDraft(InspectionVisibility.Private, null, null, null, Now);
+
+        Assert.Equal(AgentA, inspection.AgentId);
     }
 
     [Fact]

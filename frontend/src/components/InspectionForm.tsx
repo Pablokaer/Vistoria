@@ -11,17 +11,20 @@ import { Field, Input, Switch, Textarea } from "./ui";
 export { InspectionCreated } from "./company/InspectionCreated";
 
 /** Inspection fields that do not depend on the property (shared by "New inspection" and "Add property"). */
-/** `assignedAgentId` ("" = the whole team) only applies to Team visibility. */
+/** `assignedAgentId` applies to Team ("" = the whole team) and Private ("" = an outside inspector with link + code). */
 export interface InspectionSettings {
   visibility: Visibility; inviteEmail: string; assignedAgentId: string; scheduledDate: string; acceptBy: string; instructions: string; publishNow: boolean;
 }
 
 export const DEFAULT_SETTINGS: InspectionSettings = { visibility: "Public", inviteEmail: "", assignedAgentId: "", scheduledDate: "", acceptBy: "", instructions: "", publishNow: true };
 
+/** The team agent who gets the inspection directly, if any; Public inspections always go to the marketplace. */
+const directAgentId = (s: InspectionSettings): string | null => (s.visibility !== "Public" && s.assignedAgentId ? s.assignedAgentId : null);
+
 export const settingsPayload = (s: InspectionSettings) => ({
   visibility: s.visibility, instructions: s.instructions || null, scheduledDate: s.scheduledDate || null,
-  acceptBy: s.acceptBy ? new Date(s.acceptBy).toISOString() : null, publishNow: s.publishNow, inviteEmail: s.inviteEmail || null,
-  assignedAgentId: s.visibility === "Team" && s.assignedAgentId ? s.assignedAgentId : null,
+  acceptBy: s.acceptBy ? new Date(s.acceptBy).toISOString() : null, publishNow: s.publishNow,
+  inviteEmail: directAgentId(s) ? null : s.inviteEmail || null, assignedAgentId: directAgentId(s),
 });
 
 // Same identity as InspectionTypeTag: teal door-in, orange door-out, indigo calendar.
@@ -71,9 +74,13 @@ function VisibilityOption({ v, selected, onSelect }: { v: Visibility; selected: 
   );
 }
 
-/** Marketplace, the company's own team (whole team or one agent) or private invitation (+ optional inspector email). */
+/**
+ * Marketplace, the company's own team (whole team or one agent) or private: straight to one team agent, or an
+ * invitation with link + code for an outside inspector (+ optional inspector email).
+ */
 export function InspectionAssignmentFields({ value, onChange }: { value: InspectionSettings; onChange: (s: InspectionSettings) => void }) {
   const t = useT(companyFormMessages);
+  const setAgent = (id: string) => onChange({ ...value, assignedAgentId: id });
   return (
     <div className="space-y-4">
       <fieldset>
@@ -84,8 +91,9 @@ export function InspectionAssignmentFields({ value, onChange }: { value: Inspect
           ))}
         </div>
       </fieldset>
-      {value.visibility === "Team" && <TeamAgentPicker value={value.assignedAgentId} onChange={(id) => onChange({ ...value, assignedAgentId: id })} />}
-      {value.visibility === "Private" && (
+      {value.visibility === "Team" && <TeamAgentPicker value={value.assignedAgentId} onChange={setAgent} />}
+      {value.visibility === "Private" && <TeamAgentPicker mode="private" value={value.assignedAgentId} onChange={setAgent} />}
+      {value.visibility === "Private" && !value.assignedAgentId && (
         <Field label={t("agentEmail")} hint={t("agentEmailHint")}>
           <Input type="email" value={value.inviteEmail} onChange={(e) => onChange({ ...value, inviteEmail: e.target.value })} />
         </Field>

@@ -100,11 +100,15 @@ public sealed class InspectionDetailsBuilder(IAppDbContext db, IClock clock)
         return trimmed.Length > 3 ? trimmed[..3] : trimmed;
     }
 
-    /// <summary>"assign" / "release" for Team inspections the agent has not started yet.</summary>
-    private static void AddTeamActions(Inspection i, List<string> actions)
+    /// <summary>
+    /// "assign" for Team and Private inspections the agent has not started yet; "release" (back to the whole team)
+    /// only for Team ones, since a Private inspection has no team list to return to.
+    /// </summary>
+    private static void AddAssignmentActions(Inspection i, List<string> actions)
     {
-        if (i.Visibility != InspectionVisibility.Team) return;
+        if (i.Visibility == InspectionVisibility.Public) return;
         if (i.Status is InspectionStatus.Draft or InspectionStatus.Open or InspectionStatus.Assigned) actions.Add("assign");
+        if (i.Visibility != InspectionVisibility.Team) return;
         if (i.AgentId is not null && i.Status is InspectionStatus.Draft or InspectionStatus.Assigned) actions.Add("release");
     }
 
@@ -116,7 +120,7 @@ public sealed class InspectionDetailsBuilder(IAppDbContext db, IClock clock)
             if (i.Status == InspectionStatus.Draft) actions.AddRange(["publish", "edit"]);
             if (InspectionStateMachine.CanTransition(i.Status, InspectionStatus.Cancelled)) actions.Add("cancel");
             if (i.Status == InspectionStatus.Open && i.Visibility == InspectionVisibility.Private) actions.Add("regenerateInvitation");
-            AddTeamActions(i, actions);
+            AddAssignmentActions(i, actions);
             if (i.Status == InspectionStatus.Completed && tenancy is { Members.Count: > 0 }) actions.Add("sendToTenant");
             if (i.IsFinalized) actions.AddRange(["viewReport", "shareReport"]);
         }
