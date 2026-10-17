@@ -38,7 +38,7 @@ export default function TenantInvitePage() {
         <p className="text-center text-sm text-ink-3">{t("notSignedIn")}</p>
         <div className="grid grid-cols-2 gap-2">
           <LinkButton variant="secondary" href={`/login?next=${next}`}>{t("signIn")}</LinkButton>
-          <LinkButton variant="secondary" href={`/register?role=Tenant&next=${next}`}>{t("createAccount")}</LinkButton>
+          <LinkButton variant="secondary" href={`/register?invite=${encodeURIComponent(token)}`}>{t("createAccount")}</LinkButton>
         </div>
       </div>
     </AuthCard>

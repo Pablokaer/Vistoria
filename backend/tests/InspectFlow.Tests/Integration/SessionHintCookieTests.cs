@@ -29,7 +29,7 @@ public class SessionHintCookieTests(TestApp app)
 
     private async Task<(HttpClient Http, string RefreshCookie)> SignInAsync()
     {
-        var registered = await app.CreateClient().RegisterAsync("Tenant");
+        var registered = await app.CreateClient().RegisterAsync("Company");
         var http = RawClient();
         using var login = await http.SendAsync(WebPost("/api/auth/login", new { email = registered.Email, password = TestData.Password }));
         login.EnsureSuccessStatusCode();
@@ -40,7 +40,7 @@ public class SessionHintCookieTests(TestApp app)
     [Fact]
     public async Task Sign_in_sets_a_site_wide_http_only_hint_with_no_secret()
     {
-        var registered = await app.CreateClient().RegisterAsync("Tenant");
+        var registered = await app.CreateClient().RegisterAsync("Company");
         using var login = await RawClient().SendAsync(WebPost("/api/auth/login", new { email = registered.Email, password = TestData.Password }));
 
         var hint = SetCookie(login, "if_session") ?? throw new Xunit.Sdk.XunitException("Login set no if_session cookie.");

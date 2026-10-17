@@ -7,7 +7,7 @@ Short records of *why* things are the way they are. Format: context → decision
 | [0001](0001-modular-monolith.md) | Modular monolith, one deployable, one database with a schema per module |
 | [0002](0002-property-vs-inspection.md) | Property (live, editable) is separate from Inspection (a point-in-time record) |
 | [0003](0003-room-snapshot.md) | PropertyRoom vs InspectionRoom: rooms are snapshotted at publish time |
-| [0004](0004-tenancy-model.md) | Tenancy between Property and Inspection; tenants join by invitation |
+| [0004](0004-tenancy-model.md) | Tenancy between Property and Inspection; tenants join by invitation (sign-up only from it: 0023) |
 | [0005](0005-ai-abstraction.md) | AI behind `IImageAnalysisService`, structured output, human decides |
 | [0006](0006-storage-abstraction.md) | Binary files behind `IStorageService`, signed URLs, never in PostgreSQL |
 | [0007](0007-report-immutability.md) | Finalized reports are immutable, versioned snapshots |
@@ -26,3 +26,4 @@ Short records of *why* things are the way they are. Format: context → decision
 | [0020](0020-product-name-olhai.md) | Product name **Olhai** on everything people see; `InspectFlow` stays as the internal code name |
 | [0021](0021-private-inspection-to-team-agent.md) | A `Private` inspection can be sent straight to one team agent (no link + code, no accept step); superseded by 0022 |
 | [0022](0022-agents-belong-to-their-company.md) | Agents belong to their company: no marketplace, no agent self-sign-up, no private link + code; inspections are `Public` (the company's agents) or `Direct` (one agent) |
+| [0023](0023-tenant-accounts-from-invitations.md) | Tenant accounts are created only from their tenancy invitation (token + invited email), in the same transaction as joining it |

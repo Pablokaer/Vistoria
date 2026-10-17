@@ -34,6 +34,7 @@ public sealed record TenancyInvitationPreviewDto(string PropertyAddress, string 
 public sealed class TenancyService(
     IAppDbContext db,
     CompanyAccess access,
+    TenancyInvitationLookup invitations,
     ICurrentUser currentUser,
     IAuditLogger audit,
     INotificationService notifications,
@@ -104,7 +105,7 @@ public sealed class TenancyService(
         var link = urls.Value.Web($"/tenant/invite/{token}");
         notifications.Enqueue(new NotificationMessage(NotificationTypes.TenancyInvitation,
             "You have been invited to review your property inspection",
-            $"Hello {member.FullName}, please create an account or sign in with {email} to access your tenancy's inspection reports.",
+            $"Hello {member.FullName}, open the link to create your account with {email} (or sign in, if you already have one) to access your tenancy's inspection reports.",
             RecipientEmail: email, TransientLink: link));
         audit.Record(AuditActions.TenantInvited, nameof(Tenancy), tenancy.Id, new { memberId = member.Id });
         await db.SaveChangesAsync(ct);
@@ -113,7 +114,7 @@ public sealed class TenancyService(
 
     public async Task<TenancyInvitationPreviewDto> PreviewInvitationAsync(string token, CancellationToken ct)
     {
-        var member = await FindInvitationAsync(token, ct);
+        var member = await invitations.FindOpenAsync(token, ct);
         var info = await (from t in db.Tenancies.AsNoTracking()
                           join p in db.Properties.AsNoTracking() on t.PropertyId equals p.Id
                           join c in db.Companies.AsNoTracking() on t.CompanyId equals c.Id
@@ -123,22 +124,19 @@ public sealed class TenancyService(
             member.InvitationExpiresAt!.Value);
     }
 
-    /// <summary>Links the signed-in tenant to the tenancy. The account email must match the invited email.</summary>
+    /// <summary>
+    /// Links a signed-in tenant who already has an account to a further tenancy (new tenants sign up from the
+    /// invitation instead, ADR 0023). The account email must match the invited email.
+    /// </summary>
     public async Task<TenancyMemberDto> AcceptInvitationAsync(string token, CancellationToken ct)
     {
         var userId = currentUser.RequireUserId();
         if (!currentUser.IsInRole(AppRoles.Tenant))
             throw new ForbiddenException(new("Sign in with a tenant account to accept this invitation.", "Entre com uma conta de inquilino para aceitar este convite."));
-        var member = await FindInvitationAsync(token, ct, tracking: true);
+        var member = await invitations.FindOpenAsync(token, ct, tracking: true);
         var user = await db.Users.AsNoTracking().FirstAsync(u => u.Id == userId, ct);
-        if (!string.Equals(user.Email, member.Email, StringComparison.OrdinalIgnoreCase))
-            throw new ForbiddenException(new("This invitation was sent to a different email address.", "Este convite foi enviado para outro endereço de e-mail."));
-
-        var now = clock.UtcNow;
-        member.UserId = userId;
-        member.JoinedAt = now;
-        member.InvitationTokenHash = null;
-        audit.Record(AuditActions.TenantJoinedTenancy, nameof(Tenancy), member.TenancyId, new { memberId = member.Id });
+        invitations.EnsureInvitedEmail(member, user.Email);
+        invitations.Join(member, userId);
         try
         {
             await db.SaveChangesAsync(ct);
@@ -148,17 +146,6 @@ public sealed class TenancyService(
             throw new ConflictException(new("This invitation was just used. Refresh and try again.", "Este convite acabou de ser utilizado. Atualize a página e tente novamente."));
         }
         return ToMemberDto(member);
-    }
-
-    private async Task<TenancyMember> FindInvitationAsync(string token, CancellationToken ct, bool tracking = false)
-    {
-        if (string.IsNullOrWhiteSpace(token)) throw new NotFoundException(EntityNames.Invitation);
-        var hash = SecureTokens.Sha256Hex(token);
-        var query = tracking ? db.TenancyMembers : db.TenancyMembers.AsNoTracking();
-        var member = await query.FirstOrDefaultAsync(m => m.InvitationTokenHash == hash, ct);
-        if (member is null || member.UserId is not null || member.InvitationExpiresAt <= clock.UtcNow)
-            throw new NotFoundException(EntityNames.Invitation);
-        return member;
     }
 
     private async Task<Tenancy> LoadAsync(Guid tenancyId, CompanyPermission permission, CancellationToken ct, bool tracking = false)

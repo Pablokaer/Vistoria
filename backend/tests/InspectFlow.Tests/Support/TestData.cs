@@ -50,14 +50,28 @@ public static class TestData
     public static async Task<Guid> CreateTenancyAsync(ApiClient company, Guid propertyId) =>
         (await company.PostAsync("/api/tenancies", new { propertyId, startDate = "2026-01-01", endDate = "2027-01-01" })).EnsureOk().Id;
 
-    /// <summary>Invites and joins a tenant. Returns the tenant's client.</summary>
+    /// <summary>The company invites <paramref name="email"/> to the tenancy. Returns the invitation token (the last part of the link).</summary>
+    public static async Task<string> InviteTenantAsync(ApiClient company, Guid tenancyId, string email)
+    {
+        var invite = (await company.PostAsync($"/api/tenancies/{tenancyId}/tenants", new { email, fullName = "Tina Tenant" })).EnsureOk();
+        var link = invite["invitationLink"].GetValue<string>();
+        return link[(link.LastIndexOf('/') + 1)..];
+    }
+
+    /// <summary>Invites a new tenant, who signs up from the invitation and so joins the tenancy. Returns the tenant's client.</summary>
     public static async Task<ApiClient> AddTenantAsync(TestApp app, ApiClient company, Guid tenancyId)
     {
-        var tenant = await app.CreateClient().RegisterAsync("Tenant");
-        var invite = (await company.PostAsync($"/api/tenancies/{tenancyId}/tenants", new { email = tenant.Email, fullName = "Tina Tenant" })).EnsureOk();
-        var link = invite["invitationLink"].GetValue<string>();
-        (await tenant.PostAsync($"/api/tenant/invitations/{link[(link.LastIndexOf('/') + 1)..]}/accept")).EnsureOk();
-        return tenant;
+        var email = $"tenant-{Guid.NewGuid():N}@test.local";
+        var token = await InviteTenantAsync(company, tenancyId, email);
+        return await app.CreateClient().RegisterAsync("Tenant", email, "Tina Tenant", token);
+    }
+
+    /// <summary>A tenant of a new company's tenancy, for tests that need some tenant account. Returns the tenant's client.</summary>
+    public static async Task<ApiClient> TenantAsync(TestApp app)
+    {
+        var company = await CompanyAsync(app);
+        var propertyId = await CreatePropertyAsync(company, ["Kitchen"]);
+        return await AddTenantAsync(app, company, await CreateTenancyAsync(company, propertyId));
     }
 
     /// <summary>Public to the company's agents, or Direct to <paramref name="assignedAgentId"/>. Returns the inspection details.</summary>

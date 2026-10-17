@@ -3,7 +3,8 @@ using InspectFlow.Modules.Identity.Domain;
 
 namespace InspectFlow.Modules.Identity.Application;
 
-public sealed record RegisterRequest(string Email, string Password, string FullName, string Role);
+/// <param name="InvitationToken">Required for Tenant: the token of the tenancy invitation the account is created from (ADR 0023).</param>
+public sealed record RegisterRequest(string Email, string Password, string FullName, string Role, string? InvitationToken = null);
 
 public sealed record LoginRequest(string Email, string Password);
 

@@ -19,10 +19,11 @@ public sealed class ApiClient(HttpClient http)
     public void UseToken(string? token) =>
         http.DefaultRequestHeaders.Authorization = token is null ? null : new AuthenticationHeaderValue("Bearer", token);
 
-    public async Task<ApiClient> RegisterAsync(string role, string? email = null, string? name = null)
+    /// <param name="invitationToken">Required for "Tenant": tenant accounts are created from their invitation (ADR 0023).</param>
+    public async Task<ApiClient> RegisterAsync(string role, string? email = null, string? name = null, string? invitationToken = null)
     {
         email ??= $"{role.ToLowerInvariant()}-{Guid.NewGuid():N}@test.local";
-        var res = await PostAsync("/api/auth/register", new { email, password = TestData.Password, fullName = name ?? $"Test {role}", role });
+        var res = await PostAsync("/api/auth/register", new { email, password = TestData.Password, fullName = name ?? $"Test {role}", role, invitationToken });
         return SignedIn(res.EnsureOk(), email);
     }
 

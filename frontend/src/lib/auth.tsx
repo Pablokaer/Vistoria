@@ -11,7 +11,8 @@ interface AuthState {
   login: (email: string, password: string) => Promise<Me>;
   /** Development only: sign in as one of the seeded demo accounts. */
   switchAccount: (email: string) => Promise<Me>;
-  register: (data: { email: string; password: string; fullName: string; role: Role }) => Promise<Me>;
+  /** `invitationToken` is required for a Tenant (accounts are created from the invitation, ADR 0023). */
+  register: (data: { email: string; password: string; fullName: string; role: Role; invitationToken?: string }) => Promise<Me>;
   logout: () => Promise<void>;
   reload: () => Promise<void>;
 }

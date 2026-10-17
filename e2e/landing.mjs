@@ -113,15 +113,16 @@ async function accessibility(browser, { base, log }) {
 }
 
 /**
- * Signs in through the API in the browser context, as the web app does (cookies land in the context). A tenant, because
- * agents cannot sign up (ADR 0022) and a new company would first be sent to the subscription step.
+ * Signs in through the API in the browser context, as the web app does (cookies land in the context). A company,
+ * the only account anyone can create without an invitation (ADR 0022, 0023); with no subscription yet, its home is
+ * the subscription page.
  */
-async function signInAsNewTenant(page, base, run) {
+async function signInAsNewCompany(page, base, run) {
   const res = await page.request.post(`${base}/api/auth/register`, {
     headers: { "X-Client": "web" },
-    data: { email: `landing-${run}@e2e.local`, password: PASSWORD, fullName: "Lena Landing", role: "Tenant" },
+    data: { email: `landing-${run}@e2e.local`, password: PASSWORD, fullName: "Lena Landing", role: "Company" },
   });
-  if (!res.ok()) fail(`could not register the test tenant: ${res.status()}`);
+  if (!res.ok()) fail(`could not register the test company: ${res.status()}`);
 }
 
 const hasCookie = async (ctx, name) => (await ctx.cookies()).some((c) => c.name === name);
@@ -139,16 +140,16 @@ async function signedInRouting(browser, { base, snap, log }) {
   const run = Date.now().toString(36);
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: "en-GB" });
   const page = await ctx.newPage();
-  await signInAsNewTenant(page, base, run);
+  await signInAsNewCompany(page, base, run);
   if (!(await hasCookie(ctx, "if_session"))) fail("sign-in did not set the session hint");
 
   await page.addInitScript(WATCH_FOR_LANDING);
   await page.goto(base);
-  await page.waitForURL(/\/tenant$/);
+  await page.waitForURL(/\/subscription\/required$/);
   // The landing markup travels in the RSC payload (so a stale hint can fall back without a reload) but is never rendered.
   if (await page.evaluate(() => window.__landingSeen)) fail("the landing page flashed before the redirect");
   await page.reload();
-  await page.waitForURL(/\/tenant$/);
+  await page.waitForURL(/\/subscription\/required$/);
   await snap(page, "landing-signed-in-redirect");
 
   await page.getByRole("button", { name: "Sign out" }).first().click();
@@ -158,7 +159,7 @@ async function signedInRouting(browser, { base, snap, log }) {
   await hero(page).waitFor();
   log("landing: signed-in redirect, reload and logout OK");
 
-  await signInAsNewTenant(page, `${base}`, `${run}x`);
+  await signInAsNewCompany(page, `${base}`, `${run}x`);
   await ctx.clearCookies({ name: "if_refresh" }); // the session ends (expired/revoked) but the hint is still there
   await page.goto(base);
   await hero(page).waitFor({ timeout: 15000 });

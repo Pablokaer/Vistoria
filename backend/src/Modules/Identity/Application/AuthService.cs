@@ -3,6 +3,7 @@ using InspectFlow.Modules.Audit.Domain;
 using InspectFlow.Modules.Billing.Application;
 using InspectFlow.Modules.Common;
 using InspectFlow.Modules.Identity.Domain;
+using InspectFlow.Modules.Tenancies.Application;
 using InspectFlow.Shared.Auth;
 using InspectFlow.Shared.Errors;
 using InspectFlow.Shared.Localization;
@@ -18,6 +19,7 @@ public sealed class AuthService(
     IAppDbContext db,
     UserManager<User> userManager,
     UserAccountFactory accounts,
+    TenancyInvitationLookup tenantInvitations,
     ITokenService tokens,
     IAuditLogger audit,
     ICurrentUser currentUser,
@@ -33,7 +35,29 @@ public sealed class AuthService(
     /// </summary>
     public const string RefreshSupersededCode = "auth.refresh_superseded";
 
+    /// <summary>
+    /// Self-registration of a Company, or of a Tenant from the invitation it was sent (the tenant joins that tenancy in
+    /// the same transaction). Example: <c>await auth.RegisterAsync(new("tom@x.com", "Passw0rd!", "Tom", "Tenant", token), ct)</c>.
+    /// </summary>
     public async Task<AuthResult> RegisterAsync(RegisterRequest request, CancellationToken ct)
+    {
+        ValidateRegistration(request);
+        var invitation = request.Role == AppRoles.Tenant
+            ? await tenantInvitations.RequireForSignUpAsync(request.InvitationToken, request.Email, ct)
+            : null;
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var user = await accounts.CreateAsync(new NewUserAccount(request.Email, request.Password, request.FullName, request.Role));
+        if (invitation is not null) tenantInvitations.Join(invitation, user.Id);
+
+        audit.Record(AuditActions.UserRegistered, nameof(User), user.Id, new { role = request.Role }, user.Id);
+        var auth = await IssueTokensAsync(user, familyId: null, ct);
+        await SaveRegistrationAsync(ct);
+        await tx.CommitAsync(ct);
+        return auth;
+    }
+
+    private static void ValidateRegistration(RegisterRequest request)
     {
         var errors = new Dictionary<string, LocalizedText[]>();
         if (string.IsNullOrWhiteSpace(request.Email)) errors["Email"] = [new("Email is required.", "O e-mail é obrigatório.")];
@@ -43,15 +67,19 @@ public sealed class AuthService(
             errors["Role"] = [new($"Role must be Company or Tenant (got '{request.Role}'); agent accounts are created by their company.",
                 $"O perfil deve ser Company ou Tenant (recebido: '{request.Role}'); contas de vistoriador são criadas pela empresa.")];
         if (errors.Count > 0) throw new ValidationException(RegistrationInvalid, errors);
+    }
 
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
-        var user = await accounts.CreateAsync(new NewUserAccount(request.Email, request.Password, request.FullName, request.Role));
-
-        audit.Record(AuditActions.UserRegistered, nameof(User), user.Id, new { role = request.Role }, user.Id);
-        var auth = await IssueTokensAsync(user, familyId: null, ct);
-        await db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
-        return auth;
+    /// <summary>The invitation's row version makes two sign-ups from the same link race-safe: the second one gets 409.</summary>
+    private async Task SaveRegistrationAsync(CancellationToken ct)
+    {
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ConflictException(new("This invitation was just used. Sign in instead.", "Este convite acabou de ser utilizado. Entre com a sua conta."));
+        }
     }
 
     public async Task<AuthResult> LoginAsync(LoginRequest request, CancellationToken ct)

@@ -5,3 +5,5 @@
 **Decision.** `Property → Tenancy → Inspection`. `TenancyMember` holds name + email and an optional `UserId`. The company invites by email; the tenant accepts a single-use, expiring link (token stored as SHA-256) while signed in **with the invited email**. Tenants see only inspections of tenancies they joined, and only once the report was sent to them (`AwaitingTenant`, `Accepted`, `Disputed`).
 
 **Consequences.** No tenant data leaks by guessing ids (every query is scoped by membership). When several tenants exist, the first recorded decision wins (MVP); per-tenant consensus is future work. Email verification is not implemented — possession of the invitation link plus the matching email is the proof.
+
+**Update 2026-10-17.** A tenant account can now only be *created* from an invitation: sign-up takes the token, requires the invited email and joins the tenancy in the same transaction. See [ADR 0023](0023-tenant-accounts-from-invitations.md).

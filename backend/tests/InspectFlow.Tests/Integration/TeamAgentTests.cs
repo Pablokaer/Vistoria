@@ -46,7 +46,7 @@ public class TeamAgentTests(TestApp app)
         var company = await TestData.CompanyAsync(app);
         var member = await TestData.TeamAgentAsync(app, company);
         var otherCompanyAgent = await TestData.OtherCompanyAgentAsync(app);
-        var tenant = await app.CreateClient().RegisterAsync("Tenant");
+        var tenant = await TestData.TenantAsync(app);
 
         // Same answer for every existing account, so the role of an address is not revealed.
         foreach (var email in new[] { member.Email, otherCompanyAgent.Email, tenant.Email })

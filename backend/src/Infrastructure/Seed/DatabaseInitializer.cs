@@ -127,21 +127,23 @@ public static class DatabaseInitializer
         public async Task RunAsync(CancellationToken ct)
         {
             var company = await RegisterAsync(CompanyEmail, "Demo Company Owner", AppRoles.Company, ct);
-            var tenant = await RegisterAsync(TenantEmail, "Demo Tenant", AppRoles.Tenant, ct);
 
             await As(company, AppRoles.Company, sp => sp.GetRequiredService<CompanyService>()
                 .CreateWorkspaceAsync(new CreateCompanyRequest("Demo Property Management", "hello@demo-pm.local", "+353 1 555 0100"), ct));
             var agent = await RegisterTeamAgentAsync(company, ct);
 
             // Property 1: open Public Move In waiting for an agent (the demo agent sees it under Available).
-            var (mainStreet, mainTenancy) = await CreatePropertyWithTenancyAsync(company, tenant, "12 Main Street", "D02 XY45", ct);
+            var (mainStreet, mainTenancy, mainInvitation) = await CreatePropertyWithTenancyAsync(company, "12 Main Street", "D02 XY45", ct);
+            // Tenant accounts are created from an invitation (ADR 0023): the first one signs the demo tenant up.
+            var tenant = await RegisterAsync(TenantEmail, "Demo Tenant", AppRoles.Tenant, ct, mainInvitation);
             await As(company, AppRoles.Company, sp => sp.GetRequiredService<InspectionService>().CreateAsync(
                 new CreateInspectionRequest(mainStreet, mainTenancy, InspectionType.MoveIn, null,
                     "Keys are with the concierge. Please photograph every room from two corners.", DateOnly.FromDateTime(DateTime.UtcNow.AddDays(3)),
                     null, PublishNow: true), ct));
 
             // Property 2: finalized and accepted Move In, ready for a Move Out comparison demo.
-            var (oakAvenue, oakTenancy) = await CreatePropertyWithTenancyAsync(company, tenant, "48 Oak Avenue", "D04 AB12", ct);
+            var (oakAvenue, oakTenancy, oakInvitation) = await CreatePropertyWithTenancyAsync(company, "48 Oak Avenue", "D04 AB12", ct);
+            await As(tenant, AppRoles.Tenant, sp => sp.GetRequiredService<TenancyService>().AcceptInvitationAsync(oakInvitation, ct));
             var moveIn = await As(company, AppRoles.Company, sp => sp.GetRequiredService<InspectionService>().CreateAsync(
                 new CreateInspectionRequest(oakAvenue, oakTenancy, InspectionType.MoveIn, null,
                     null, null, null, PublishNow: true), ct));
@@ -180,7 +182,8 @@ public static class DatabaseInitializer
                 new TenantDecisionRequest("Everything is correct."), ct));
         }
 
-        private async Task<(Guid PropertyId, Guid TenancyId)> CreatePropertyWithTenancyAsync(Guid company, Guid tenant, string address,
+        /// <summary>A property with the demo rooms and a tenancy that invited the demo tenant; returns the invitation token.</summary>
+        private async Task<(Guid PropertyId, Guid TenancyId, string InvitationToken)> CreatePropertyWithTenancyAsync(Guid company, string address,
             string postcode, CancellationToken ct)
         {
             var property = await As(company, AppRoles.Company, sp => sp.GetRequiredService<PropertyService>().CreateAsync(
@@ -190,9 +193,7 @@ public static class DatabaseInitializer
                 new CreateTenancyRequest(property.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-7)), DateOnly.FromDateTime(DateTime.UtcNow.AddYears(1)), $"TEN-{address[..2].Trim()}"), ct));
             var invite = await As(company, AppRoles.Company, sp => sp.GetRequiredService<TenancyService>().InviteTenantAsync(
                 tenancy.Id, new InviteTenantRequest(TenantEmail, "Demo Tenant"), ct));
-            var token = invite.InvitationLink[(invite.InvitationLink.LastIndexOf('/') + 1)..];
-            await As(tenant, AppRoles.Tenant, sp => sp.GetRequiredService<TenancyService>().AcceptInvitationAsync(token, ct));
-            return (property.Id, tenancy.Id);
+            return (property.Id, tenancy.Id, invite.InvitationLink[(invite.InvitationLink.LastIndexOf('/') + 1)..]);
         }
 
         private Task UploadAsync(Guid agent, Guid inspectionId, Guid roomId, MediaType type, Guid? defectId, string asset, CancellationToken ct) =>
@@ -212,10 +213,10 @@ public static class DatabaseInitializer
             return agent.AgentId;
         }
 
-        private async Task<Guid> RegisterAsync(string email, string name, string role, CancellationToken ct)
+        private async Task<Guid> RegisterAsync(string email, string name, string role, CancellationToken ct, string? invitationToken = null)
         {
             var result = await As(Guid.Empty, role, sp => sp.GetRequiredService<AuthService>()
-                .RegisterAsync(new RegisterRequest(email, DemoPassword, name, role), ct));
+                .RegisterAsync(new RegisterRequest(email, DemoPassword, name, role, invitationToken), ct));
             return result.User.Id;
         }
 

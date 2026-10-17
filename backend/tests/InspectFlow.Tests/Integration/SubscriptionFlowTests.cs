@@ -55,7 +55,7 @@ public class SubscriptionFlowTests(TestApp app)
     {
         var agent = await TestData.OtherCompanyAgentAsync(app);
         (await agent.GetAsync("/api/agent/dashboard")).EnsureOk();
-        var tenant = await app.CreateClient().RegisterAsync("Tenant");
+        var tenant = await TestData.TenantAsync(app);
         (await tenant.GetAsync("/api/tenant/dashboard")).EnsureOk();
         Assert.True((await Billing.SubscriptionAsync(agent))["hasAccess"]!.GetValue<bool>());
     }

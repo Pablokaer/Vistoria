@@ -23,13 +23,14 @@ const snap = async (page, name) => { await page.screenshot({ path: path.join(OUT
 const asset = (name) => path.join(ASSETS, name);
 const ROOM_ASSET = { "Living Room": "living-room-1.jpg", "Bedroom 1": "bedroom-1.jpg", "Bedroom 2": "bedroom-2.jpg", Kitchen: "kitchen-1.jpg", Bathroom: "bathroom-1.jpg", Garage: "garage-1.jpg" };
 
-async function register(browser, role, email, name, opts = {}) {
-  const ctx = await browser.newContext(opts.mobile ? { ...devices["Pixel 7"] } : { viewport: { width: 1280, height: 900 } });
+/** A tenant opens the invitation link and creates the account there (tenants only sign up from an invitation, ADR 0023). */
+async function registerFromInvitation(browser, inviteLink, email, name) {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const page = await ctx.newPage();
   page.on("dialog", (d) => d.accept());
-  await page.goto(`${BASE}${opts.next ? `/register?role=${role}&next=${encodeURIComponent(opts.next)}` : "/register"}`);
-  const label = { Company: "Company", Tenant: "Tenant" }[role];
-  await page.getByText(label, { exact: true }).click();
+  await page.goto(`${BASE}${new URL(inviteLink).pathname}`);
+  await page.getByRole("link", { name: "Create account" }).click();
+  await page.waitForURL("**/register?invite=**");
   await page.getByLabel("Full name").fill(name);
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSWORD);
@@ -161,12 +162,10 @@ try {
   await snap(company, "company-inspection-open");
   log("move in published", moveInId);
 
-  // ---------------- Tenant joins ----------------
-  const { page: tenant } = await register(browser, "Tenant", tenantEmail, "Tom Tenant", { next: new URL(inviteLink).pathname });
-  await tenant.waitForURL("**/tenant/invite/**");
-  await tenant.getByRole("button", { name: "Accept invitation" }).click();
+  // ---------------- Tenant signs up from the invitation (joins the tenancy at once) ----------------
+  const { page: tenant } = await registerFromInvitation(browser, inviteLink, tenantEmail, "Tom Tenant");
   await tenant.waitForURL(/\/tenant$/);
-  log("tenant joined tenancy");
+  log("tenant signed up from the invitation and joined the tenancy");
 
   // ---------------- Agent (mobile), created by the company ----------------
   const agentEmail = `agent-${run}@e2e.local`;

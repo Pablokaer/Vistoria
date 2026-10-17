@@ -36,7 +36,7 @@ public class TenantTests(TestApp app)
         (await tenant.GetAsync($"/api/tenant/inspections/{inspectionId}/report")).EnsureOk();
 
         // Another tenant (not a member) cannot see it through any route.
-        var stranger = await app.CreateClient().RegisterAsync("Tenant");
+        var stranger = await TestData.TenantAsync(app);
         (await stranger.GetAsync($"/api/tenant/inspections/{inspectionId}/report")).EnsureStatus(HttpStatusCode.NotFound);
         (await stranger.GetAsync($"/api/inspections/{inspectionId}/report")).EnsureStatus(HttpStatusCode.NotFound);
         (await stranger.PostAsync($"/api/tenant/inspections/{inspectionId}/accept")).EnsureStatus(HttpStatusCode.NotFound);
@@ -49,18 +49,54 @@ public class TenantTests(TestApp app)
         var company = await TestData.CompanyAsync(app);
         var propertyId = await TestData.CreatePropertyAsync(company, ["Kitchen"]);
         var tenancyId = await TestData.CreateTenancyAsync(company, propertyId);
-        var invite = (await company.PostAsync($"/api/tenancies/{tenancyId}/tenants", new { email = $"invited-{Guid.NewGuid():N}@t.local", fullName = "Invited" })).EnsureOk();
-        var link = invite["invitationLink"].GetValue<string>();
-        var token = link[(link.LastIndexOf('/') + 1)..];
+        var token = await TestData.InviteTenantAsync(company, tenancyId, $"invited-{Guid.NewGuid():N}@t.local");
 
         var preview = (await app.CreateClient().GetAsync($"/api/tenant/invitations/{token}")).EnsureOk();
         Assert.Contains("***", preview["invitedEmail"].GetValue<string>(), StringComparison.Ordinal);
 
-        var wrongPerson = await app.CreateClient().RegisterAsync("Tenant");
+        var wrongPerson = await TestData.TenantAsync(app);
         (await wrongPerson.PostAsync($"/api/tenant/invitations/{token}/accept")).EnsureStatus(HttpStatusCode.Forbidden);
 
         var agent = await TestData.TeamAgentAsync(app, company);
         (await agent.PostAsync($"/api/tenant/invitations/{token}/accept")).EnsureStatus(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Tenant_signs_up_only_from_an_invitation_with_the_invited_email()
+    {
+        var company = await TestData.CompanyAsync(app);
+        var propertyId = await TestData.CreatePropertyAsync(company, ["Kitchen"]);
+        var tenancyId = await TestData.CreateTenancyAsync(company, propertyId);
+        var email = $"invited-{Guid.NewGuid():N}@t.local";
+        var token = await TestData.InviteTenantAsync(company, tenancyId, email);
+        object SignUp(string address, string? invitationToken) =>
+            new { email = address, password = TestData.Password, fullName = "Tom Tenant", role = "Tenant", invitationToken };
+
+        var noToken = await app.CreateClient().PostAsync("/api/auth/register", SignUp(email, null));
+        noToken.EnsureStatus(HttpStatusCode.BadRequest);
+        Assert.Contains("invitation link", noToken.Raw, StringComparison.Ordinal);
+        (await app.CreateClient().PostAsync("/api/auth/register", SignUp(email, "not-a-real-token"))).EnsureStatus(HttpStatusCode.NotFound);
+        (await app.CreateClient().PostAsync("/api/auth/register", SignUp($"other-{Guid.NewGuid():N}@t.local", token))).EnsureStatus(HttpStatusCode.Forbidden);
+
+        var tenant = await app.CreateClient().RegisterAsync("Tenant", email.ToUpperInvariant(), "Tom Tenant", token);
+        var tenancy = (await company.GetAsync($"/api/tenancies/{tenancyId}")).EnsureOk();
+        Assert.True(tenancy["members"].AsArray().Single()!["joined"]!.GetValue<bool>());
+        (await tenant.GetAsync("/api/tenant/dashboard")).EnsureOk();
+        (await app.CreateClient().PostAsync("/api/auth/register", SignUp($"again-{Guid.NewGuid():N}@t.local", token))).EnsureStatus(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Existing_tenant_accepts_a_further_invitation_while_signed_in()
+    {
+        var company = await TestData.CompanyAsync(app);
+        var propertyId = await TestData.CreatePropertyAsync(company, ["Kitchen"]);
+        var tenant = await TestData.AddTenantAsync(app, company, await TestData.CreateTenancyAsync(company, propertyId));
+        var secondTenancy = await TestData.CreateTenancyAsync(company, propertyId);
+        var token = await TestData.InviteTenantAsync(company, secondTenancy, tenant.Email);
+
+        (await tenant.PostAsync($"/api/tenant/invitations/{token}/accept")).EnsureOk();
+        var tenancy = (await company.GetAsync($"/api/tenancies/{secondTenancy}")).EnsureOk();
+        Assert.True(tenancy["members"].AsArray().Single()!["joined"]!.GetValue<bool>());
     }
 
     [Fact]

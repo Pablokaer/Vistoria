@@ -142,6 +142,7 @@ public static class DependencyInjection
         services.AddScoped<CompanyService>();
         services.AddScoped<CompanyAgentService>();
         services.AddScoped<PropertyService>();
+        services.AddScoped<TenancyInvitationLookup>();
         services.AddScoped<TenancyService>();
         services.AddScoped<InspectionAccess>();
         services.AddScoped<InspectionWriteScope>();

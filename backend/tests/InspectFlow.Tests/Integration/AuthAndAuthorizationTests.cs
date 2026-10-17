@@ -9,9 +9,9 @@ public class AuthAndAuthorizationTests(TestApp app)
     [Fact]
     public async Task Register_assigns_role_and_me_returns_it()
     {
-        var tenant = await app.CreateClient().RegisterAsync("Tenant");
-        var me = (await tenant.GetAsync("/api/auth/me")).EnsureOk();
-        Assert.Equal("Tenant", me["roles"].AsArray().Single()!.GetValue<string>());
+        var company = await app.CreateClient().RegisterAsync("Company");
+        var me = (await company.GetAsync("/api/auth/me")).EnsureOk();
+        Assert.Equal("Company", me["roles"].AsArray().Single()!.GetValue<string>());
         Assert.Null(me.Body!["company"]);
     }
 
@@ -38,14 +38,14 @@ public class AuthAndAuthorizationTests(TestApp app)
         var client = app.CreateClient();
         (await client.PostAsync("/api/auth/register", new { email = $"x{Guid.NewGuid():N}@t.local", password = TestData.Password, fullName = "X", role = "Admin" }))
             .EnsureStatus(HttpStatusCode.BadRequest);
-        (await client.PostAsync("/api/auth/register", new { email = $"x{Guid.NewGuid():N}@t.local", password = "short", fullName = "X", role = "Tenant" }))
+        (await client.PostAsync("/api/auth/register", new { email = $"x{Guid.NewGuid():N}@t.local", password = "short", fullName = "X", role = "Company" }))
             .EnsureStatus(HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task Login_fails_with_wrong_password_and_refresh_rotates_with_reuse_detection()
     {
-        var registered = await app.CreateClient().RegisterAsync("Tenant");
+        var registered = await app.CreateClient().RegisterAsync("Company");
         var client = app.CreateClient();
         (await client.PostAsync("/api/auth/login", new { email = registered.Email, password = "WrongPass1" })).EnsureStatus(HttpStatusCode.Unauthorized);
 
@@ -64,7 +64,7 @@ public class AuthAndAuthorizationTests(TestApp app)
     [Fact]
     public async Task Web_clients_get_the_refresh_token_only_as_http_only_cookie()
     {
-        var registered = await app.CreateClient().RegisterAsync("Tenant");
+        var registered = await app.CreateClient().RegisterAsync("Company");
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login")
         {
             Content = System.Net.Http.Json.JsonContent.Create(new { email = registered.Email, password = TestData.Password }),
@@ -85,7 +85,7 @@ public class AuthAndAuthorizationTests(TestApp app)
         (await anonymous.GetAsync("/api/properties")).EnsureStatus(HttpStatusCode.Unauthorized);
         (await anonymous.GetAsync("/api/agent/available")).EnsureStatus(HttpStatusCode.Unauthorized);
 
-        var tenant = await app.CreateClient().RegisterAsync("Tenant");
+        var tenant = await TestData.TenantAsync(app);
         var company = await TestData.CompanyAsync(app);
         var agent = await TestData.TeamAgentAsync(app, company);
 
