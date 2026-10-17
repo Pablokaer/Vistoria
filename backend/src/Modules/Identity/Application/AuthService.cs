@@ -18,6 +18,7 @@ namespace InspectFlow.Modules.Identity.Application;
 public sealed class AuthService(
     IAppDbContext db,
     UserManager<User> userManager,
+    PasswordSignInGuard signIn,
     UserAccountFactory accounts,
     TenancyInvitationLookup tenantInvitations,
     ITokenService tokens,
@@ -82,21 +83,10 @@ public sealed class AuthService(
         }
     }
 
+    /// <summary>Email + password sign-in (checks in <see cref="PasswordSignInGuard"/>). Example: <c>await auth.LoginAsync(new("ana@x.com", "Passw0rd!"), ct)</c>.</summary>
     public async Task<AuthResult> LoginAsync(LoginRequest request, CancellationToken ct)
     {
-        var invalid = new LocalizedText("Invalid email or password.", "E-mail ou senha inválidos.");
-        var user = string.IsNullOrWhiteSpace(request.Email) ? null : await userManager.FindByEmailAsync(request.Email.Trim());
-        if (user is null) throw new UnauthorizedException(invalid);
-        if (await userManager.IsLockedOutAsync(user))
-            throw new UnauthorizedException(new("Account temporarily locked after repeated failed sign-ins. Try again later.",
-                "Conta bloqueada temporariamente após várias tentativas de acesso sem sucesso. Tente novamente mais tarde."));
-        if (!await userManager.CheckPasswordAsync(user, request.Password ?? string.Empty))
-        {
-            await userManager.AccessFailedAsync(user);
-            throw new UnauthorizedException(invalid);
-        }
-
-        await userManager.ResetAccessFailedCountAsync(user);
+        var user = await signIn.VerifyAsync(request.Email, request.Password);
         audit.Record(AuditActions.UserLoggedIn, nameof(User), user.Id, userId: user.Id);
         var auth = await IssueTokensAsync(user, familyId: null, ct);
         await db.SaveChangesAsync(ct);

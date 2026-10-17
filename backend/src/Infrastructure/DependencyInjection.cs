@@ -38,6 +38,7 @@ public static class DependencyInjection
     {
         // ---- Options ----
         services.Configure<AuthOptions>(configuration.GetSection("Auth"));
+        services.Configure<LoginThrottleOptions>(configuration.GetSection("Auth:LoginThrottle"));
         services.Configure<JwtOptions>(configuration.GetSection("Jwt"));
         services.Configure<StorageOptions>(configuration.GetSection("Storage"));
         services.Configure<AiOptions>(configuration.GetSection("Ai"));
@@ -77,8 +78,11 @@ public static class DependencyInjection
                 o.Password.RequireUppercase = true;
                 o.Password.RequireNonAlphanumeric = false;
                 o.Lockout.AllowedForNewUsers = true;
-                o.Lockout.MaxFailedAccessAttempts = 5;
-                o.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10);
+                // Account-wide, so anyone could trigger it: kept well above the per-device throttle (5 per 15 min,
+                // Auth:LoginThrottle) so a single machine can no longer lock someone else out; it still stops a
+                // password-guessing run spread over many addresses.
+                o.Lockout.MaxFailedAccessAttempts = 20;
+                o.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
             })
             .AddRoles<Role>()
             .AddEntityFrameworkStores<AppDbContext>();
@@ -86,6 +90,7 @@ public static class DependencyInjection
         services.AddScoped<CurrentUser>();
         services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<CurrentUser>());
         services.AddSingleton<ITokenService, JwtTokenService>();
+        services.AddSingleton<ILoginThrottle, MemoryLoginThrottle>();
         services.AddSingleton<IClock, SystemClock>();
 
         // ---- Cross-cutting ----
@@ -137,6 +142,7 @@ public static class DependencyInjection
 
         // ---- Module application services ----
         services.AddScoped<AuthService>();
+        services.AddScoped<PasswordSignInGuard>();
         services.AddScoped<UserAccountFactory>();
         services.AddScoped<CompanyAccess>();
         services.AddScoped<CompanyService>();

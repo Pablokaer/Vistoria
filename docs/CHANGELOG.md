@@ -4,6 +4,12 @@ Every code change is recorded here (newest first), together with the docs it tou
 
 ## 2026-10-17
 
+- **Sign-in can no longer lock out other people or reveal which emails have accounts.** See [ADR 0009, update](architecture/0009-authentication.md).
+  - **Before:** 5 wrong passwords locked any account for 10 minutes, so anyone who knew an email could keep its owner out. The "locked" message came before the password check, and an unknown email answered faster.
+  - **Now:** `PasswordSignInGuard` + `ILoginThrottle` (`MemoryLoginThrottle`). After 5 failures per account **and** client IP in 15 minutes (`Auth:LoginThrottle`), that device gets 429 `too_many_attempts` for that account. The Identity lockout needs 20 failures (15 minutes). An unknown email gets the same 401 and hashing time as a wrong password, and "locked" is only shown with the right password.
+  - **Tests:** new `MemoryLoginThrottleTests` (4: per account + device, window expiry and reset, new window after expiry, unknown IP) and `SignInProtectionTests` (3: throttle without lockout, lockout revealed only with the right password, same answer for unknown email). 224 backend tests in total.
+  - **Docs:** README (security notes, known limitations, tests), ADR 0009 update, implementation report.
+
 - **Tenant accounts are created only from their invitation.** Without email verification anyone could register a tenant account with someone else's address. See [ADR 0023](architecture/0023-tenant-accounts-from-invitations.md).
   - **API:** `POST /api/auth/register` with `role: Tenant` requires `invitationToken` (400 without, 404 for an unknown/used/expired one, 403 for another email). The account joins the tenancy in the same transaction; a second sign-up from the same link gets 409. Signed-in tenants still accept further invitations with `POST /api/tenant/invitations/{token}/accept`.
   - **Code:** new `TenancyInvitationLookup` (find open invitation, invited-email check, join + audit), used by `AuthService` and `TenancyService`. The demo tenant signs up from the first demo invitation.
