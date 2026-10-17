@@ -103,9 +103,11 @@ Or use the launcher script (Git Bash / WSL on Windows), which checks Docker, cre
 |---|---|
 | Web app | http://localhost:3000 |
 | API | http://localhost:8080 (OpenAPI document: `/openapi/v1.json` in Development) |
-| PostgreSQL | localhost:5432 (`inspectflow` / `inspectflow`) |
+| PostgreSQL | localhost:15432 (`inspectflow` / `inspectflow`; `POSTGRES_PORT` changes it — not 5432, so a locally installed PostgreSQL never clashes) |
 
 On start-up the API applies migrations and, in `Development`, seeds demo data. Data persists in the `pgdata` and `storage` volumes; `docker compose down -v` resets everything.
+
+All three ports are published on `127.0.0.1` only, so the demo users, the dev account switcher and the default database password are not reachable from the network. To try the web app from a phone on the same Wi-Fi, set `WEB_BIND_ADDRESS=0.0.0.0` in `.env` and open `http://<this machine's LAN IP>:3000`. This file is for development only; servers use `docker-compose.prod.yml` (see *Production deployment*).
 
 > Behind a corporate TLS-inspecting proxy, pass your CA to the builds:
 > `docker build --secret id=extra_ca,src=/path/ca.crt -t inspectflow-api ./backend` (same for `./frontend` → `inspectflow-web`), then `docker compose up --no-build`.
@@ -118,7 +120,7 @@ Prerequisites: .NET SDK 10, Node.js 22, PostgreSQL 16 (e.g. `docker compose up d
 # API (http://localhost:8080)
 cd backend
 export ASPNETCORE_ENVIRONMENT=Development
-export DATABASE_CONNECTION_STRING="Host=localhost;Port=5432;Database=inspectflow;Username=inspectflow;Password=inspectflow"
+export DATABASE_CONNECTION_STRING="Host=localhost;Port=15432;Database=inspectflow;Username=inspectflow;Password=inspectflow"
 export JWT_SECRET="dev-only-jwt-secret-change-me-0123456789abcdef"
 export STORAGE_SIGNING_KEY="dev-only-storage-signing-key-0123456789abcdef"
 dotnet run --project src/Api        # migrates + seeds in Development
@@ -136,12 +138,29 @@ Migrations live in `backend/src/Infrastructure/Persistence/Migrations` (`Initial
 ```bash
 dotnet tool install -g dotnet-ef
 cd backend
-export DATABASE_CONNECTION_STRING="Host=localhost;Port=5432;Database=inspectflow;Username=inspectflow;Password=inspectflow"
+export DATABASE_CONNECTION_STRING="Host=localhost;Port=15432;Database=inspectflow;Username=inspectflow;Password=inspectflow"
 dotnet ef database update -p src/Infrastructure -s src/Infrastructure            # apply to an empty database
 dotnet ef migrations add <Name> -p src/Infrastructure -s src/Infrastructure -o Persistence/Migrations
 ```
 
-For production, prefer a reviewed SQL script (`dotnet ef migrations script --idempotent ...`) or a migration bundle over migrating on start-up.
+The production compose file migrates on start-up too (one API instance; see [ADR 0024](docs/architecture/0024-production-deployment-and-trusted-proxies.md)). To review and apply the SQL yourself instead, generate it with `dotnet ef migrations script --idempotent -p src/Infrastructure -s src/Infrastructure -o migrate.sql`, apply it with `psql`, and set `MIGRATE_ON_STARTUP=false`.
+
+### Production deployment
+
+`docker-compose.prod.yml` is a separate, standalone file. It runs `ASPNETCORE_ENVIRONMENT=Production` with no demo seed, requires every secret, and publishes nothing but a Caddy reverse proxy on ports 80/443. Caddy routes `/api/*` and `/health` straight to the API and everything else to the web app; database, API and web app are reachable only on the internal network.
+
+```bash
+cp .env.production.example .env.production   # fill in every value; the file is gitignored
+docker compose -f docker-compose.prod.yml --env-file .env.production up --build -d
+docker compose -f docker-compose.prod.yml --env-file .env.production ps
+```
+
+- **Address:** set `SITE_ADDRESS` to your domain and point its DNS at the server, with ports 80 and 443 open. Caddy then obtains and renews the HTTPS certificate itself. Behind another TLS terminator, use `SITE_ADDRESS=:80`. `WEB_BASE_URL` is the public URL used in links, e.g. `https://app.example.com`.
+- **Secrets:** compose refuses to start while `POSTGRES_PASSWORD`, `JWT_SECRET`, `STORAGE_SIGNING_KEY`, `WEB_BASE_URL` or `SITE_ADDRESS` is empty, and names the missing one. Generate them with `openssl rand -base64 48`.
+- **Payments and AI:** set the Stripe and OpenAI variables. Without them, checkout and AI descriptions fail with a clear message; the Sandbox and the mock never run in Production.
+- **Client IP:** the API believes `X-Forwarded-For` only from Caddy's fixed address (`CADDY_IP`, default `172.30.250.10` on `INTERNAL_SUBNET` `172.30.250.0/24`; change both if that subnet clashes with a host network). Rate limits therefore count per real client.
+- **Upgrades:** `git pull`, take a database backup, then run the `up --build -d` command again. Migrations run when the new API starts.
+- **Backups:** the data is in the `olhai_pgdata` (database) and `olhai_storage` (photos, PDFs) volumes. For example: `docker compose -f docker-compose.prod.yml --env-file .env.production exec db pg_dump -U inspectflow inspectflow > backup.sql`.
 
 ## Configuration
 
@@ -158,7 +177,10 @@ All settings can be given as the flat environment variables below (see `.env.exa
 | `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_BASE_URL` | OpenAI settings (server-side only) |
 | `WEB_BASE_URL` | Base URL used in tenant invitation and share links |
 | `MIGRATE_ON_STARTUP`, `SEED_DEMO_DATA` | Start-up behaviour (seed is ignored outside Development) |
-| `TRUST_FORWARDED_HEADERS` | Honour `X-Forwarded-For` (only when the API is reachable exclusively via a trusted proxy) |
+| `TRUST_FORWARDED_HEADERS` | Honour `X-Forwarded-For` / `X-Forwarded-Proto` (only when the API is reachable exclusively via a trusted proxy) |
+| `TRUSTED_PROXIES` | Required with `TRUST_FORWARDED_HEADERS=true`: comma-separated IPs or CIDR ranges of that proxy (e.g. `172.30.250.10`). Headers from any other sender are ignored; an empty or invalid list stops the start-up. Never list the web container: the Next.js rewrite passes a client-supplied `X-Forwarded-For` through |
+| `WEB_BIND_ADDRESS` (dev compose) | Host address the web app is published on: `127.0.0.1` (default) or `0.0.0.0` for the LAN. db and API are always on `127.0.0.1` |
+| `SITE_ADDRESS`, `HTTP_PORT`, `HTTPS_PORT`, `CADDY_IP`, `INTERNAL_SUBNET` (prod compose) | Caddy site (domain → automatic HTTPS, or `:80`), published ports, and the proxy's fixed internal address (see *Production deployment*) |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated origins for browser clients on other origins (not needed for the bundled web app) |
 | `API_INTERNAL_URL` (frontend, build time) | Where Next.js proxies `/api/*` |
 | `BILLING_PROVIDER` | `Auto` (default: Stripe when `STRIPE_SECRET_KEY` is set, otherwise the Sandbox in Development), `Stripe` or `Sandbox` |
@@ -254,7 +276,7 @@ Then *Review inspection* → edit texts if needed → *Finalize inspection* → 
 cd backend
 dotnet test                                   # needs Docker (Testcontainers starts PostgreSQL)
 # or against an existing server (a temporary database is created and dropped):
-TEST_DATABASE_CONNECTION_STRING="Host=localhost;Port=5432;Database=postgres;Username=inspectflow;Password=inspectflow" dotnet test
+TEST_DATABASE_CONNECTION_STRING="Host=localhost;Port=15432;Database=postgres;Username=inspectflow;Password=inspectflow" dotnet test
 
 cd frontend && npm run lint && npm run build
 
@@ -268,7 +290,7 @@ cd backend && PDF_PREVIEW_DIR=/tmp/pdf-preview dotnet test --filter "FullyQualif
 cd e2e && npm install && BASE_URL=http://localhost:3000 node ui-flow.mjs
 ```
 
-246 backend tests cover: photo GPS removal (EXIF in JPEG/PNG/WebP in both byte orders, XMP values, PNG CRCs, date taken and orientation kept, malformed and truncated files untouched, stored hash = stored bytes), sign-in protections (per account + device throttle without account lockout, locked state only revealed with the right password, the same answer for unknown emails and wrong passwords), tenant sign-up only from an invitation (token required, invited email only, single use) and further invitations accepted while signed in, agents belonging to their company (no agent sign-up, accounts created by the company and never linked, one message for every used email, Public inspections hidden from and not acceptable by other companies' agents, Direct inspections hidden from colleagues, taking back an accepted inspection until the agent starts), the AI report voice (room overview, walls and floor, defect surface and inspector label, no "image" wording, pt-BR terminology, guide word budget, mock drafts), the product name on the PDF report (Olhai, not the code name), the session hint cookie behind the routing of `/` (set, renewed, removed on logout and failed refresh, kept when a parallel tab rotated the token), company team agents (account creation, direct assignment, hidden designated drafts, reassignment/release until start, removal), the PDF report (7 layout scenarios render, missing photos become placeholders, Move In photos loaded for Move Out reports), languages (Accept-Language resolution incl. q-values and pt-PT, translated ProblemDetails titles/errors/details, Identity and AI errors, 402 in Portuguese, plans per language, report language frozen in the snapshot, PDF labels and dates in both languages, v1 snapshots read as English), the AI writing guide (parsing, prompt order safety → language → guide, output language in the OpenAI system message, prompt version), company report language and localization, subscriptions (no access without an active subscription, 402 on the Company API, the full sandbox payment, resuming an abandoned checkout, success-page parameters and forged or unsigned webhooks never activating, replayed webhooks applied once, past due → grace → cancellation, lapsed → subscribe again, parallel checkout starts, access policy and state machine, Stripe request/signature/event mapping), authorization across companies/roles/tenants, property & rooms, room snapshot, publish rules, public accept (+ 8 parallel agents → exactly one wins), state transitions, upload validation (content sniffing, size, ownership, after-finalization), room completion and blocked finalization, finalization + PDF, report immutability (hash, EF guard, DB trigger), share links, tenant access/observations/accept/dispute (+ concurrent decisions), completed rooms reopening when an edit breaks a rule, same-tenancy baselines, the full Move In and Move Out flows through HTTP, the OpenAI adapter contract (strict schema, safety prompt, no key leakage) and architecture boundaries.
+259 backend tests cover: trusted proxies (addresses and CIDR ranges, empty or invalid lists refused with the value, IPv4-mapped proxy addresses, X-Forwarded-For from the web container or loopback ignored), photo GPS removal (EXIF in JPEG/PNG/WebP in both byte orders, XMP values, PNG CRCs, date taken and orientation kept, malformed and truncated files untouched, stored hash = stored bytes), sign-in protections (per account + device throttle without account lockout, locked state only revealed with the right password, the same answer for unknown emails and wrong passwords), tenant sign-up only from an invitation (token required, invited email only, single use) and further invitations accepted while signed in, agents belonging to their company (no agent sign-up, accounts created by the company and never linked, one message for every used email, Public inspections hidden from and not acceptable by other companies' agents, Direct inspections hidden from colleagues, taking back an accepted inspection until the agent starts), the AI report voice (room overview, walls and floor, defect surface and inspector label, no "image" wording, pt-BR terminology, guide word budget, mock drafts), the product name on the PDF report (Olhai, not the code name), the session hint cookie behind the routing of `/` (set, renewed, removed on logout and failed refresh, kept when a parallel tab rotated the token), company team agents (account creation, direct assignment, hidden designated drafts, reassignment/release until start, removal), the PDF report (7 layout scenarios render, missing photos become placeholders, Move In photos loaded for Move Out reports), languages (Accept-Language resolution incl. q-values and pt-PT, translated ProblemDetails titles/errors/details, Identity and AI errors, 402 in Portuguese, plans per language, report language frozen in the snapshot, PDF labels and dates in both languages, v1 snapshots read as English), the AI writing guide (parsing, prompt order safety → language → guide, output language in the OpenAI system message, prompt version), company report language and localization, subscriptions (no access without an active subscription, 402 on the Company API, the full sandbox payment, resuming an abandoned checkout, success-page parameters and forged or unsigned webhooks never activating, replayed webhooks applied once, past due → grace → cancellation, lapsed → subscribe again, parallel checkout starts, access policy and state machine, Stripe request/signature/event mapping), authorization across companies/roles/tenants, property & rooms, room snapshot, publish rules, public accept (+ 8 parallel agents → exactly one wins), state transitions, upload validation (content sniffing, size, ownership, after-finalization), room completion and blocked finalization, finalization + PDF, report immutability (hash, EF guard, DB trigger), share links, tenant access/observations/accept/dispute (+ concurrent decisions), completed rooms reopening when an edit breaks a rule, same-tenancy baselines, the full Move In and Move Out flows through HTTP, the OpenAI adapter contract (strict schema, safety prompt, no key leakage) and architecture boundaries.
 
 ## API overview
 
@@ -288,13 +310,14 @@ Errors are RFC 7807 problem details with a stable `code` (e.g. `inspection.inval
 - Authorization is enforced in application services (membership/assignment checks on every query); the UI only hides what the API already forbids.
 - Tokens (tenant invitations, share links, refresh tokens): SHA-256 of 256-bit random values; plaintext shown once.
 - Rate limits on sign-in/registration, tenant invitation acceptance, public endpoints, uploads and AI. Failed sign-ins are throttled per account **and** device (5 per 15 minutes → 429), and the account-wide Identity lockout needs 20, so nobody can lock someone else out from one machine. An unknown email and a wrong password get the same answer, and "locked" is only shown with the right password (ADR 0009, update 2026-10-17).
+- Per-IP limits use the real client IP only through a listed proxy (`TRUSTED_PROXIES`); a client-supplied `X-Forwarded-For` from anyone else is ignored. In production, Caddy is the only entry point; database, API and web app are not published ([ADR 0024](docs/architecture/0024-production-deployment-and-trusted-proxies.md)).
 - Uploads validated by magic bytes (JPEG/PNG/WebP), size and ownership; the GPS position (EXIF and XMP) is erased in place before hashing and storing, while date taken and orientation stay ([ADR 0025](docs/architecture/0025-photo-gps-removal.md)); stored under server-generated keys; served via expiring HMAC-signed URLs with `nosniff`.
 - `Referrer-Policy: no-referrer` (tokens appear in tenant invitation and share-link paths), `X-Frame-Options: DENY`.
 - Audit log (`audit.audit_logs`, append-only) records the key events; metadata containing secret-like keys is refused.
 
 ## Known limitations & technical debt
 
-- **Rate limiting behind the web proxy**: the bundled Next.js rewrite does not forward the client IP, so per-IP limits apply to the web server's IP. In production route `/api` through a reverse proxy that sets `X-Forwarded-For` and enable `TRUST_FORWARDED_HEADERS`, or move to per-account limits. The per-device sign-in throttle has the same limit: behind the bundled proxy all visitors share one key per account. The Next.js proxy also has a 30 s timeout per request.
+- **Rate limiting in development**: the Next.js rewrite does not forward the client IP, so in the development stack every per-IP limit applies to the web container's IP. The production stack routes `/api` through Caddy and counts per real client (ADR 0024), the per-device sign-in throttle included. In-memory limits assume one API instance; several instances need a shared store. The Next.js proxy (development only) has a 30 s timeout per request.
 - **AI queue is in-process**: durable in the database and re-queued at start-up, but with several API instances use a real queue/worker.
 - **Local storage only**; S3/Azure Blob implementations and direct-to-bucket uploads are prepared but not written. Photos are not resized server-side (the web client downsizes before upload; the PDF uses 144 DPI rasterization).
 - **Notifications** are stored in-app and logged; no email/push delivery yet (invitation links are shown to the company to share).

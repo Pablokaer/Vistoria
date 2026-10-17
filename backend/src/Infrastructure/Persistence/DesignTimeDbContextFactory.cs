@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
 namespace InspectFlow.Infrastructure.Persistence;
@@ -9,7 +9,7 @@ public sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<App
     public AppDbContext CreateDbContext(string[] args)
     {
         var cs = Environment.GetEnvironmentVariable("DATABASE_CONNECTION_STRING")
-                 ?? "Host=localhost;Port=5432;Database=inspectflow;Username=inspectflow;Password=inspectflow";
+                 ?? "Host=localhost;Port=15432;Database=inspectflow;Username=inspectflow;Password=inspectflow";
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql(cs, o => o.MigrationsHistoryTable("__ef_migrations_history", "public"))
             .UseSnakeCaseNamingConvention()

@@ -1,0 +1,27 @@
+# Olhai production entry point, used by docker-compose.prod.yml (see README → Production deployment).
+# SITE_ADDRESS is a domain (automatic HTTPS from Let's Encrypt) or ":80" behind another TLS terminator.
+# Caddy trusts no upstream proxy, so it discards any X-Forwarded-For sent by the client and sets the real client IP;
+# the API believes X-Forwarded-For only from this container (TRUSTED_PROXIES, ADR 0024).
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	# Straight to the API, never through the Next.js rewrite: that rewrite passes a client-supplied
+	# X-Forwarded-For through unchanged, which would let anyone pick their own rate-limit bucket.
+	@api path /api/* /health
+	handle @api {
+		# Photo uploads are capped at 20 MB by the API; refuse anything bigger before it reaches it.
+		request_body {
+			max_size 25MB
+		}
+		reverse_proxy api:8080
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+}

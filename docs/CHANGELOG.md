@@ -4,6 +4,18 @@ Every code change is recorded here (newest first), together with the docs it tou
 
 ## 2026-10-17
 
+- **Production deployment behind Caddy; the API trusts `X-Forwarded-For` only from listed proxies.** Development defaults could reach a server (Development environment, demo users, sandbox payments, Postgres on 5432 with the default password). Every per-IP limit also saw the web container's IP, and the Next.js rewrite passes a client-supplied `X-Forwarded-For` through unchanged, which an echo-server test confirmed. See [ADR 0024](architecture/0024-production-deployment-and-trusted-proxies.md).
+  - **API:** with `TRUST_FORWARDED_HEADERS=true` the new `TRUSTED_PROXIES` (`ForwardedHeaders:KnownProxies`, IPs or CIDR ranges) is required. Only those senders are believed, and loopback is no longer trusted by default. An empty or invalid list stops the start-up with the offending value (`TrustedProxyList`).
+  - **Production:** standalone `docker-compose.prod.yml` (project `olhai`, `ASPNETCORE_ENVIRONMENT=Production`, no seed, every secret required via `${VAR:?}`) with `deploy/Caddyfile`:
+    - Caddy is the only published service (80/443, automatic HTTPS).
+    - `/api/*` and `/health` go straight to the API, everything else to the web app.
+    - Caddy has a fixed internal address, which is the API's only trusted proxy.
+    - Settings live in `.env.production` (gitignored; template `.env.production.example`).
+  - **Development:** `docker-compose.yml` publishes db and API on `127.0.0.1`, and the web app too unless `WEB_BIND_ADDRESS=0.0.0.0`. PostgreSQL's host port is now **15432** (`POSTGRES_PORT`): on Windows a locally installed PostgreSQL listening on `0.0.0.0:5432` makes a `127.0.0.1:5432` bind fail. README connection strings and the design-time default follow. In `.env.example`, comments after empty values moved to their own lines, because compose reads `VAR=   # text` as the value `# text`. Stray Stripe/OpenAI "values" like that silently switch the stack to Stripe.
+  - **Verified:** a local run of the production stack under a separate project (health, plans, `/api/dev/*` 404, only Caddy published, a spoofed `X-Forwarded-For` stays in the sender's own rate-limit bucket), and the UI flow against the development stack on `127.0.0.1`.
+  - **Tests:** new `TrustedProxyListTests` (13 cases: parsing, refused lists, the middleware believing only the listed proxy, IPv4-mapped addresses). 259 backend tests in total.
+  - **Docs:** README (production deployment, configuration, development ports, security notes, limitations), ADR 0024, implementation report.
+
 - **Uploaded photos lose their GPS position; date taken and orientation stay.** Phone photos carried their coordinates to tenants and share-link viewers. See [ADR 0025](architecture/0025-photo-gps-removal.md).
   - **Code:** `PhotoLocationScrubber` (+ `ExifGpsEraser`, `XmpGpsBlanker`, `PngCrc32`) edits the file in place before `MediaService` hashes and stores it: the EXIF GPS IFD in JPEG APP1, PNG `eXIf` and WebP `EXIF` (both byte orders) is zeroed and emptied, `*:GPS*` XMP values become spaces, and changed PNG chunks get a new CRC. Nothing is re-encoded, and malformed files are left as they are. The upload audit records `locationRemoved`.
   - **Tests:** new `PhotoLocationScrubberTests` (with the `ExifPhotoBuilder` test helper) and an upload test that reads the stored file back (no GPS, date kept, stored SHA-256 = stored bytes). 246 backend tests in total.

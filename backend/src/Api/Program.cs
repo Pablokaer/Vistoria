@@ -58,12 +58,13 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
 
 if (builder.Configuration.GetValue("ForwardedHeaders:Enabled", false))
 {
+    // Parsed here so a missing or malformed TRUSTED_PROXIES stops the start-up instead of trusting everyone (ADR 0024).
+    var trustedProxies = TrustedProxyList.Parse(builder.Configuration["ForwardedHeaders:KnownProxies"]);
     builder.Services.Configure<ForwardedHeadersOptions>(o =>
     {
         o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
         // Only enable when the API is reachable exclusively through a trusted proxy (see README).
-        o.KnownIPNetworks.Clear();
-        o.KnownProxies.Clear();
+        trustedProxies.ApplyTo(o);
     });
 }
 

@@ -12,7 +12,9 @@ frontend/next-env.d.ts
 *.tsbuildinfo
 # Local data & secrets
 .env
-.env.local
+.env.*
+!.env.example
+!.env.production.example
 data/
 backend/src/Api/data/
 *.log

@@ -13,10 +13,11 @@ A working, persistent, tested MVP covering the three roles end to end:
 - **Tenant**: account created from the tenancy invitation (or a further invitation accepted while signed in) → dashboard (awaiting / accepted / disputed) → report review, room-level and general observations → accept or dispute.
 - **Public entry & billing**: landing page with architectural photography, a phone mockup of the real inspection screen, features, the four-step process, a section for inspectors and pricing from the API (ADR 0019); `/` sends signed-in users to their home using a no-secret session hint cookie, without rendering the landing page (ADR 0018) → company registration → plan → checkout at the payment provider (Stripe, or the Sandbox in development) → activation only from signed, idempotent webhooks → dashboard. Company API access requires an active subscription, enforced by an authorization requirement (402 `subscription.required`), and abandoned checkouts are resumed after signing in again (ADR 0012).
 - **Reports**: immutable versioned JSON snapshot + QuestPDF PDF (SHA-256 of both), web report page, expiring share links, Move Out comparison summary.
+- **Deployment**: a separate production compose file (Production environment, required secrets, no demo seed) with Caddy as the only published service and automatic HTTPS. The API trusts `X-Forwarded-For` only from Caddy's fixed address, so rate limits count per real client. The development compose publishes on 127.0.0.1 only (ADR 0024).
 - **Languages**: English and Brazilian Portuguese everywhere. The UI language is per user (browser language or header switcher, remembered in a cookie). API messages follow `Accept-Language`, plans are translated in config, and reports, PDFs and AI drafts follow the company's report language, which is frozen into each report (ADR 0014).
 - **UI**: in-house design system (tokens in `globals.css`, Inter, primitives in `components/ui`, inline icons), sidebar app shell with mobile drawer and bottom tabs, role-specific dashboards, *Available* search/filters/sort (client-side), tabbed My inspections, phone-first two-step execution with room navigation, document-style reports; skeleton loading, toasts and in-app confirmations (ADR 0015).
 
-Validation performed: backend and frontend build without warnings; ESLint clean; 246 backend tests pass (unit + HTTP/PostgreSQL integration); migrations applied to empty databases (tests and compose); `docker compose up` stack verified; the Playwright UI script checks the Portuguese and English UI (browser language, switcher, Portuguese API error) and runs the full Move In + Move Out scenario plus a team-agent scenario (the company creates the agents → a Direct inspection is hidden from a colleague → its agent sees it) across several browser sessions (desktop company/tenant, mobile agent) against the Docker stack, including PDF download.
+Validation performed: backend and frontend build without warnings; ESLint clean; 259 backend tests pass (unit + HTTP/PostgreSQL integration); migrations applied to empty databases (tests and compose); `docker compose up` stack verified; the Playwright UI script checks the Portuguese and English UI (browser language, switcher, Portuguese API error) and runs the full Move In + Move Out scenario plus a team-agent scenario (the company creates the agents → a Direct inspection is hidden from a colleague → its agent sees it) across several browser sessions (desktop company/tenant, mobile agent) against the Docker stack, including PDF download.
 
 ## 3. Architecture
 
@@ -34,7 +35,7 @@ Abstractions keeping the domain vendor-free: `IImageAnalysisService` (OpenAI / m
 | API | `backend/src/Api/Program.cs`, `Endpoints/{Auth,Company,Agent,Tenant,Shared}Endpoints.cs`, `Infrastructure/{ErrorHandling,RateLimits,EnvironmentAliases}.cs` |
 | Frontend | `frontend/src/app/globals.css` (design tokens), `components/{ui,shell,inspection,agent,company,report,tenant}/*`, `frontend/src/i18n/{locales,translate,formatting,server,I18nProvider}.ts*` + `messages/*.ts` (texts per language), `frontend/src/lib/{api,auth,hooks,autosave,image,types}.ts*`, `components/*`, `app/**/page.tsx` |
 | Tests | `backend/tests/InspectFlow.Tests/{Domain,Integration,Support}/*`, `e2e/ui-flow.mjs` |
-| Ops/docs | `docker-compose.yml`, `backend/Dockerfile`, `frontend/Dockerfile`, `.env.example`, `README.md`, `docs/architecture/*` |
+| Ops/docs | `docker-compose.yml` (development, ports on 127.0.0.1), `docker-compose.prod.yml` + `deploy/Caddyfile` + `.env.production.example` (production behind Caddy), `backend/Dockerfile`, `frontend/Dockerfile`, `.env.example`, `README.md`, `docs/architecture/*` |
 
 ## 5. Migrations
 
@@ -65,6 +66,7 @@ Public: Landing, Pricing, Checkout, Sandbox payment, Subscription success, Subsc
 - Web auth: refresh token only in an HttpOnly SameSite=Strict cookie through the same-origin Next.js proxy; native apps get it in the body.
 - Development seed goes through the real application services (so seeded data satisfies every rule) and never runs outside Development.
 - Development secrets in compose are prefixed `dev-only-` and rejected outside Development.
+- Production runs from its own compose file. Caddy is the only published service and routes `/api` straight to the API. The API believes `X-Forwarded-For` only from Caddy's fixed address (`TRUSTED_PROXIES`, fail-fast when missing or invalid), so per-IP rate limits count per real client. The development compose publishes everything on 127.0.0.1 (ADR 0024).
 
 ## 8. Independent review
 
@@ -77,6 +79,10 @@ All items are met: backend and frontend compile; database is created from scratc
 Caveats to be transparent about:
 - The **real OpenAI call was not exercised** (no API key available here). The adapter is covered by contract tests with a fake HTTP handler (request shape, strict schema, safety prompt, error mapping, key never in body/errors). Validate once with a real key; the default model name (`gpt-4.1-mini`) is configurable via `OPENAI_MODEL`.
 - Docker images were built here with an extra CA secret because this sandbox intercepts TLS; on a normal machine `docker compose up --build` needs nothing extra.
+
+### Production deployment and trusted proxies (2026-10-17)
+
+A standalone `docker-compose.prod.yml` runs Production with required secrets and no demo data; Caddy is the only published service and sends `/api` straight to the API, which believes `X-Forwarded-For` only from Caddy's fixed address. Per-IP limits and the sign-in throttle therefore count real clients, and the development stack publishes its ports on 127.0.0.1 only (ADR 0024).
 
 ### Photos lose their GPS position (2026-10-17)
 
